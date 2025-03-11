@@ -1,0 +1,62 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v4
+      
+      - name: XML instalation
+        run: sudo apt-get install -y libxml2-utils gettext
+      
+      - name: Locale compilation .po do .mo
+        run: |
+          if [ -d "locales" ]; then
+            find locales -type f -name "*.po" -exec bash -c 'msgfmt "$0" -o "${0%.po}.mo"' {} \;
+            echo ".po to .mo"
+          else
+            echo "Locales folder not existing - ommitting step .po compilation."
+          fi
+
+      - name: XML get number
+        id: get-version
+        run: |
+          VERSION=$(xmllint --xpath "string(/root/versions/version/num)" Wazuh.xml)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+      
+      - name: prepare tar.gz
+        run: |
+          PLUGIN_NAME="Wazuh"
+          mkdir -p /tmp/$PLUGIN_NAME
+          cp -r . /tmp/$PLUGIN_NAME/
+          rm -rf /tmp/$PLUGIN_NAME/.git /tmp/$PLUGIN_NAME/.github
+          cd /tmp
+          tar -czvf $PLUGIN_NAME-${{ steps.get-version.outputs.version }}.tar.gz $PLUGIN_NAME
+          mv $PLUGIN_NAME-${{ steps.get-version.outputs.version }}.tar.gz $GITHUB_WORKSPACE/
+      
+      - name: Tag creation
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git tag -a ${{ steps.get-version.outputs.version }} -m "${{ steps.get-version.outputs.version }}"
+          git push origin ${{ steps.get-version.outputs.version }}
+      
+      - name: Release creation
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get-version.outputs.version }}
+          name: ${{ steps.get-version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: Wazuh-${{ steps.get-version.outputs.version }}.tar.gz

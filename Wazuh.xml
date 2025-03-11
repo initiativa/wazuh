@@ -1,0 +1,58 @@
+<root>
+   <name>Wazuh</name>
+   <key>wazuh</key>
+   <!-- stable, beta, development, alpha, ... -->
+   <state>stable</state>
+   <logo>https://raw.githubusercontent.com/pluginsGLPI/wazuh/master/wazuh.png</logo>
+   <description>
+      <short>
+         <de>Wazuh GLPI-Plugin.</de>
+         <en>Wazuh GLPI plugin.</en>
+         <fr>Plugin GLPI Wazuh.</fr>
+         <it>Plug-in GLPI "Wazuh".</it>
+         <pl>Plugin Wazuh.</pl>
+      </short>
+      <long>
+         <de>Wazuh-Integrations-GLPI-Plugin.</de>
+         <en>Wazuh integration GLPI plugin.</en>
+         <fr>Wazuh integration GLPI plugin.</fr>
+         <it>Plug-in GLPI di integrazione Wazuh.</it>
+         <pl>Wtyczka GLPI dla Wazuh.</pl>
+      </long>
+   </description>
+   <homepage>https://github.com/pluginsGLPI/wazuh</homepage>
+   <download>https://github.com/pluginsGLPI/wazuh/releases</download>
+   <issues>https://github.com/pluginsGLPI/wazuh/issues</issues>
+   <readme>https://github.com/pluginsGLPI/wazuh/blob/master/README.md</readme>
+   <authors>
+      <author>Tomasz W.</author>
+   </authors>
+   <versions>
+      <version>
+         <num>0.0.1</num>
+         <compatibility>~10.0</compatibility>
+      </version>
+   </versions>
+   <langs>
+      <lang>de_DE</lang>
+      <lang>en_GB</lang>
+      <lang>fr_FR</lang>
+      <lang>it_IT</lang>
+      <lang>pl_PL</lang>
+   </langs>
+   <license>GPL V3+</license>
+   <!--tags>
+      <en>
+         <tag>One tag</tag>
+         <tag>Another tag</tag>
+      </en>
+      <fr>
+         <tag>Un tag</tag>
+         <tag>Un autre tag</tag>
+      </fr>
+   </tags-->
+   <!--screenshots>
+      <screenshot>https://github.com/pluginsGLPI/fields/raw/master/screenshot.png</screenshot>
+      <screenshot>https://github.com/pluginsGLPI/fields/raw/master/screenshot2.png</screenshot>
+   </screenshots-->
+</root>

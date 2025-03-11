@@ -1,0 +1,20 @@
+{
+    "require": {
+        "php": ">=8.1"
+    },
+    "require-dev": {
+        "glpi-project/tools": "^0.4"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "8.4.0"
+        },
+        "sort-packages": true
+    },
+    "autoload": {
+        "psr-4": {
+            "src\\": "src/"
+        }
+    }
+}
