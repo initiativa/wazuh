@@ -19,3 +19,6 @@ msgstr ""
 
 msgid "config_title"
 msgstr ""
+
+msgid "vulnerable_title"
+msgstr ""

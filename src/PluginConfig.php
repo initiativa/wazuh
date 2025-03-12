@@ -18,6 +18,7 @@
  */
 
 namespace src;
+//namespace GlpiPlugin\Wazuh;
 
 /**
  * Description of Config

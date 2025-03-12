@@ -38,6 +38,8 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 
 require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 use src\PluginConfig;
+use GlpiPlugin\Wazuh\Computer;
+//use GlpiPlugin\Wazuh\PluginConfig;
 
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
@@ -64,14 +66,24 @@ function plugin_init_wazuh()
     }
     
     if (Session::getLoginUserID()) {
-      Plugin::registerClass('src\Computer', ['addtabon' => ['Computer']]);
-      Plugin::registerClass('src\NetworkDevice', ['addtabon' => ['NetworkDevice']]);
-      
-      $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_NAME] = [
-         'tools' => 'src\\Menu'
-      ];
-   }
-    
+        \Plugin::registerClass(Computer::class, [
+            'addtabon' => ['Computer']
+        ]);
+
+        \Plugin::registerClass(\GlpiPlugin\Wazuh\NetworkDevice::class, [
+            'addtabon' => ['NetworkEquipment']
+        ]);
+
+//        Plugin::registerClass('PluginWazuhComputer', [
+//            'addtabon' => ['Computer']
+//        ]);
+//      Plugin::registerClass('src\Computer', ['addtabon' => ['Computer']]);
+//      Plugin::registerClass('src\NetworkDevice', ['addtabon' => ['NetworkDevice']]);
+
+        $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_NAME] = [
+            'tools' => 'src\\Menu'
+        ];
+    }
 }
 
 

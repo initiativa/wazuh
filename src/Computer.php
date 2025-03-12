@@ -17,24 +17,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace src;
+namespace GlpiPlugin\Wazuh;
+
+use Glpi\Application\View\TemplateRenderer;
+use CommonGLPI;
+
+if (!defined('GLPI_ROOT')) {
+   die("No access.");
+}
 
 /**
  * Description of Computer
  *
  * @author w-tomasz
  */
-class Computer extends \CommonDBTM implements Asset {
+class Computer extends \CommonDBTM implements Vulnerabilitable {
 
-    #[\Override]
-    static function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0) {
-        Logger::addWarning(__FUNCTION__ . " " . $item.getType() . " " . $withtemplate);
-        
-    }
+   #[\Override]
+   static function getTypeName($nb = 0) {
+      return \src\PluginConfig::APP_NAME;
+   }
+   
+   #[\Override]
+   function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
+      
+      return \src\PluginConfig::APP_NAME;
+   }
+   
+   #[\Override]
+   static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
+        $twig = TemplateRenderer::getInstance();
+        $twig->display('@Wazuh/vulnerable.view.twig', [
+            'APP_NAME' => \src\PluginConfig::APP_NAME,
+            'APP_VER' => \src\PluginConfig::loadVersionNumber()
+        ]);
 
-    #[\Override]
-    static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
-        Logger::addWarning(__FUNCTION__ . " " . $item.getType() . " : " . $tabnum . " : " . $withtemplate);
-        
+        return true;
     }
 }

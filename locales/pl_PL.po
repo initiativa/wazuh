@@ -20,3 +20,6 @@ msgstr ""
 
 msgid "config_title"
 msgstr "Konfiguracja"
+
+msgid "vulnerable_title"
+msgstr "Aktywne luki w zabezpieczeniach"

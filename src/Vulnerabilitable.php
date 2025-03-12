@@ -1,6 +1,6 @@
 <?php
 
-/* 
+/*
  * Copyright (C) 2025 w-tomasz
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+namespace GlpiPlugin\Wazuh;
 
-echo "****** HERE I'AM";
+/**
+ * Description of Vulnerabilitable
+ *
+ * @author w-tomasz
+ */
 
-Html::footer();
+interface Vulnerabilitable {
+    //put your code here
+}

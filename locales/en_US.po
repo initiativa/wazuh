@@ -20,3 +20,6 @@ msgstr ""
 
 msgid "config_title"
 msgstr "Configuration"
+
+msgid "vulnerable_title"
+msgstr "Active vulnerabilities"
