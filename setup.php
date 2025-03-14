@@ -59,10 +59,10 @@ function plugin_init_wazuh()
 {
     global $PLUGIN_HOOKS;
 
-    $PLUGIN_HOOKS['csrf_compliant'][PluginConfig::APP_NAME] = true;
+    $PLUGIN_HOOKS['csrf_compliant'][PluginConfig::APP_CODE] = true;
     
     if (Session::haveRight('config', UPDATE)) {
-        $PLUGIN_HOOKS['config_page'][PluginConfig::APP_NAME] = 'front/config.php';
+        $PLUGIN_HOOKS['config_page'][PluginConfig::APP_CODE] = 'front/config.php';
     }
     
     if (Session::getLoginUserID()) {
@@ -80,7 +80,7 @@ function plugin_init_wazuh()
 //      Plugin::registerClass('src\Computer', ['addtabon' => ['Computer']]);
 //      Plugin::registerClass('src\NetworkDevice', ['addtabon' => ['NetworkDevice']]);
 
-        $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_NAME] = [
+        $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
             'tools' => 'src\\Menu'
         ];
     }
@@ -135,7 +135,7 @@ function plugin_wazuh_check_config($verbose = false)
     }
 
     if ($verbose) {
-        echo __('Installed / not configured', 'Wazuh');
+        echo __('Installed / not configured', 'wazuh');
     }
     return false;
 }

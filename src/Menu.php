@@ -30,7 +30,7 @@ class Menu
     public static function getMenuContent()
     {
         return [
-            'title' => 'Wazuh',
+            'title' => 'wazuh',
             'page'  => '/plugins/wazuh/front/index.php',
             'icon'  => 'ti-shield',
         ];

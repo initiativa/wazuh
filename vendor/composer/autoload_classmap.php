@@ -8,10 +8,8 @@ $baseDir = dirname($vendorDir);
 return array(
     'Composer\\InstalledVersions' => $vendorDir . '/composer/InstalledVersions.php',
     'src\\Asset' => $baseDir . '/src/Asset.php',
-    'src\\Computer' => $baseDir . '/src/Computer.php',
     'src\\Hook' => $baseDir . '/src/Hook.php',
     'src\\Logger' => $baseDir . '/src/Logger.php',
     'src\\Menu' => $baseDir . '/src/Menu.php',
-    'src\\NetworkDevice' => $baseDir . '/src/NetworkDevice.php',
     'src\\PluginConfig' => $baseDir . '/src/PluginConfig.php',
 );

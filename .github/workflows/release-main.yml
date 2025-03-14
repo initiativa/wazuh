@@ -28,13 +28,13 @@ jobs:
       - name: XML get number
         id: get-version
         run: |
-          VERSION=$(xmllint --xpath "string(/root/versions/version/num)" Wazuh.xml)
+          VERSION=$(xmllint --xpath "string(/root/versions/version/num)" wazuh.xml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
       
       - name: prepare tar.gz
         run: |
-          PLUGIN_NAME="Wazuh"
+          PLUGIN_NAME="wazuh"
           mkdir -p /tmp/$PLUGIN_NAME
           cp -r . /tmp/$PLUGIN_NAME/
           rm -rf /tmp/$PLUGIN_NAME/.git /tmp/$PLUGIN_NAME/.github
@@ -59,4 +59,4 @@ jobs:
           name: ${{ steps.get-version.outputs.version }}
           draft: false
           prerelease: false
-          files: Wazuh-${{ steps.get-version.outputs.version }}.tar.gz
+          files: wazuh-${{ steps.get-version.outputs.version }}.tar.gz

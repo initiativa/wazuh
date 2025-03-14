@@ -29,12 +29,13 @@ namespace src;
 class PluginConfig {
     
     public const APP_NAME = 'Wazuh';
+    public const APP_CODE = 'wazuh';
     
-    public const PLUGIN_ROOT = GLPI_ROOT . '/plugins/' . self::APP_NAME;
+    public const PLUGIN_ROOT = GLPI_ROOT . '/plugins/' . self::APP_CODE;
     
     public static function loadVersionNumber(): string
     {
-        $xml = simplexml_load_file(static::PLUGIN_ROOT . '/Wazuh.xml');
+        $xml = simplexml_load_file(static::PLUGIN_ROOT . '/wazuh.xml');
         $versionNumber = (string)$xml->versions->version->num;
         
         return $versionNumber;

@@ -27,32 +27,43 @@
  * @link      https://github.com/pluginsGLPI/example
  * -------------------------------------------------------------------------
  */
-
 // ----------------------------------------------------------------------
 // Original Author of file:
 // Purpose of file:
 // ----------------------------------------------------------------------
 
 use Glpi\Application\View\TemplateRenderer;
+
 // Non menu entry case
 //header("Location:../../central.php");
-
 // Entry menu case
 require_once ("../../../inc/includes.php");
 
 use src\PluginConfig;
+use src\Logger;
 
 Session::checkRight("config", UPDATE);
 
 // To be available when plugin in not activated
 Plugin::load(PluginConfig::APP_NAME);
 
-Html::header("TITRE", $_SERVER['PHP_SELF'], "config", "plugins");
+if (isset($_POST['add'])) {
+    Logger::addWarning('chyba działa');
+    $controller = new ServerConnectionController();
+    $controller->addServerConnection();
+} else {
+    Logger::addWarning('Standard config.');
+    global $DB;
 
-$twig = TemplateRenderer::getInstance();
-$twig->display('@Wazuh/config.form.twig', [
-    'APP_NAME' => PluginConfig::APP_NAME,
-    'APP_VER' => PluginConfig::loadVersionNumber()
-]);
+    $connections = $DB->queryOrDie('SELECT * from glpi_plugin_wazuh_table');
 
-Html::footer();
+    Html::header("TITRE", $_SERVER['PHP_SELF'], "config", "plugins");
+    $twig = TemplateRenderer::getInstance();
+    $twig->display('@wazuh/config.form.twig', [
+        'APP_NAME' => PluginConfig::APP_NAME,
+        'APP_VER' => PluginConfig::loadVersionNumber(),
+        'connections' => $connections
+    ]);
+
+    Html::footer();
+}

@@ -23,11 +23,9 @@ class ComposerStaticInit1487684dead9db2b1fbfd643ab758829
     public static $classMap = array (
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'src\\Asset' => __DIR__ . '/../..' . '/src/Asset.php',
-        'src\\Computer' => __DIR__ . '/../..' . '/src/Computer.php',
         'src\\Hook' => __DIR__ . '/../..' . '/src/Hook.php',
         'src\\Logger' => __DIR__ . '/../..' . '/src/Logger.php',
         'src\\Menu' => __DIR__ . '/../..' . '/src/Menu.php',
-        'src\\NetworkDevice' => __DIR__ . '/../..' . '/src/NetworkDevice.php',
         'src\\PluginConfig' => __DIR__ . '/../..' . '/src/PluginConfig.php',
     );
 

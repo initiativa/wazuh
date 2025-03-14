@@ -28,8 +28,8 @@ class Hook {
 public static function getMenu()
     {
         return [
-            'title' => 'Wazuh',
-            'page'  => '/plugins/Wazuh/front/index.php',
+            'title' => 'wazuh',
+            'page'  => '/plugins/wazuh/front/index.php',
             'icon'  => 'ti-shield',
         ];
     }

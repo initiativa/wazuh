@@ -47,7 +47,7 @@ class NetworkDevice extends \CommonDBTM implements Vulnerabilitable {
    #[\Override]
    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
         $twig = TemplateRenderer::getInstance();
-        $twig->display('@Wazuh/vulnerable.view.twig', [
+        $twig->display('@wazuh/vulnerable.view.twig', [
             'APP_NAME' => \src\PluginConfig::APP_NAME,
             'APP_VER' => \src\PluginConfig::loadVersionNumber()
         ]);

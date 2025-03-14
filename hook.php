@@ -33,10 +33,10 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
     define('PLUGIN_WAZUH_DIR', __DIR__);
 }
 
-require_once (PLUGIN_WAZUH_DIR . "/src/PluginConfig.php");
-require_once (PLUGIN_WAZUH_DIR .  "/src/Logger.php");
+require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
 use src\Logger;
+use src\PluginConfig;
 
 /**
  * Plugin install process
@@ -46,7 +46,15 @@ use src\Logger;
 function plugin_wazuh_install()
 {
     Logger::addWarning(__FUNCTION__ . " Installing.");
+    \GlpiPlugin\Wazuh\Database::initTables();
+    \GlpiPlugin\Wazuh\Db\Wazuh::createTable();
+
     return true;
+}
+
+function plugin_myplugin_upgrade($old_version) {
+    Logger::addWarning(__FUNCTION__ . " Upgrading.");
+    
 }
 
 /**
@@ -57,13 +65,14 @@ function plugin_wazuh_install()
 function plugin_wazuh_uninstall()
 {
     Logger::addWarning(__FUNCTION__ . " Uninstalling.");
+    \GlpiPlugin\Wazuh\Database::dropTables();
     return true;
 }
 
 function get_wazuh_menu()
     {
     return [
-        'title' => 'Wazuh',
+        'title' => PluginConfig::APP_NAME,
         'page' => '/plugins/wazuh/front/index.php',
         'icon' => 'ti-shield',
     ];
