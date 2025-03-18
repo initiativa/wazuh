@@ -1,69 +1,81 @@
 <?php
 
-/**
- * -------------------------------------------------------------------------
- * Example plugin for GLPI
- * -------------------------------------------------------------------------
- *
- * LICENSE
- *
- * This file is part of Example.
- *
- * Example is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * Example is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Example. If not, see <http://www.gnu.org/licenses/>.
- * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2006-2022 by Example plugin team.
- * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
- * @link      https://github.com/pluginsGLPI/example
- * -------------------------------------------------------------------------
- */
-// ----------------------------------------------------------------------
-// Original Author of file:
-// Purpose of file:
-// ----------------------------------------------------------------------
 
 use Glpi\Application\View\TemplateRenderer;
 
-// Non menu entry case
-//header("Location:../../central.php");
-// Entry menu case
 require_once ("../../../inc/includes.php");
 
 use src\PluginConfig;
 use src\Logger;
+use GlpiPlugin\Wazuh\ServerConnection;
+use Search;
+use Html;
 
+Session::checkLoginUser();
 Session::checkRight("config", UPDATE);
+Plugin::load(PluginConfig::APP_CODE);
 
-// To be available when plugin in not activated
-Plugin::load(PluginConfig::APP_NAME);
 
-if (isset($_POST['add'])) {
-    Logger::addWarning('chyba działa');
-    $controller = new ServerConnectionController();
-    $controller->addServerConnection();
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['server_name'])) {
+//    Session::checkCSRF($_POST);
+
+//    $csrf_valid = Session::validateCSRF($_POST);
+//    Logger::addDebug('CSRF validation result: ' . ($csrf_valid ? 'true' : 'false') . ' :POST: ' . $_POST['_glpi_csrf_token']);
+//    Logger::addDebug(Logger::implodeWithKeys($_SESSION['glpicsrftokens']));
+    $item = ServerConnection::createFromPostData($_POST);
+
+    $item_id = $item->add($item->fields);
+    if ($item_id === false) {
+        Logger::addError(__FILE__ . " Error while adding data to db: " . Logger::implodeWithKeys($item->fields));
+        Session::addMessageAfterRedirect(sprintf(__('server_adding_connection_error', PluginConfig::APP_CODE), $item->name),
+                true,
+                ERROR);
+    } else {
+        Logger::addDebug(__FILE__ . " Server connection added to database: " . Logger::implodeWithKeys($item->fields));
+        Session::addMessageAfterRedirect(sprintf(__('server_connection_added', PluginConfig::APP_CODE), $item->name),
+                true,
+                INFO);
+    }
+    Html::redirect(Plugin::getWebDir(\src\PluginConfig::APP_CODE) . '/front/config.php');
+
+} else if (isset($_POST['delete'])) {
+   Logger::addDebug(__FILE__ . " Deleting: " . $_POST['id']);
+   $item = new ServerConnection();
+   $item->check($_POST['id'], DELETE);
+   $item->delete($_POST);
+   $item->redirectToList();
 } else {
-    Logger::addWarning('Standard config.');
+    Logger::addDebug('Standard config.');
     global $DB;
 
-    $connections = $DB->queryOrDie('SELECT * from glpi_plugin_wazuh_table');
+    $connection = new ServerConnection();
+    $connections = $connection->find(['enabled' => 1]);
+//    Logger::addDebug(Logger::implodeWithKeys($connections));
 
-    Html::header("TITRE", $_SERVER['PHP_SELF'], "config", "plugins");
-    $twig = TemplateRenderer::getInstance();
-    $twig->display('@wazuh/config.form.twig', [
-        'APP_NAME' => PluginConfig::APP_NAME,
-        'APP_VER' => PluginConfig::loadVersionNumber(),
-        'connections' => $connections
-    ]);
+    Html::header(
+            ServerConnection::getTypeName(Session::getPluralNumber()),
+            $_SERVER['PHP_SELF'],
+            "config",
+            "GlpiPlugin\\Wazuh\Menu"
+    );
+
+  if (ServerConnection::canCreate()) {
+        echo "<a class='btn btn-primary' href='serverconnection.form.php'>";
+        echo "<i class='ti ti-plus me-1'></i>";
+        echo __('Add', PluginConfig::APP_CODE);
+        echo "</a>";
+    }    
+
+    Search::show(ServerConnection::class);
+//    $csrf_token = Session::getNewCSRFToken();
+//    $twig = TemplateRenderer::getInstance();
+//    $twig->display('@wazuh/config.form.twig', [
+//        'APP_NAME' => PluginConfig::APP_CODE,
+//        'APP_VER' => PluginConfig::loadVersionNumber(),
+//        'csrf_token' => $csrf_token,
+//        'connections' => $connections
+//    ]);
 
     Html::footer();
 }
+

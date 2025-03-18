@@ -23,3 +23,40 @@ msgstr "Konfiguracja"
 
 msgid "vulnerable_title"
 msgstr "Aktywne luki w zabezpieczeniach"
+
+msgid "add_new_connection"
+msgstr "Dodaj nowe połączenie"
+
+msgid "server_name"
+msgstr "Server name:"
+
+msgid "address_url"
+msgstr "Url address:"
+
+msgid "port"
+msgstr "Port:"
+
+msgid "user_name"
+msgstr "Nazwa użytkownika:"
+
+msgid "password"
+msgstr "Hasło:"
+
+msgid "description"
+msgstr "Opis:"
+
+msgid "active"
+msgstr "Aktywne:"
+
+msgid "add_connection"
+msgstr "Dodaj połączenie"
+
+msgid "clean"
+msgstr "Wyczyść"
+
+msgid "server_connection_added"
+msgstr "Dodano połączenie servera: %1$s"
+
+msgid "server_adding_connection_error"
+msgstr "Błąd podczas dodawania servera: %1$s"
+

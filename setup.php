@@ -38,7 +38,10 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 
 require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 use src\PluginConfig;
+use src\Logger;
 use GlpiPlugin\Wazuh\Computer;
+use GlpiPlugin\Wazuh\NetworkDevice;
+use Glpi\Plugin\Hooks;
 //use GlpiPlugin\Wazuh\PluginConfig;
 
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
@@ -59,14 +62,53 @@ function plugin_init_wazuh()
 {
     global $PLUGIN_HOOKS;
 
-    $PLUGIN_HOOKS['csrf_compliant'][PluginConfig::APP_CODE] = true;
+    $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT][PluginConfig::APP_CODE] = true;
+    
+//    if (isset($_SESSION['glpiactiveprofile'])) {
+//        
+//        $PLUGIN_HOOKS['routes'][PluginConfig::APP_CODE] = 'config/routes.yaml';
+//        Logger::addNotice(__FUNCTION__ . " routes registered.");
+//    }
     
     if (Session::haveRight('config', UPDATE)) {
-        $PLUGIN_HOOKS['config_page'][PluginConfig::APP_CODE] = 'front/config.php';
+        $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/config.php';
+        Logger::addNotice(__FUNCTION__ . " plugin configuration registered.");
+
+        $PLUGIN_HOOKS[Hooks::USE_MASSIVE_ACTION][PluginConfig::APP_CODE] = true;
+        
     }
     
+    Plugin::registerClass('GlpiPlugin\\Wazuh\\ServerConnection', [
+      'addtabon' => ['Entity'],
+      'linkuser_types' => true,
+      'linkgroup_types' => true,
+      'notificationtemplates_types' => true,
+      'document_types' => true,
+      'ticket_types' => true,
+      'helpdesk_visible_types' => true,
+   ]);
+   
+   if (Session::haveRight('plugin_wazuh_serverconnection', READ)) {
+        Logger::addNotice(__FUNCTION__ . " Rights session OK.");
+      $PLUGIN_HOOKS['menu_toadd']['wazuh'] = [
+         'admin' => 'PluginWazuhMenu'
+      ];
+      
+      $PLUGIN_HOOKS['submenu_entry']['wazuh']['options']['serverconnection'] = [
+         'title' => __('Server Connections', 'wazuh'),
+         'page'  => '/plugins/wazuh/front/serverconnection.php',
+         'links' => [
+            'search' => '/plugins/wazuh/front/serverconnection.php',
+            'add'    => '/plugins/wazuh/front/serverconnection.form.php'
+         ]
+      ];
+   } else {
+        Logger::addWarning(__FUNCTION__ . " Bad session rights.");
+   }
+    
+    
     if (Session::getLoginUserID()) {
-        \Plugin::registerClass(Computer::class, [
+        \Plugin::registerClass(\GlpiPlugin\Wazuh\Computer::class, [
             'addtabon' => ['Computer']
         ]);
 
@@ -74,14 +116,8 @@ function plugin_init_wazuh()
             'addtabon' => ['NetworkEquipment']
         ]);
 
-//        Plugin::registerClass('PluginWazuhComputer', [
-//            'addtabon' => ['Computer']
-//        ]);
-//      Plugin::registerClass('src\Computer', ['addtabon' => ['Computer']]);
-//      Plugin::registerClass('src\NetworkDevice', ['addtabon' => ['NetworkDevice']]);
-
         $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
-            'tools' => 'src\\Menu'
+            'config' => 'GlpiPlugin\Wazuh\ServerConnection',
         ];
     }
 }
@@ -99,8 +135,8 @@ function plugin_version_wazuh()
         'name'           => PluginConfig::APP_NAME,
         'version'        => PluginConfig::loadVersionNumber(),
         'author'         => '<a href="http://www.initiativa.it">Initiativa</a>',
-        'license'        => '',
-        'homepage'       => '',
+        'license'        => 'https://github.com/initiativa/Wazuh?tab=GPL-3.0-1-ov-file',
+        'homepage'       => 'https://github.com/initiativa/Wazuh',
         'requirements'   => [
             'glpi' => [
                 'min' => PLUGIN_WAZUH_MIN_GLPI_VERSION,
@@ -135,7 +171,7 @@ function plugin_wazuh_check_config($verbose = false)
     }
 
     if ($verbose) {
-        echo __('Installed / not configured', 'wazuh');
+        echo __('Installed / not configured', PluginConfig::APP_CODE);
     }
     return false;
 }

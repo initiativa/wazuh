@@ -30,8 +30,9 @@
 
 namespace src;
 
-class Logger
-{
+class Logger {
+    use LoggerArrayTrait;
+
     protected static $DEBUG = 100;
     protected static $INFO = 200;
     protected static $NOTICE = 250;

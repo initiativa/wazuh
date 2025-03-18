@@ -1,5 +1,5 @@
 <root>
-   <name>wazuh</name>
+   <name>Wazuh</name>
    <key>wazuh</key>
    <!-- stable, beta, development, alpha, ... -->
    <state>stable</state>

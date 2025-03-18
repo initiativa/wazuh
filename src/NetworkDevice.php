@@ -21,6 +21,7 @@ namespace GlpiPlugin\Wazuh;
 
 use CommonGLPI;
 use Glpi\Application\View\TemplateRenderer;
+use src\PluginConfig;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -35,21 +36,21 @@ class NetworkDevice extends \CommonDBTM implements Vulnerabilitable {
     
    #[\Override]
    static function getTypeName($nb = 0) {
-      return \src\PluginConfig::APP_NAME;
+      return PluginConfig::APP_NAME;
    }
    
    #[\Override]
    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
       
-      return \src\PluginConfig::APP_NAME;
+      return PluginConfig::APP_NAME;
    }
    
    #[\Override]
    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
         $twig = TemplateRenderer::getInstance();
-        $twig->display('@wazuh/vulnerable.view.twig', [
-            'APP_NAME' => \src\PluginConfig::APP_NAME,
-            'APP_VER' => \src\PluginConfig::loadVersionNumber()
+        $twig->display('@wazuh/network_device.vulnerable.view.twig', [
+            'APP_NAME' => PluginConfig::APP_CODE,
+            'APP_VER' => PluginConfig::loadVersionNumber()
         ]);
       return true;
    }

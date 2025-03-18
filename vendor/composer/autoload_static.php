@@ -25,7 +25,7 @@ class ComposerStaticInit1487684dead9db2b1fbfd643ab758829
         'src\\Asset' => __DIR__ . '/../..' . '/src/Asset.php',
         'src\\Hook' => __DIR__ . '/../..' . '/src/Hook.php',
         'src\\Logger' => __DIR__ . '/../..' . '/src/Logger.php',
-        'src\\Menu' => __DIR__ . '/../..' . '/src/Menu.php',
+        'src\\LoggerArrayTrait' => __DIR__ . '/../..' . '/src/LoggerArrayTrait.php',
         'src\\PluginConfig' => __DIR__ . '/../..' . '/src/PluginConfig.php',
     );
 

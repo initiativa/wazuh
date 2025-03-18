@@ -22,3 +22,46 @@ msgstr ""
 
 msgid "vulnerable_title"
 msgstr ""
+
+msgid "add_new_connection"
+msgstr ""
+
+msgid "server_name"
+msgstr ""
+
+msgid "address_url"
+msgstr ""
+
+msgid "port"
+msgstr ""
+
+msgid "user_name"
+msgstr ""
+
+msgid "password"
+msgstr ""
+
+msgid "description"
+msgstr ""
+
+msgid "active"
+msgstr ""
+
+msgid "add_connection"
+msgstr ""
+
+msgid "clean"
+msgstr ""
+
+msgid "server_connection_added"
+msgstr ""
+
+msgid "server_adding_connection_error"
+msgstr ""
+
+msgid "active"
+msgstr ""
+
+msgid "inactive"
+msgstr ""
+

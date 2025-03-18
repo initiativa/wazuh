@@ -10,6 +10,6 @@ return array(
     'src\\Asset' => $baseDir . '/src/Asset.php',
     'src\\Hook' => $baseDir . '/src/Hook.php',
     'src\\Logger' => $baseDir . '/src/Logger.php',
-    'src\\Menu' => $baseDir . '/src/Menu.php',
+    'src\\LoggerArrayTrait' => $baseDir . '/src/LoggerArrayTrait.php',
     'src\\PluginConfig' => $baseDir . '/src/PluginConfig.php',
 );

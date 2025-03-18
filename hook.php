@@ -37,6 +37,7 @@ require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
 use src\Logger;
 use src\PluginConfig;
+use GlpiPlugin\Wazuh\ServerConnection;
 
 /**
  * Plugin install process
@@ -47,7 +48,12 @@ function plugin_wazuh_install()
 {
     Logger::addWarning(__FUNCTION__ . " Installing.");
     \GlpiPlugin\Wazuh\Database::initTables();
-    \GlpiPlugin\Wazuh\Db\Wazuh::createTable();
+    \GlpiPlugin\Wazuh\ServerConnection::createTable();
+    
+   $migration = new \Migration(2);
+   \GlpiPlugin\Wazuh\Profile::initProfile();
+   \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
+   $migration->executeMigration();
 
     return true;
 }
@@ -66,6 +72,7 @@ function plugin_wazuh_uninstall()
 {
     Logger::addWarning(__FUNCTION__ . " Uninstalling.");
     \GlpiPlugin\Wazuh\Database::dropTables();
+    \GlpiPlugin\Wazuh\ServerConnection::dropTable();
     return true;
 }
 
@@ -76,5 +83,19 @@ function get_wazuh_menu()
         'page' => '/plugins/wazuh/front/index.php',
         'icon' => 'ti-shield',
     ];
+}
+
+function plugin_wazuh_getDropdown()
+{
+    $plugin = new Plugin();
+
+    if ($plugin->isActivated('wazuh')) {
+        Logger::addWarning(__FUNCTION__ . " Dropdown should exist.");
+        return [
+            '\GlpiPlugin\Wazuh\ServerConnection' => \GlpiPlugin\Wazuh\ServerConnection::getTypeName(Session::getPluralNumber()),
+        ];
+    }
+
+    return [];
 }
 
