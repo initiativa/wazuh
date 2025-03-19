@@ -21,7 +21,6 @@ namespace GlpiPlugin\Wazuh;
 
 use CommonGLPI;
 use Glpi\Application\View\TemplateRenderer;
-use src\PluginConfig;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -32,7 +31,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class NetworkDevice extends \CommonDBTM implements Vulnerabilitable {
+class NetworkDevice extends \CommonDBTM {
     
    #[\Override]
    static function getTypeName($nb = 0) {

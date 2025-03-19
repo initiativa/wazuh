@@ -37,12 +37,13 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 //require_once (PLUGIN_WAZUH_DIR .  "/hook.php");
 
 require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
-use src\PluginConfig;
-use src\Logger;
+
+use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\Computer;
 use GlpiPlugin\Wazuh\NetworkDevice;
 use Glpi\Plugin\Hooks;
-//use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\PluginWazuhMenu;
 
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
@@ -64,11 +65,6 @@ function plugin_init_wazuh()
 
     $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT][PluginConfig::APP_CODE] = true;
     
-//    if (isset($_SESSION['glpiactiveprofile'])) {
-//        
-//        $PLUGIN_HOOKS['routes'][PluginConfig::APP_CODE] = 'config/routes.yaml';
-//        Logger::addNotice(__FUNCTION__ . " routes registered.");
-//    }
     
     if (Session::haveRight('config', UPDATE)) {
         $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/config.php';
@@ -87,24 +83,24 @@ function plugin_init_wazuh()
       'ticket_types' => true,
       'helpdesk_visible_types' => true,
    ]);
-   
-   if (Session::haveRight('plugin_wazuh_serverconnection', READ)) {
-        Logger::addNotice(__FUNCTION__ . " Rights session OK.");
-      $PLUGIN_HOOKS['menu_toadd']['wazuh'] = [
-         'admin' => 'PluginWazuhMenu'
-      ];
+
+//
+//   if (Session::haveRight('config', READ)) {
+//        Logger::addNotice(__FUNCTION__ . " Rights session OK.");
+//      $PLUGIN_HOOKS['menu_toadd']['wazuh'] = ['admin' => 'PluginWazuhMenu'];
       
-      $PLUGIN_HOOKS['submenu_entry']['wazuh']['options']['serverconnection'] = [
-         'title' => __('Server Connections', 'wazuh'),
-         'page'  => '/plugins/wazuh/front/serverconnection.php',
-         'links' => [
-            'search' => '/plugins/wazuh/front/serverconnection.php',
-            'add'    => '/plugins/wazuh/front/serverconnection.form.php'
-         ]
-      ];
-   } else {
-        Logger::addWarning(__FUNCTION__ . " Bad session rights.");
-   }
+      
+//      $PLUGIN_HOOKS['submenu_entry']['wazuh']['options']['serverconnection'] = [
+//         'title' => __('Server Connections', 'wazuh'),
+//         'page'  => '/plugins/wazuh/front/serverconnection.php',
+//         'links' => [
+//            'search' => '/plugins/wazuh/front/serverconnection.php',
+//            'add'    => '/plugins/wazuh/front/serverconnection.form.php'
+//         ]
+//      ];
+//   } else {
+//        Logger::addWarning(__FUNCTION__ . " Bad session rights.");
+//   }
     
     
     if (Session::getLoginUserID()) {
@@ -120,8 +116,13 @@ function plugin_init_wazuh()
             'config' => 'GlpiPlugin\Wazuh\ServerConnection',
         ];
     }
+    
+    $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = ['admin' => '\GlpiPlugin\\Wazuh\PluginWazuhMenu'];
+    
+    
+    $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];
+    $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT][PluginConfig::APP_CODE] = ['js/wazuh.js'];
 }
-
 
 /**
  * Get the name and the version of the plugin
@@ -175,3 +176,5 @@ function plugin_wazuh_check_config($verbose = false)
     }
     return false;
 }
+
+

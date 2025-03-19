@@ -5,8 +5,8 @@ use Glpi\Application\View\TemplateRenderer;
 
 require_once ("../../../inc/includes.php");
 
-use src\PluginConfig;
-use src\Logger;
+use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\ServerConnection;
 use Search;
 use Html;
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['server_name'])) {
                 true,
                 INFO);
     }
-    Html::redirect(Plugin::getWebDir(\src\PluginConfig::APP_CODE) . '/front/config.php');
+    Html::redirect(Plugin::getWebDir(\GlpiPlugin\Wazuh\PluginConfig::APP_CODE) . '/front/config.php');
 
 } else if (isset($_POST['delete'])) {
    Logger::addDebug(__FILE__ . " Deleting: " . $_POST['id']);

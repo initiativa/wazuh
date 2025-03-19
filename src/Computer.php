@@ -21,7 +21,6 @@ namespace GlpiPlugin\Wazuh;
 
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
-use src\PluginConfig;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -32,7 +31,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class Computer extends \CommonDBTM implements Vulnerabilitable {
+class Computer extends \CommonDBTM {
 
    #[\Override]
    static function getTypeName($nb = 0) {

@@ -14,7 +14,7 @@
     },
     "autoload": {
         "psr-4": {
-            "src\\": "src/"
+            "GlpiPlugin\\Wazuh\\": "src/"
         }
     }
 }

@@ -1,0 +1,107 @@
+/**
+ * Styles for Wazuh plugin
+ */
+
+/* Status indicators */
+.agent-status {
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    font-weight: bold;
+}
+
+.status-active {
+    background-color: #5cb85c;
+    color: white;
+}
+
+.status-disconnected {
+    background-color: #d9534f;
+    color: white;
+}
+
+.status-pending {
+    background-color: #f0ad4e;
+    color: white;
+}
+
+.status-never-connected {
+    background-color: #777777;
+    color: white;
+}
+
+/* Dashboard widgets */
+.wazuh-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.wazuh-stat-card {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.wazuh-stat-card h3 {
+    margin-top: 0;
+    color: #4c4c4c;
+    font-size: 16px;
+}
+
+.wazuh-stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #3a87ad;
+}
+
+/* Agent details */
+.wazuh-agent-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 10px;
+}
+
+.wazuh-agent-details .detail-group {
+    flex: 1 1 300px;
+}
+
+.wazuh-agent-details .detail-item {
+    margin-bottom: 8px;
+    border-bottom: 1px dotted #ddd;
+    padding-bottom: 8px;
+}
+
+.wazuh-agent-details .detail-label {
+    font-weight: bold;
+    color: #666;
+}
+
+/* Button styles */
+.wazuh-sync-button {
+    margin: 15px 0;
+}
+
+/* Loading spinner */
+#display-spinner {
+    text-align: center;
+    display: none;
+    padding: 20px;
+}
+
+/* Tooltip customization */
+.wazuh-tooltip {
+    cursor: help;
+    border-bottom: 1px dotted #666;
+}
+
+/* Responsive tables */
+@media screen and (max-width: 768px) {
+    .wazuh-responsive-table {
+        overflow-x: auto;
+        display: block;
+    }
+}

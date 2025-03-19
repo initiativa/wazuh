@@ -23,6 +23,8 @@ if (!defined("GLPI_ROOT")) {
     die("No access.");
 }
 
+use GlpiPlugin\Wazuh\Logger;
+
 /**
  * Description of Database
  *
@@ -45,7 +47,7 @@ class Database
             $DB->query($sql) or die($DB->error());
         }
 
-        \src\Logger::addWarning("Database installed...");
+        Logger::addWarning("Database installed...");
     }
     /**
      * @return void
@@ -57,6 +59,6 @@ class Database
             GLPI_ROOT . "/plugins/wazuh/install/db_clean.sql"
         );
         $DB->query($sql) or die($DB->error());
-        \src\Logger::addWarning("Database uninstalled...");
+        Logger::addWarning("Database uninstalled...");
     }
 }

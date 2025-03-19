@@ -35,8 +35,8 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 
 require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
-use src\Logger;
-use src\PluginConfig;
+use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\ServerConnection;
 
 /**
@@ -44,22 +44,28 @@ use GlpiPlugin\Wazuh\ServerConnection;
  *
  * @return boolean
  */
-function plugin_wazuh_install()
-{
-    Logger::addWarning(__FUNCTION__ . " Installing.");
-    \GlpiPlugin\Wazuh\Database::initTables();
-    \GlpiPlugin\Wazuh\ServerConnection::createTable();
-    
-   $migration = new \Migration(2);
-   \GlpiPlugin\Wazuh\Profile::initProfile();
-   \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
-   $migration->executeMigration();
+function plugin_wazuh_install() {
+    Logger::addNotice(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
 
+
+    $migration = new \Migration(PLUGIN_WAZUH_VERSION);
+    $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
+
+    \GlpiPlugin\Wazuh\ServerConnection::createTable();
+
+    \GlpiPlugin\Wazuh\PluginWazuhConfig::install($migration);
+    \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
+
+
+    \GlpiPlugin\Wazuh\Profile::initProfile();
+    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
+
+    $migration->executeMigration();
     return true;
 }
 
 function plugin_myplugin_upgrade($old_version) {
-    Logger::addWarning(__FUNCTION__ . " Upgrading.");
+    Logger::addNotice(__FUNCTION__ . " Upgrading.");
     
 }
 
@@ -68,11 +74,17 @@ function plugin_myplugin_upgrade($old_version) {
  *
  * @return boolean
  */
-function plugin_wazuh_uninstall()
-{
-    Logger::addWarning(__FUNCTION__ . " Uninstalling.");
+function plugin_wazuh_uninstall() {
+    Logger::addNotice(__FUNCTION__ . " Uninstalling.");
     \GlpiPlugin\Wazuh\Database::dropTables();
     \GlpiPlugin\Wazuh\ServerConnection::dropTable();
+    
+    $migration = new Migration(PLUGIN_WAZUH_VERSION);
+    $migration->displayMessage("UnMigrating tables from " . PLUGIN_WAZUH_VERSION);
+    
+    \GlpiPlugin\Wazuh\PluginWazuhAgent::uninstall($migration);
+    \GlpiPlugin\Wazuh\PluginWazuhConfig::uninstall($migration);
+
     return true;
 }
 

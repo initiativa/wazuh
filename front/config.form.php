@@ -1,8 +1,8 @@
 <?php
 require_once ("../../../inc/includes.php");
 
-use src\PluginConfig;
-use src\Logger;
+use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\ServerConnection;
 use Search;
 use Html;
@@ -38,10 +38,10 @@ if (isset($_POST["add"])) {
 
 
 if (isset($_GET["id"])) {
-    \src\Logger::addDebug("DISPLAY1");
+    Logger::addDebug("DISPLAY1");
     $item->display(['id' => $_GET["id"]]);
 } else {
-    \src\Logger::addDebug("DISPLAY2");
+    Logger::addDebug("DISPLAY2");
     $item->display();
 }
 

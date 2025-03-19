@@ -269,6 +269,7 @@ trait TableAnnotationTrait {
                 return is_array($value) ? $value : [$value];
             
             case 'datetime':
+            case 'timestamp':
             case '\datetime':
                 return $value ? new \DateTime($value) : null;
             
@@ -541,10 +542,10 @@ trait TableAnnotationTrait {
                 return "VARCHAR({$length})";
             
             case 'datetime':
-                return 'DATETIME';
+                return 'TIMESTAMP';
             
             case 'datetimeimmutable':
-                return 'DATETIME';
+                return 'TIMESTAMP';
             
             case 'dateinterval':
                 return 'VARCHAR(255)';

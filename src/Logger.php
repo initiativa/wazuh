@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-namespace src;
+namespace GlpiPlugin\Wazuh;
 
 class Logger {
     use LoggerArrayTrait;

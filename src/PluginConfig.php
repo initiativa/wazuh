@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace src;
-//namespace GlpiPlugin\Wazuh;
+namespace GlpiPlugin\Wazuh;
+// namespace GlpiPlugin\Wazuh;
 
 /**
  * Description of Config
@@ -26,18 +26,18 @@ namespace src;
  * @author w-tomasz
  */
 
-class PluginConfig {
-    
-    public const APP_NAME = 'Wazuh';
-    public const APP_CODE = 'wazuh';
-    
-    public const PLUGIN_ROOT = GLPI_ROOT . '/plugins/' . self::APP_CODE;
-    
+class PluginConfig
+{
+    public const APP_NAME = "Wazuh";
+    public const APP_CODE = "wazuh";
+
+    public const PLUGIN_ROOT = GLPI_ROOT . "/plugins/" . self::APP_CODE;
+
     public static function loadVersionNumber(): string
     {
-        $xml = simplexml_load_file(static::PLUGIN_ROOT . '/wazuh.xml');
-        $versionNumber = (string)$xml->versions->version->num;
-        
+        $xml = simplexml_load_file(static::PLUGIN_ROOT . "/wazuh.xml");
+        $versionNumber = (string) $xml->versions->version->num;
+
         return $versionNumber;
     }
 }

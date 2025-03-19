@@ -37,7 +37,6 @@ class Profile extends \Profile {
    static function initProfile() {
       $profileRight = new \ProfileRight();
       
-      // Definiowanie nowych uprawnień dla wszystkich profili
       foreach ($_SESSION['glpiactiveprofile'] as $key => $val) {
          if (strpos($key, 'plugin_wazuh_') !== false) {
             $profileRight->deleteByCriteria(['profiles_id' => $_SESSION['glpiactiveprofile']['id'], 
@@ -45,13 +44,12 @@ class Profile extends \Profile {
          }
       }
       
-      // Dodawanie nowych uprawnień
-      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], 
-         ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
+      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
+      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], ['plugin_wazuh_agent' => \ALLSTANDARDRIGHT]);
    }
    
    /**
-    * Dodaje domyślne uprawnienia dla profilu
+    * Adding default rights to profile
     */
    static function addDefaultProfileInfos($profiles_id, $rights) {
       $profileRight = new \ProfileRight();
@@ -67,15 +65,13 @@ class Profile extends \Profile {
    }
    
    /**
-    * Tworzy pierwsze uprawnienia dla administratora
     */
    static function createFirstAccess($profiles_id) {
-      self::addDefaultProfileInfos($profiles_id, 
-         ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
+      self::addDefaultProfileInfos($profiles_id, ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
+      self::addDefaultProfileInfos($profiles_id, ['plugin_wazuh_agent' => \ALLSTANDARDRIGHT]);
    }
    
    /**
-    * Metoda wywoływana podczas instalacji pluginu
     */
    static function install(\Migration $migration) {
       self::initProfile();
