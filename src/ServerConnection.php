@@ -41,9 +41,9 @@ class ServerConnection extends \CommonDropdown
 
     public static $rightname = "plugin_wazuh_serverconnection";
 
-    public $usenotifications = true;
-
-    public $usenotepad = true;
+//    public $usenotifications = true;
+//
+//    public $usenotepad = true;
 
     public static function createTable()
     {
@@ -142,18 +142,15 @@ class ServerConnection extends \CommonDropdown
     public static function getMenuContent()
     {
         $menu = [];
-        Logger::addDebug("ServerConnection getting menu content");
-        if (\Config::canUpdate()) {
-            Logger::addDebug("ServerConnection getting menu content 2.");
-            $menu["title"] = self::getMenuName();
-            $menu["page"] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/serverconnection.php";
-            $menu["icon"] = self::getIcon();
-        }
-        if (count($menu)) {
-            return $menu;
-        }
+        $menu["title"] = self::getMenuName();
+        $menu["page"] = "/plugins/wazuh/front/serverconnection.php";
+        $menu["icon"] = self::getIcon();
+        
+        $menu['options']['config']['title'] = 'Konfiguracja2';
+        $menu['options']['config']['page'] = "/plugins/wazuh/front/serverconnection.php";
+        $menu['options']['config']['icon'] = self::getIcon();
 
-        return false;
+        return $menu;
     }
 
     public static function getIcon()
@@ -232,9 +229,7 @@ class ServerConnection extends \CommonDropdown
                 !empty($input[$field_name]) &&
                 $input[$field_name] !== "NULL"
             ) {
-                $input[$field_name] = (new GLPIKey())->encrypt(
-                    $input[$field_name]
-                );
+                $input[$field_name] = (new GLPIKey())->encrypt($input[$field_name]);
             }
         }
 
@@ -344,8 +339,8 @@ class ServerConnection extends \CommonDropdown
     #[\Override]
     public static function canCreate()
     {
-        //        return true;
-        return Session::haveRight(self::$rightname, CREATE);
+                return true;
+//        return Session::haveRight(self::$rightname, CREATE);
     }
 
     #[\Override]
@@ -439,3 +434,5 @@ class ServerConnection extends \CommonDropdown
     //        return true;
     //    }
 }
+
+

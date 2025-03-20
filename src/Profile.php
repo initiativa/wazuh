@@ -30,8 +30,9 @@ if (!defined('GLPI_ROOT')) {
  */
 class Profile extends \Profile {
     
+     #[\Override]
      static function getTypeName($nb = 0) {
-      return __('Wazuh', 'wazuh');
+      return __('Wazuh Profile', 'wazuh');
    }
    
    static function initProfile() {
@@ -44,9 +45,19 @@ class Profile extends \Profile {
          }
       }
       
-      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
-      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], ['plugin_wazuh_agent' => \ALLSTANDARDRIGHT]);
-   }
+//      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
+//      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], [PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT]);
+//      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], [PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT]);
+      
+      self::addDefaultProfileInfos(
+                $_SESSION['glpiactiveprofile']['id'],
+                [
+                    'plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT,
+                    PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
+                    PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT
+                ]
+        );
+    }
    
    /**
     * Adding default rights to profile
@@ -67,9 +78,19 @@ class Profile extends \Profile {
    /**
     */
    static function createFirstAccess($profiles_id) {
-      self::addDefaultProfileInfos($profiles_id, ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
-      self::addDefaultProfileInfos($profiles_id, ['plugin_wazuh_agent' => \ALLSTANDARDRIGHT]);
-   }
+//      self::addDefaultProfileInfos($profiles_id, ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
+//      self::addDefaultProfileInfos($profiles_id, [PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT]);
+//      self::addDefaultProfileInfos($profiles_id, [PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT]);
+      
+      self::addDefaultProfileInfos(
+                $profiles_id,
+                [
+                    'plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT,
+                    PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
+                    PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT
+                ]
+        );
+    }
    
    /**
     */
@@ -79,3 +100,5 @@ class Profile extends \Profile {
     
     
 }
+
+

@@ -22,6 +22,8 @@ namespace GlpiPlugin\Wazuh;
 use CommonDBTM;
 use Migration;
 use Session;
+use Html;
+use Dropdown;
 
 /**
  * Description of PluginWazuhAgent
@@ -30,7 +32,7 @@ use Session;
  */
 
 class PluginWazuhAgent extends CommonDBTM {
-   static $rightname = 'plugin_wazuh_agent';
+   public static $rightname = 'plugin_wazuh_agent';
    
    /**
     * Visible tabs definitions
@@ -49,12 +51,19 @@ class PluginWazuhAgent extends CommonDBTM {
     public static function getMenuContent()
     {
         $menu = [];
-        Logger::addDebug("WazuhAgent getting menu content");
         if (\Config::canUpdate()) {
-            Logger::addDebug("WazuhAgent getting menu content 2.");
             $menu["title"] = self::getMenuName();
-            $menu["page"] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/agent.php";
+            $menu["page"] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhagent.php";
             $menu["icon"] = self::getIcon();
+            
+        $menu['options']['tools']['title'] = self::getMenuName() . '2';
+        $menu['options']['tools']['page'] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhagent.php";
+        $menu['options']['tools']['icon'] = self::getIcon();
+
+        $menu['tools']['title'] = self::getMenuName() . '3';
+        $menu['tools']['page'] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhagent.php";
+        $menu['tools']['icon'] = self::getIcon();
+
         }
         if (count($menu)) {
             return $menu;
@@ -63,10 +72,10 @@ class PluginWazuhAgent extends CommonDBTM {
         return false;
     }
 
+
     #[\Override]
-    public static function getIcon()
-    {
-        return "fas fa-sign-in-alt";
+    public static function getIcon() {
+        return "fa-solid fa-user-secret";
     }
 
     #[\Override]
@@ -200,20 +209,23 @@ class PluginWazuhAgent extends CommonDBTM {
         return $tab;
     }
 
-   
+
+    #[\Override]
+    public static function canCreate(): bool {
+        return parent::canUpdate();
+    }
+
    
    /**
     * Fetch Wazuh data
     * @return array
     */
-   static function fetchAgentsFromWazuh() {
-        $config = new PluginWazuhConfig();
-        $config->getFromDB(1);
+   static function fetchAgentsFromWazuh(PluginWazuhConfig $config) {
 
         $wazuh_server = $config->fields['server_url'];
         $api_port = $config->fields['api_port'];
         $api_user = $config->fields['api_username'];
-        $api_password = $config->fields['api_password'];
+        $api_password = (new \GLPIKey())->decrypt($config->fields['api_password']);
 
         // First - get the JWT token
         $ch = curl_init();
@@ -309,16 +321,29 @@ class PluginWazuhAgent extends CommonDBTM {
         }
     }
 
+    
+    static function syncAgents(): bool {
+        $ids = (new PluginWazuhConfig())->find();
+        foreach ($ids as $id) {
+            Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
+            $wazuhConfig = new PluginWazuhConfig();
+            $wazuhConfig->getFromDB($id['id']);
+            if (!self::syncAgent($wazuhConfig)) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     /**
-    * Funkcja synchronizacji agentów
+    * Wazuh agents sync
     * @return boolean
     */
-
-   static function syncAgents() {
+    
+   static function syncAgent(PluginWazuhConfig $wazuhConfig): bool {
         global $DB;
 
-        // Pobieranie agentów z Wazuh
-        $agents = self::fetchAgentsFromWazuh();
+        $agents = self::fetchAgentsFromWazuh($wazuhConfig);
         if (empty($agents)) {
             Logger::addError(__FUNCTION__ . ' Empty agents.');
             return false;
@@ -535,3 +560,5 @@ class PluginWazuhAgent extends CommonDBTM {
       return true;
    }
 }
+
+

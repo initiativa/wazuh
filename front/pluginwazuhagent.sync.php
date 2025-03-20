@@ -37,5 +37,5 @@ if (PluginWazuhAgent::syncAgents()) {
 }
 
 // Redirect to agent list
-Html::redirect('agent.php');
+Html::redirect('pluginwazuhagent.php');
 

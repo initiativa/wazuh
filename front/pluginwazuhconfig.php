@@ -29,24 +29,7 @@
  */
 
 include('../../../inc/includes.php');
-use GlpiPlugin\Wazuh\ServerConnection;
+use GlpiPlugin\Wazuh\PluginWazuhConfig;
 
-/** @var array $_UPOST */
-global $_UPOST;
-
-$dropdown = new ServerConnection();
-
-if (isset($_POST['id']) && isset($_POST['request_authorization'])) {
-    $dropdown->check($_POST['id'], UPDATE);
-    $dropdown->redirectToAuthorizationUrl();
-} else {
-    Html::requireJs('clipboard');
-
-    if (array_key_exists('client_secret', $_POST) && array_key_exists('client_secret', $_UPOST)) {
-        // Client secret must not be altered.
-        $_POST['client_secret'] = $_UPOST['client_secret'];
-    }
-
-    include(GLPI_ROOT . '/front/dropdown.common.form.php');
-}
-
+$common = new PluginWazuhConfig();
+include('dbtm.common.php');

@@ -165,3 +165,5 @@ class PluginWazuhProfile extends CommonDBTM {
       }
    }
 }
+
+

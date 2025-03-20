@@ -88,23 +88,14 @@ function plugin_wazuh_uninstall() {
     return true;
 }
 
-function get_wazuh_menu()
-    {
-    return [
-        'title' => PluginConfig::APP_NAME,
-        'page' => '/plugins/wazuh/front/index.php',
-        'icon' => 'ti-shield',
-    ];
-}
 
 function plugin_wazuh_getDropdown()
 {
     $plugin = new Plugin();
 
-    if ($plugin->isActivated('wazuh')) {
-        Logger::addWarning(__FUNCTION__ . " Dropdown should exist.");
+    if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            '\GlpiPlugin\Wazuh\ServerConnection' => \GlpiPlugin\Wazuh\ServerConnection::getTypeName(Session::getPluralNumber()),
+            'GlpiPlugin\Wazuh\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
         ];
     }
 

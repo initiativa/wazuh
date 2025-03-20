@@ -21,6 +21,7 @@ namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
 use Migration;
+use Html;
 /**
  * Description of PluginWazuhConfig
  *
@@ -28,65 +29,173 @@ use Migration;
  */
 
 class PluginWazuhConfig extends CommonDBTM {
-   static $rightname = 'config';
+    use DefaultsTrait;
+
+    public static $rightname = 'plugin_wazuh_config';
    
    /**
     * @param object $migration
     * @return boolean
     */
    static function install(Migration $migration) {
-      global $DB;
-      
-      $table = self::getTable();
-      
-      if (!$DB->tableExists($table)) {
-         $migration->displayMessage("Installing $table");
-         
-         $query = "CREATE TABLE IF NOT EXISTS `$table` (
+        global $DB;
+
+        $table = self::getTable();
+
+        if (!$DB->tableExists($table)) {
+            $migration->displayMessage("Installing $table");
+
+            $query = "CREATE TABLE IF NOT EXISTS `$table` (
                      `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+                     `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                      `server_url` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                      `api_port` varchar(5) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '55000',
                      `api_username` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                      `api_password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-                     `sync_interval` int(11) NOT NULL DEFAULT '86400',
+                     `sync_interval` int UNSIGNED NOT NULL DEFAULT '86400',
                      `last_sync` timestamp DEFAULT NULL,
                      PRIMARY KEY (`id`)
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-         $DB->query($query) or die("Error creating $table table");
-         
-         $DB->insert($table, [
-            'id'          => 1,
-            'server_url'  => '192.168.0.2',
-            'api_port'    => '55000',
-            'api_username' => 'wazuh-wui',
-            'api_password' => 'MyS3cr37P450r.*-',
-            'sync_interval' => 86400
-         ]);
-      }
-      
-      return true;
-   }
-   
-   /**
+            $DB->query($query) or die("Error creating $table table");
+
+            $migration->updateDisplayPrefs(
+                    [
+                        '\\GlpiPlugin\\Wazuh\\PluginWazuhConfig' => [3 => 1, 4 => 2]
+                    ],
+            );
+        }
+
+        self::defaultsConfigData($table);
+
+        return true;
+    }
+
+    /**
     * @param object $migration
     * @return boolean
     */
    static function uninstall(Migration $migration) {
-      global $DB;
-      
-      $table = self::getTable();
-      
-      $migration->displayMessage("Uninstalling $table");
-      $migration->dropTable($table);
-      
-      return true;
-   }
+        global $DB;
+
+        $table = self::getTable();
+        if ($DB->tableExists($table)) {
+            $migration->displayMessage("Uninstalling $table");
+            $migration->dropTable($table);
+        }
+
+        return true;
+    }
+
+    #[\Override]
+    public static function getTypeName($nb = 0) {
+        return _n("Wazuh Config", "Wazuh Config's", $nb, PluginConfig::APP_CODE);
+    }
+
+    public static function canCreate()
+    {
+        return true;
+    }
+
+
+   
+    #[\Override]
+    public static function getMenuContent()
+    {
+        $menu = [];
+        if (\Config::canUpdate()) {
+            $menu["title"] = self::getMenuName();
+            $menu["page"] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhconfig.php";
+            $menu["icon"] = self::getIcon();
+        }
+        
+        $menu['options']['admin']['title'] = 'Konfiguracja2';
+        $menu['options']['admin']['page'] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhconfig.php";
+        $menu['options']['admin']['icon'] = 'fas fa-cog';
+
+        if (count($menu)) {
+            return $menu;
+        }
+
+        return false;
+    }
+    
+    #[\Override]
+    public static function getIcon() {
+        return "fa-solid fa-satellite-dish";
+    }
+
+    #[\Override]
+    public function rawSearchOptions() {
+        $tab = parent::rawSearchOptions();
+
+        $tab[] = [
+            "id" => 3,
+            "name" => __("URL", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "server_url",
+            "searchtype" => "contains",
+            "datatype" => "itemlink",
+            "massiveaction" => false,
+        ];
+
+        $tab[] = [
+            "id" => 4,
+            "name" => __("Port", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "api_port",
+            "searchtype" => "contains",
+            "datatype" => "text",
+            "massiveaction" => false,
+        ];
+
+        $tab[] = [
+            "id" => 5,
+            "name" => __("Username", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "api_username",
+            "searchtype" => "contains",
+            "datatype" => "text",
+            "massiveaction" => false,
+        ];
+
+        $tab[] = [
+            "id" => 6,
+            "name" => __("Sync interval", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "sync_interval",
+            "searchtype" => "eq",
+            "datatype" => "number",
+            "massiveaction" => false,
+        ];
+
+        $tab[] = [
+            "id" => 7,
+            "name" => __("Last Sync", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "last_sync",
+            "searchtype" => "eq",
+            "datatype" => "datetime",
+            "massiveaction" => false,
+        ];
+
+        
+        return $tab;
+    }
+
+    public function defineTabs($options = []) {
+        $tabs = parent::defineTabs($options);
+
+        $this->addStandardTab(PluginWazuhConfig::class, $tabs, $options);
+
+        return $tabs;
+    }
    
    /**
     * @param integer $ID
     * @param array $options
     * @return boolean
     */
+   #[\Override]
    function showForm($ID, array $options = []) {
       global $CFG_GLPI;
       
@@ -141,3 +250,5 @@ class PluginWazuhConfig extends CommonDBTM {
       return true;
    }
 }
+
+

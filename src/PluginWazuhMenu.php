@@ -32,24 +32,25 @@ class PluginWazuhMenu extends CommonGLPI {
    static $rightname = 'plugin_wazuh_agent';
    
    /**
-    * Funkcja zwracająca nazwę
     * @param integer $nb
     * @return string
     */
+   #[\Override]
    static function getTypeName($nb = 0) {
-      return __('Wazuh', 'wazuh');
+      return _n('Wazuh Agent', 'Wazuh Agent\'s', $nb, PluginConfig::APP_CODE);
    }
    
    /**
     * Funkcja generująca menu
     * @return array
     */
+   #[\Override]
    static function getMenuContent() {
       $menu = [];
       
       $menu['title'] = self::getTypeName();
       $menu['page'] = "/plugins/wazuh/front/agent.php";
-      $menu['icon'] = "fas fa-shield-alt";
+      $menu['icon'] = "fa-solid fa-user-secret";
       
       //Submenus achieved with option swicher. ex: Html::header(...... 'here last swich');
       if (Session::haveRight(PluginWazuhAgent::$rightname, READ)) {
@@ -59,7 +60,7 @@ class PluginWazuhMenu extends CommonGLPI {
       }
       
       if (Session::haveRight('config', UPDATE)) {
-         $menu['options']['config']['title'] = __('Configuration');
+         $menu['options']['config']['title'] = PluginWazuhConfig::getTypeName(2);
          $menu['options']['config']['page'] = "/plugins/wazuh/front/config.form.php?id=1";
          $menu['options']['config']['icon'] = "fas fa-cog";
       }
@@ -67,3 +68,5 @@ class PluginWazuhMenu extends CommonGLPI {
       return $menu;
    }
 }
+
+

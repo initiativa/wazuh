@@ -44,14 +44,18 @@ use GlpiPlugin\Wazuh\Computer;
 use GlpiPlugin\Wazuh\NetworkDevice;
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Wazuh\PluginWazuhMenu;
+use GlpiPlugin\Wazuh\ServerConnection;
 
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
 // Minimal GLPI version, inclusive
-define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "10.0.0");
+define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "10.0.11");
 // Maximum GLPI version, exclusive
 define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "10.0.99");
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 /**
  * Init hooks of the plugin.
@@ -74,15 +78,15 @@ function plugin_init_wazuh()
         
     }
     
-    Plugin::registerClass('GlpiPlugin\\Wazuh\\ServerConnection', [
-      'addtabon' => ['Entity'],
-      'linkuser_types' => true,
-      'linkgroup_types' => true,
-      'notificationtemplates_types' => true,
-      'document_types' => true,
-      'ticket_types' => true,
-      'helpdesk_visible_types' => true,
-   ]);
+//    Plugin::registerClass('GlpiPlugin\\Wazuh\\ServerConnection', [
+//      'addtabon' => ['Entity'],
+//      'linkuser_types' => true,
+//      'linkgroup_types' => true,
+//      'notificationtemplates_types' => true,
+//      'document_types' => true,
+//      'ticket_types' => true,
+//      'helpdesk_visible_types' => true,
+//   ]);
 
 //
 //   if (Session::haveRight('config', READ)) {
@@ -112,12 +116,19 @@ function plugin_init_wazuh()
             'addtabon' => ['NetworkEquipment']
         ]);
 
-        $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
-            'config' => 'GlpiPlugin\Wazuh\ServerConnection',
-        ];
+//        $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
+//            'config' => '\\GlpiPlugin\\Wazuh\\ServerConnection',
+//        ];
     }
+
+    $PLUGIN_HOOKS['menu_entries']['wazuh'] = 'PluginWazuhAgent::addToMenuTray';
     
-    $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = ['admin' => '\GlpiPlugin\\Wazuh\PluginWazuhMenu'];
+    $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
+        'admin' => [
+            'GlpiPlugin\Wazuh\PluginWazuhConfig',
+            'GlpiPlugin\Wazuh\PluginWazuhAgent'],
+        'config' => 'GlpiPlugin\Wazuh\ServerConnection'
+    ];
     
     
     $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];

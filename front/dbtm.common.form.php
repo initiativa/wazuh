@@ -1,25 +1,15 @@
 <?php
-require_once ("../../../inc/includes.php");
 
+use Glpi\Exception\Http\AccessDeniedHttpException;
 use GlpiPlugin\Wazuh\PluginConfig;
-use GlpiPlugin\Wazuh\Logger;
-use GlpiPlugin\Wazuh\ServerConnection;
-use Search;
-use Html;
 
 if (!Plugin::isPluginActive(PluginConfig::APP_CODE)) {
-    throw new LogicException();
+    Html::displayNotFoundError();
 }
 
-    Html::header(ServerConnection::getTypeName(), $_SERVER['PHP_SELF'], "plugins", ServerConnection::class, []);
-
-
-// Sprawdzenie uprawnień
-Session::checkRight("config", READ);
-
-    
-    
-$item = new ServerConnection();
+if (!($item instanceof \CommonDBTM)) {
+    throw new LogicException();
+}
 
 if (isset($_POST["add"])) {
     $item->check(-1, CREATE, $_POST);
@@ -35,12 +25,15 @@ if (isset($_POST["add"])) {
     $item->redirectToList();
 }
 
+Html::header($item::getTypeName(), $_SERVER['PHP_SELF'], '\\GlpiPlugin\\Wazuh\\PluginWazuhMenu', $item::class, ['config']);
 
 if (isset($_GET["id"])) {
-    Logger::addDebug("DISPLAY1");
-    $item->display(['id' => $_GET["id"]]);
+    $item->check($_GET["id"], READ);
+    $options['id'] = $_GET["id"];
+    $options['show_nav_header'] = true;
+    $item->display($options);
 } else {
-    Logger::addDebug("DISPLAY2");
+    $item->check($_GET["id"], READ);
     $item->display();
 }
 
