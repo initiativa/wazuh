@@ -24,7 +24,8 @@ use Migration;
 use Session;
 use Html;
 use Dropdown;
-
+use NetworkEquipment;
+use Computer;
 /**
  * Description of PluginWazuhAgent
  *
@@ -34,14 +35,22 @@ use Dropdown;
 class PluginWazuhAgent extends CommonDBTM {
    public static $rightname = 'plugin_wazuh_agent';
    
-   /**
+   
+    function showItems() {
+        $relation = new WazuhAgentAssetsRelation();
+        $relation->showItems($this);
+    }
+
+    /**
     * Visible tabs definitions
     * @param array $options
     * @return array
     */
+   #[\Override]
    function defineTabs($options = []) {
       $ong = [];
       $this->addDefaultFormTab($ong);
+      $this->addStandardTab('WazuhAgentAssetsRelation', $ong, $options);
       $this->addStandardTab('Log', $ong, $options);
       
       return $ong;
@@ -118,15 +127,20 @@ class PluginWazuhAgent extends CommonDBTM {
                      `groups` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
-                     `computers_id` int unsigned NOT NULL DEFAULT '0',
+                     `itemtype` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                     `item_id` int unsigned NOT NULL DEFAULT '0',
+                     `entities_id` int unsigned NOT NULL DEFAULT '0',
+                     `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
                      UNIQUE KEY `unicity` (`agent_id`),
                      KEY `name` (`name`),
                      KEY `status` (`status`),
-                     KEY `computers_id` (`computers_id`),
+                     KEY `item_id` (`item_id`),
+                     KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
+                     KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
          $DB->query($query) or die("Error creating $table table");
@@ -404,31 +418,13 @@ class PluginWazuhAgent extends CommonDBTM {
                         'WHERE' => ['agent_id' => $agent['id']]
                     ])->current();
 
-            // Znajdź powiązany komputer
-            $computer_id = 0;
-            if (!empty($agent['name'])) {
-                $computers = $DB->request([
-                    'FROM' => 'glpi_computers',
-                    'WHERE' => ['name' => $agent['name']]
-                ]);
-
-                if (count($computers) > 0) {
-                    foreach ($computers as $computer) {
-                        $computer_id = $computer['id'];
-                        break;
-                    }
-                }
-
-                Logger::addDebug("Found computer ID: " . $computer_id . " for agent: " . $agent['name']);
-            }
-
             // Za każdym razem tworzymy nowy obiekt aby uniknąć potencjalnych problemów
             $agent_obj = new self();
 
             if ($existing_agent) {
                 // Aktualizacja istniejącego agenta
                 $agent_data['id'] = $existing_agent['id'];
-                $agent_data['computers_id'] = $computer_id > 0 ? $computer_id : $existing_agent['computers_id'];
+//                $agent_data['computers_id'] = $computer_id > 0 ? $computer_id : $existing_agent['computers_id'];
 
                 Logger::addDebug("Updating agent ID: " . $existing_agent['id'] . " with data: " . json_encode($agent_data));
 
@@ -442,7 +438,7 @@ class PluginWazuhAgent extends CommonDBTM {
             } else {
                 // Dodawanie nowego agenta
                 $agent_data['date_creation'] = $currentDate;
-                $agent_data['computers_id'] = $computer_id;
+//                $agent_data['computers_id'] = $computer_id;
 
                 Logger::addDebug("Adding new agent with data: " . json_encode($agent_data));
 
@@ -471,94 +467,160 @@ class PluginWazuhAgent extends CommonDBTM {
         return $success_count > 0;
     }
 
+    private function collectDevices() {
+        $elements = [];
+
+        $elements[''] = Dropdown::EMPTY_VALUE;
+
+        $computer = new Computer();
+        $computers = $computer->find([
+            'is_deleted' => 0,
+            'entities_id' => $_SESSION['glpiactive_entity']
+        ]);
+
+        foreach ($computers as $comp) {
+            $elements['Computer___' . $comp['id']] = 'Computer > ' . $comp['name'];
+        }
+
+        $network = new NetworkEquipment();
+        $networks = $network->find([
+            'is_deleted' => 0,
+            'entities_id' => $_SESSION['glpiactive_entity']
+        ]);
+
+        foreach ($networks as $net) {
+            $elements['NetworkEquipment___' . $net['id']] = 'NetworkEquipment > ' . $net['name'];
+        }
+        
+        return $elements;
+    }
+    
     /**
-    * Funkcja generowania formularza
     * @param integer $ID ID agenta
     * @param array $options
     * @return boolean
     */
    function showForm($ID, array $options = []) {
-      global $CFG_GLPI;
-      
-      $this->initForm($ID, $options);
-      $this->showFormHeader($options);
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('Name') . "</td>";
-      echo "<td>";
-      echo Html::input('name', ['value' => $this->fields['name'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('Agent ID', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('agent_id', ['value' => $this->fields['agent_id'], 'class' => 'form-control', 'readonly' => 'readonly']);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('IP Address') . "</td>";
-      echo "<td>";
-      echo Html::input('ip', ['value' => $this->fields['ip'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('Status', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Dropdown::showFromArray('status', [
-         'active'         => __('Active', 'wazuh'),
-         'disconnected'   => __('Disconnected', 'wazuh'),
-         'pending'        => __('Pending', 'wazuh'),
-         'never_connected' => __('Never Connected', 'wazuh')
-      ], ['value' => $this->fields['status'], 'display' => false]);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('Version', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('version', ['value' => $this->fields['version'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('Last Keep Alive', 'wazuh') . "</td>";
-      echo "<td>";
-      Html::showDateTimeField('last_keepalive', ['value' => $this->fields['last_keepalive']]);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('OS Name', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('os_name', ['value' => $this->fields['os_name'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('OS Version', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('os_version', ['value' => $this->fields['os_version'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('Groups', 'wazuh') . "</td>";
-      echo "<td colspan='3'>";
-      echo Html::textarea([
-         'name'    => 'groups',
-         'value'   => $this->fields['groups'],
-         'cols'    => 100,
-         'rows'    => 3
-      ]);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('Computer') . "</td>";
-      echo "<td colspan='3'>";
-      Computer::dropdown([
-         'name'      => 'computers_id',
-         'value'     => $this->fields['computers_id'],
-         'entity'    => $this->fields['entities_id']
-      ]);
-      echo "</td>";
-      echo "</tr>";
-      
-      $this->showFormButtons($options);
-      
-      return true;
-   }
+        global $CFG_GLPI;
+
+        $this->initForm($ID, $options);
+        $this->showFormHeader($options);
+
+        echo "<tr class='tab_bg_1'>";
+        echo "<td>" . __('Name') . "</td>";
+        echo "<td>";
+        echo Html::input('name', ['value' => $this->fields['name'], 'class' => 'form-control']);
+        echo "</td>";
+        echo "<td>" . __('Agent ID', 'wazuh') . "</td>";
+        echo "<td>";
+        echo Html::input('agent_id', ['value' => $this->fields['agent_id'], 'class' => 'form-control', 'readonly' => 'readonly']);
+        echo "</td>";
+        echo "</tr>";
+
+        echo "<tr class='tab_bg_1'>";
+        echo "<td>" . __('IP Address') . "</td>";
+        echo "<td>";
+        echo Html::input('ip', ['value' => $this->fields['ip'], 'class' => 'form-control']);
+        echo "</td>";
+        echo "<td>" . __('Status', 'wazuh') . "</td>";
+        echo "<td>";
+        echo Dropdown::showFromArray('status', [
+            'active' => __('Active', 'wazuh'),
+            'disconnected' => __('Disconnected', 'wazuh'),
+            'pending' => __('Pending', 'wazuh'),
+            'never_connected' => __('Never Connected', 'wazuh')
+                ], ['value' => $this->fields['status'], 'display' => false]);
+        echo "</td>";
+        echo "</tr>";
+
+        echo "<tr class='tab_bg_1'>";
+        echo "<td>" . __('Version', 'wazuh') . "</td>";
+        echo "<td>";
+        echo Html::input('version', ['value' => $this->fields['version'], 'class' => 'form-control']);
+        echo "</td>";
+        echo "<td>" . __('Last Keep Alive', 'wazuh') . "</td>";
+        echo "<td>";
+        Html::showDateTimeField('last_keepalive', ['value' => $this->fields['last_keepalive']]);
+        echo "</td>";
+        echo "</tr>";
+
+        echo "<tr class='tab_bg_1'>";
+        echo "<td>" . __('OS Name', 'wazuh') . "</td>";
+        echo "<td>";
+        echo Html::input('os_name', ['value' => $this->fields['os_name'], 'class' => 'form-control']);
+        echo "</td>";
+        echo "<td>" . __('OS Version', 'wazuh') . "</td>";
+        echo "<td>";
+        echo Html::input('os_version', ['value' => $this->fields['os_version'], 'class' => 'form-control']);
+        echo "</td>";
+        echo "</tr>";
+
+        echo "<tr class='tab_bg_1'>";
+        echo "<td>" . __('Groups', 'wazuh') . "</td>";
+        echo "<td colspan='3'>";
+        echo Html::textarea([
+            'name' => 'groups',
+            'value' => $this->fields['groups'],
+            'cols' => 100,
+            'rows' => 3
+        ]);
+        echo "</td>";
+        echo "</tr>";
+
+        echo "<tr class='tab_bg_1'>";
+        echo "<td>" . __('Device') . "</td>";
+        echo "<td>";
+
+        $elements = $this->collectDevices();
+
+        Dropdown::showFromArray('itemtype_item_id', $elements, [
+            'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : '',
+            'rand' => mt_rand(),
+            'width' => '100%'
+        ]);
+
+        echo Html::scriptBlock("
+            $(document).ready(function() {
+                $('form').submit(function() {
+                    var selected = $('select[name=\"itemtype_item_id\"]').val();
+                    if (selected) {
+                        var parts = selected.split('___');
+                        if (parts.length == 2) {
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'itemtype',
+                                value: parts[0]
+                            }).appendTo('form');
+
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'item_id',
+                                value: parts[1]
+                            }).appendTo('form');
+                        } else {
+                            // Gdy wybrano pusty element
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'itemtype',
+                                value: ''
+                            }).appendTo('form');
+
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'item_id',
+                                value: '0'
+                            }).appendTo('form');
+                        }
+                    }
+                    return true;
+                });
+            });
+        ");
+
+        echo "</td>";
+        echo "</tr>";
+
+        $this->showFormButtons($options);
+       return true;
+    }
 }
-
-

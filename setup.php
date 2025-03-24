@@ -45,6 +45,7 @@ use GlpiPlugin\Wazuh\NetworkDevice;
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Wazuh\PluginWazuhMenu;
 use GlpiPlugin\Wazuh\ServerConnection;
+use Plugin;
 
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
@@ -108,13 +109,14 @@ function plugin_init_wazuh()
     
     
     if (Session::getLoginUserID()) {
-        \Plugin::registerClass(\GlpiPlugin\Wazuh\Computer::class, [
+        Plugin::registerClass(\GlpiPlugin\Wazuh\Computer::class, [
             'addtabon' => ['Computer']
         ]);
 
-        \Plugin::registerClass(\GlpiPlugin\Wazuh\NetworkDevice::class, [
+        Plugin::registerClass(\GlpiPlugin\Wazuh\NetworkDevice::class, [
             'addtabon' => ['NetworkEquipment']
         ]);
+        plugin_wazuh_registerClasses();
 
 //        $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
 //            'config' => '\\GlpiPlugin\\Wazuh\\ServerConnection',
@@ -133,6 +135,13 @@ function plugin_init_wazuh()
     
     $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];
     $PLUGIN_HOOKS[Hooks::ADD_JAVASCRIPT][PluginConfig::APP_CODE] = ['js/wazuh.js'];
+}
+
+function plugin_wazuh_registerClasses() {
+    Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhAgent');
+    Plugin::registerClass('GlpiPlugin\Wazuh\WazuhAgentAssetsRelation', [
+        'addtabon' => ['Computer', 'NetworkEquipment']
+    ]);
 }
 
 /**

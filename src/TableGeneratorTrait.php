@@ -42,7 +42,7 @@ trait TableGeneratorTrait
         $primaryKey = null;
         $keys = [];
         $foreignKeys = [];
-        $definedColumnNames = []; // Przechowywanie nazw kolumn już zdefiniowanych
+        $definedColumnNames = [];
 
         foreach ($reflection->getProperties() as $property) {
             // Skip properties from parent classes
@@ -50,7 +50,7 @@ trait TableGeneratorTrait
                 $columnDef = self::parsePropertyAttributes($property);
 
                 if (!empty($columnDef)) {
-                    $definedColumnNames[] = $columnDef["name"]; // Dodaj nazwę kolumny do listy zdefiniowanych
+                    $definedColumnNames[] = $columnDef["name"];
 
                     if (
                         isset($columnDef["isPrimary"]) &&
@@ -370,7 +370,8 @@ trait TableGeneratorTrait
         ];
     }
 
-    public static function getTableDropQuery(): string {
+    public static function getTableDropQuery(): string
+    {
         return "DROP TABLE IF EXISTS " . self::getTable();
     }
 

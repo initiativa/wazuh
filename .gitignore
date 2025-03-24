@@ -2,4 +2,4 @@
 .DS_Store
 .zed
 /vendor/
-/phpactor.json
+/.phpactor.json
