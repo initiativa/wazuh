@@ -31,7 +31,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class Computer extends \CommonDBTM {
+class WazuhComputerTab extends \CommonDBTM {
 
    #[\Override]
    static function getTypeName($nb = 0) {

@@ -31,7 +31,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class NetworkDevice extends \CommonDBTM {
+class WazuhNetworkDeviceTab extends \CommonDBTM {
     
    #[\Override]
    static function getTypeName($nb = 0) {

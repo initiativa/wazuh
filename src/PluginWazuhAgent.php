@@ -220,7 +220,70 @@ class PluginWazuhAgent extends CommonDBTM {
             "massiveaction" => false,
         ];
 
+        $tab[] = [
+            "id" => 8,
+            "name" => __("Device Type", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "itemtype",
+            "searchtype" => "contains",
+            "datatype" => "text",
+            "massiveaction" => false,
+        ];
+
+
+//        $tab[] = [
+//            "id" => 9,
+//            "name" => __("Device", PluginConfig::APP_CODE),
+//            "table" => self::getTable(),
+//            "field" => "item_id",
+//            "datatype" => "dropdown",
+//            "massiveaction" => false,
+//            "forcegroupby" => true,
+//            "additionalfields" => ['itemtype'],
+//            "joinparams" => [
+//                'beforejoin' => [
+//                    'table' => 'glpi_computers',
+//                    'joinparams' => [
+//                        'condition' => ["AND" => ["REFTABLE.itemtype" => "Computer"]]
+//                    ]
+//                ],
+//                'beforejoin2' => [
+//                    'table' => 'glpi_networkequipments',
+//                    'joinparams' => [
+//                        'condition' => ["AND" => ["REFTABLE.itemtype" => "NetworkEquipment"]]
+//                    ]
+//                ]
+//            ]
+//        ];
+        
+        $tab[] = [
+            "id" => 9,
+            "name" => __("Device", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "item_id",
+            "datatype" => "specific",
+            "massiveaction" => false,
+            "additionalfields" => ['itemtype'],
+        ];
+
         return $tab;
+    }
+
+    #[\Override]
+    public static function getSpecificValueToDisplay($field, $values, array $options = []) {
+        if ($field === 'item_id' && isset($values['itemtype']) && !empty($values['itemtype'])) {
+            $itemtype = $values['itemtype'];
+            $item_id = $values['item_id'];
+
+            if (class_exists($itemtype) && in_array($itemtype, ['Computer', 'NetworkEquipment'])) {
+                $item = new $itemtype();
+                if ($item->getFromDB($item_id)) {
+                    return $item->getLink();
+                }
+            }
+            return $values['item_id'];
+        }
+        return parent::getSpecificValueToDisplay($field, $values, $options);
     }
 
 
