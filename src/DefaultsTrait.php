@@ -46,7 +46,11 @@ trait DefaultsTrait {
             'api_port' => '55000',
             'api_username' => 'wazuh',
             'api_password' => (new GLPIKey())->encrypt(getenv('WPASS2')),
-            'sync_interval' => 86400
+            'sync_interval' => 86400,
+            'indexer_url' => '10.70.0.111',
+            'indexer_port' => '9200',
+            'indexer_user' => 'admin_tomasz',
+            'indexer_password' => (new GLPIKey())->encrypt(getenv('IPASS2')),
         ]);
     }
 }

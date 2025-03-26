@@ -1,6 +1,6 @@
 {% macro passwordFieldWithToggle(name, value, label = '', options = {}) %}
     {% set options = {'rand': random()}|merge(options) %}
-    {% set id = options.id|default('passwordfield' ~ options.rand) %}
+    {% set id = options.id|default(name ~ options.rand) %}
     
     <div class="form-field row col-12 col-sm-6  mb-2">
         <label class="col-form-label col-xxl-5 text-xxl-end" for="{{ id }}">

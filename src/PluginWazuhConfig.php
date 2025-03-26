@@ -57,6 +57,10 @@ class PluginWazuhConfig extends CommonDBTM {
                      `api_port` varchar(5) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '55000',
                      `api_username` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                      `api_password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                     `indexer_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                     `indexer_port` varchar(5) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                     `indexer_user` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                     `indexer_password` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                      `sync_interval` int UNSIGNED NOT NULL DEFAULT '86400',
                      `last_sync` timestamp DEFAULT NULL,
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -117,7 +121,7 @@ class PluginWazuhConfig extends CommonDBTM {
     }
 
     private function prepareInput($input) {
-        foreach (['api_password'] as $field_name) {
+        foreach (['api_password', 'indexer_password'] as $field_name) {
             if (array_key_exists($field_name, $input) && !empty($input[$field_name]) && $input[$field_name] !== 'NULL') {
                 $input[$field_name] = (new GLPIKey())->encrypt($input[$field_name]);
             }
@@ -227,8 +231,13 @@ class PluginWazuhConfig extends CommonDBTM {
         return $tabs;
     }
 
+    private function decryptFields($fields) {
+        foreach($fields as $field) {
+            $this->fields[$field] = $this->decryptPwd($this->fields[$field]);
+        }
+    }
     
-    private function decryptPwd($str): string {
+    private function decryptPwd($str): string | null {
         $key = new \GLPIKey();
         try {
             // Wycisz ostrzeżenia podczas próby deszyfrowania
@@ -257,7 +266,7 @@ class PluginWazuhConfig extends CommonDBTM {
         $this->initForm($ID, $options);
         $this->showFormHeader($options);
 
-        $this->fields['api_password'] = $this->decryptPwd($this->fields['api_password']);
+        $this->decryptFields(['api_password', 'indexer_password']);
         TemplateRenderer::getInstance()->display(
                 "@wazuh/plugin_wazuh_config.form.twig",
                 [
