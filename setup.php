@@ -101,7 +101,9 @@ function plugin_wazuh_registerClasses() {
     Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhNetworkDeviceTab::class, [
         'addtabon' => ['NetworkEquipment']
     ]);
-//    Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhAgent');
+    Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhAgent');
+    Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhConfig');
+    Plugin::registerClass('GlpiPlugin\Wazuh\ServerConnection');
 //    Plugin::registerClass('GlpiPlugin\Wazuh\WazuhAgentAssetsRelation', [
 //        'addtabon' => ['Computer', 'NetworkEquipment']
 //    ]);

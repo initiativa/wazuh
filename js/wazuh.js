@@ -24,6 +24,21 @@ function initWazuhPlugin() {
     initTooltips();
 }
 
+function toggleWazuhPassword(fieldId) {
+    var field = document.getElementById(fieldId);
+    var button = field.nextElementSibling.querySelector('i');
+
+    if (field.type === 'password') {
+        field.type = 'text';
+        button.classList.remove('ti-eye');
+        button.classList.add('ti-eye-off');
+    } else {
+        field.type = 'password';
+        button.classList.remove('ti-eye-off');
+        button.classList.add('ti-eye');
+    }
+}
+
 /**
  * Update agent status indicators with visual cues
  */

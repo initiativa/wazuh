@@ -23,6 +23,10 @@ if (isset($_POST["add"])) {
     $item->check($_POST["id"], DELETE);
     $item->delete($_POST);
     $item->redirectToList();
+} else if (isset($_POST["restore"])) {
+    $item->check($_POST["id"], PURGE);
+    $item->restore($_POST);
+    $item->redirectToList();
 }
 
 Html::header($item::getTypeName(), $_SERVER['PHP_SELF'], '\\GlpiPlugin\\Wazuh\\PluginWazuhMenu', $item::class, ['config']);

@@ -58,7 +58,7 @@ function plugin_wazuh_install() {
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
 
     \GlpiPlugin\Wazuh\Profile::initProfile();
-    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
+//    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
 
     $migration->executeMigration();
     return true;
@@ -76,7 +76,6 @@ function plugin_myplugin_upgrade($old_version) {
  */
 function plugin_wazuh_uninstall() {
     Logger::addNotice(__FUNCTION__ . " Uninstalling.");
-    \GlpiPlugin\Wazuh\Database::dropTables();
     \GlpiPlugin\Wazuh\ServerConnection::dropTable();
     
     $migration = new Migration(PLUGIN_WAZUH_VERSION);
@@ -96,7 +95,7 @@ function plugin_wazuh_getDropdown()
 
     if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            'GlpiPlugin\Wazuh\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
+            '\\GlpiPlugin\\Wazuh\\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
         ];
     }
 

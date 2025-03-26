@@ -1,0 +1,30 @@
+{% extends "generic_show_form.html.twig" %}
+{% import 'components/form/fields_macros.html.twig' as fields %}
+{% import '@wazuh/wazuh_fields_macros.html.twig' as wazuh_fields %}
+
+{% block form_fields %}
+    {% set rand = random() %}
+    
+    {{ fields.textField('server_url', item.fields['server_url'], __('Wazuh Server URL', 'wazuh'), {
+        'rand': rand
+    }) }}
+    {{ fields.textField('api_port', item.fields['api_port'], __('API Port', 'wazuh'), {
+        'rand': rand
+    }) }}
+    {{ fields.textField('api_username', item.fields['api_username'], __('API Username', 'wazuh'), {
+        'rand': rand
+    }) }}
+    
+    {{ wazuh_fields.passwordFieldWithToggle(
+        'api_password',
+        item.fields['api_password'],
+        __('API Password', 'wazuh'),
+        {'rand': rand}
+    ) }}
+    
+    {{ fields.numberField('sync_interval', item.fields['sync_interval'], __('Synchronization Interval (seconds)', 'wazuh'), {
+        'rand': rand
+    }) }}
+    
+{% endblock %}
+

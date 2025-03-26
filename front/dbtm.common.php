@@ -1,13 +1,12 @@
 
 <?php
 
-
 if (!($common instanceof \CommonDBTM)) {
     throw new LogicException();
 }
 
 if (!$common::canView()) {
-    throw new \Glpi\Exception\Http\AccessDeniedHttpException();
+    Html::displayRightError();
 }
 
 Html::header(

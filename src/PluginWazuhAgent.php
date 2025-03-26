@@ -34,13 +34,13 @@ use Computer;
 
 class PluginWazuhAgent extends CommonDBTM {
    public static $rightname = 'plugin_wazuh_agent';
+   public $dohistory = true;
    
-   
-    function showItems() {
-        $relation = new WazuhAgentAssetsRelation();
-        $relation->showItems($this);
-    }
-
+//    function showItems() {
+//        $relation = new WazuhAgentAssetsRelation();
+//        $relation->showItems($this);
+//    }
+//
     /**
     * Visible tabs definitions
     * @param array $options
@@ -287,13 +287,33 @@ class PluginWazuhAgent extends CommonDBTM {
     }
 
 
-    #[\Override]
-    public static function canCreate(): bool {
-        return parent::canUpdate();
+//    #[\Override]
+//    public static function canCreate(): bool {
+//        return parent::canUpdate();
+//    }
+
+    
+    public function prepareInputForAdd($input) {
+        return $input;
     }
 
-   
-   /**
+    public function prepareInputForUpdate($input) {
+        return $input;
+    }
+
+    static function getHistoryChangeWhenUpdateField($field) {
+//        switch ($field) {
+//            case 'name':
+//            case 'content':
+//            case 'date':
+//                return true;
+//            default:
+//                return false;
+//        }
+        return true;
+    }
+
+    /**
     * Fetch Wazuh data
     * @return array
     */

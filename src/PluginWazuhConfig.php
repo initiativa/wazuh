@@ -22,6 +22,9 @@ namespace GlpiPlugin\Wazuh;
 use CommonDBTM;
 use Migration;
 use Html;
+use GLPIKey;
+use Glpi\Application\View\TemplateRenderer;
+
 /**
  * Description of PluginWazuhConfig
  *
@@ -32,6 +35,8 @@ class PluginWazuhConfig extends CommonDBTM {
     use DefaultsTrait;
 
     public static $rightname = 'plugin_wazuh_config';
+    
+    public $dohistory = true;
    
    /**
     * @param object $migration
@@ -54,13 +59,23 @@ class PluginWazuhConfig extends CommonDBTM {
                      `api_password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
                      `sync_interval` int UNSIGNED NOT NULL DEFAULT '86400',
                      `last_sync` timestamp DEFAULT NULL,
-                     PRIMARY KEY (`id`)
+                     `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
+                     `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
+                     `entities_id` int unsigned NOT NULL DEFAULT '0',
+                     `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
+                     `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+                     PRIMARY KEY (`id`),
+                     KEY `entities_id` (`entities_id`),
+                     KEY `date_mod` (`date_mod`),
+                     KEY `date_creation` (`date_creation`),
+                     KEY `is_recursive` (`is_recursive`),
+                     KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
             $DB->query($query) or die("Error creating $table table");
 
             $migration->updateDisplayPrefs(
                     [
-                        '\\GlpiPlugin\\Wazuh\\PluginWazuhConfig' => [3 => 1, 4 => 2]
+                        'GlpiPlugin\Wazuh\PluginWazuhConfig' => [3 => 1, 4 => 2]
                     ],
             );
         }
@@ -91,13 +106,33 @@ class PluginWazuhConfig extends CommonDBTM {
         return _n("Wazuh Config", "Wazuh Config's", $nb, PluginConfig::APP_CODE);
     }
 
-    public static function canCreate()
-    {
-        return true;
+    #[\Override]
+    public function prepareInputForAdd($input) {
+        return $this->prepareInput($input);
     }
 
+    #[\Override]
+    public function prepareInputForUpdate($input) {
+        return $this->prepareInput($input);
+    }
 
-   
+    private function prepareInput($input) {
+        foreach (['api_password'] as $field_name) {
+            if (array_key_exists($field_name, $input) && !empty($input[$field_name]) && $input[$field_name] !== 'NULL') {
+                $input[$field_name] = (new GLPIKey())->encrypt($input[$field_name]);
+            }
+        }
+        return $input;
+    }
+
+    public static function getHistoryChangeWhenUpdateField($field) {
+       return true;
+    }
+
+//    public static function canCreate() {
+//        return true;
+//    }
+
     #[\Override]
     public static function getMenuContent()
     {
@@ -182,14 +217,34 @@ class PluginWazuhConfig extends CommonDBTM {
         return $tab;
     }
 
+    #[\Override]
     public function defineTabs($options = []) {
         $tabs = parent::defineTabs($options);
 
         $this->addStandardTab(PluginWazuhConfig::class, $tabs, $options);
+        $this->addStandardTab('Log', $tabs, $options);
 
         return $tabs;
     }
-   
+
+    
+    private function decryptPwd($str): string {
+        $key = new \GLPIKey();
+        try {
+            // Wycisz ostrzeżenia podczas próby deszyfrowania
+            $decrypted = @$key->decrypt($str);
+            if ($decrypted !== false && !empty($decrypted)) {
+                $decrypted_password = $decrypted;
+            } else {
+                $decrypted_password = $str;
+            }
+        } catch (Exception $e) {
+            $decrypted_password = $api_password;
+        }
+        
+        return $decrypted_password;
+    }
+    
    /**
     * @param integer $ID
     * @param array $options
@@ -197,57 +252,70 @@ class PluginWazuhConfig extends CommonDBTM {
     */
    #[\Override]
    function showForm($ID, array $options = []) {
-      global $CFG_GLPI;
-      
-      $this->getFromDB($ID);
-      $this->showFormHeader($options);
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('Wazuh Server URL', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('server_url', ['value' => $this->fields['server_url'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('API Port', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('api_port', ['value' => $this->fields['api_port'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('API Username', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('api_username', ['value' => $this->fields['api_username'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('API Password', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('api_password', ['type' => 'password', 'value' => $this->fields['api_password'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "</tr>";
-      
-      echo "<tr class='tab_bg_1'>";
-      echo "<td>" . __('Synchronization Interval (seconds)', 'wazuh') . "</td>";
-      echo "<td>";
-      echo Html::input('sync_interval', ['type' => 'number', 'value' => $this->fields['sync_interval'], 'class' => 'form-control']);
-      echo "</td>";
-      echo "<td>" . __('Last Synchronization', 'wazuh') . "</td>";
-      echo "<td>";
-      if (!empty($this->fields['last_sync'])) {
-         echo Html::convDateTime($this->fields['last_sync']);
-      } else {
-         echo __('Never', 'wazuh');
-      }
-      echo "</td>";
-      echo "</tr>";
-      
-      $this->showFormButtons($options);
-      
-      echo "<div class='center'>";
-      echo "<a class='btn btn-primary' href='" . $CFG_GLPI['root_doc'] . 
-         "/plugins/wazuh/front/agent.sync.php'>" . 
-         __('Synchronize Now', 'wazuh') . "</a>";
-      echo "</div>";
-      
-      return true;
+        global $CFG_GLPI;
+
+        $this->initForm($ID, $options);
+        $this->showFormHeader($options);
+
+        $this->fields['api_password'] = $this->decryptPwd($this->fields['api_password']);
+        TemplateRenderer::getInstance()->display(
+                "@wazuh/plugin_wazuh_config.form.twig",
+                [
+                    "item" => $this,
+                    "params" => $options,
+                ]
+        );
+        return true;
+
+//      echo "<tr class='tab_bg_1'>";
+//      echo "<td>" . __('Wazuh Server URL', 'wazuh') . "</td>";
+//      echo "<td>";
+//      echo Html::input('server_url', ['value' => $this->fields['server_url'], 'class' => 'form-control']);
+//      echo "</td>";
+//      echo "<td>" . __('API Port', 'wazuh') . "</td>";
+//      echo "<td>";
+//      echo Html::input('api_port', ['value' => $this->fields['api_port'], 'class' => 'form-control']);
+//      echo "</td>";
+//      echo "</tr>";
+//      
+//      echo "<tr class='tab_bg_1'>";
+//      echo "<td>" . __('API Username', 'wazuh') . "</td>";
+//      echo "<td>";
+//      echo Html::input('api_username', ['value' => $this->fields['api_username'], 'class' => 'form-control']);
+//      echo "</td>";
+//      echo "<td>" . __('API Password', 'wazuh') . "</td>";
+//      echo "<td>";
+//      echo Html::input('api_password', ['type' => 'password', 'value' => $this->decryptPwd($this->fields['api_password']), 'class' => 'form-control']);
+//      echo "<button type='button' style='position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;' onclick='togglePassword_{{ id }}()'>";
+//      echo "<i class='ti ti-eye'></i>";
+//      echo "</button>";
+//      echo "</td>";
+//      echo "</tr>";
+//      
+//      echo "<tr class='tab_bg_1'>";
+//      echo "<td>" . __('Synchronization Interval (seconds)', 'wazuh') . "</td>";
+//      echo "<td>";
+//      echo Html::input('sync_interval', ['type' => 'number', 'value' => $this->fields['sync_interval'], 'class' => 'form-control']);
+//      echo "</td>";
+//      echo "<td>" . __('Last Synchronization', 'wazuh') . "</td>";
+//      echo "<td>";
+//      if (!empty($this->fields['last_sync'])) {
+//         echo Html::convDateTime($this->fields['last_sync']);
+//      } else {
+//         echo __('Never', 'wazuh');
+//      }
+//      echo "</td>";
+//      echo "</tr>";
+//      
+//      $this->showFormButtons($options);
+//      
+//      echo "<div class='center'>";
+//      echo "<a class='btn btn-primary' href='" . $CFG_GLPI['root_doc'] . 
+//         "/plugins/wazuh/front/agent.sync.php'>" . 
+//         __('Synchronize Now', 'wazuh') . "</a>";
+//      echo "</div>";
+//      
+//      return true;
    }
 }
 

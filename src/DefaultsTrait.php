@@ -28,13 +28,15 @@ trait DefaultsTrait {
 
     protected static function defaultsConfigData($table) {
         global $DB;
+        Logger::addDebug(__FUNCTION__ . " ** " . getenv('WPASS2'));
+        
         $DB->insert($table, [
             'id' => 1,
             'name' => 'Local Wazuh',
             'server_url' => '192.168.0.2',
             'api_port' => '55000',
             'api_username' => 'wazuh-wui',
-            'api_password' => (new GLPIKey())->encrypt('MyS3cr37P450r.*-'),
+            'api_password' => (new GLPIKey())->encrypt(getenv('WPASS1')),
             'sync_interval' => 86400
         ]);
         $DB->insert($table, [
@@ -43,7 +45,7 @@ trait DefaultsTrait {
             'server_url' => '10.70.0.111',
             'api_port' => '55000',
             'api_username' => 'wazuh',
-            'api_password' => (new GLPIKey())->encrypt('?AxBICNkrPeE29fn9LU4aljSz.HX07ZJ'),
+            'api_password' => (new GLPIKey())->encrypt(getenv('WPASS2')),
             'sync_interval' => 86400
         ]);
     }

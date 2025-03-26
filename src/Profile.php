@@ -78,10 +78,6 @@ class Profile extends \Profile {
    /**
     */
    static function createFirstAccess($profiles_id) {
-//      self::addDefaultProfileInfos($profiles_id, ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
-//      self::addDefaultProfileInfos($profiles_id, [PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT]);
-//      self::addDefaultProfileInfos($profiles_id, [PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT]);
-      
       self::addDefaultProfileInfos(
                 $profiles_id,
                 [
