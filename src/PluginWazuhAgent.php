@@ -26,6 +26,7 @@ use Html;
 use Dropdown;
 use NetworkEquipment;
 use Computer;
+use DBConnection;
 /**
  * Description of PluginWazuhAgent
  *
@@ -101,6 +102,34 @@ class PluginWazuhAgent extends CommonDBTM {
       return 'plugin_wazuh_agents_id';
    }
    
+   public static function getByDeviceTypeAndId(string $itemtype, int $item_id): ?PluginWazuhAgent {
+        $agent = new self();
+        $criteria = [
+            'itemtype' => $itemtype,
+            'item_id' => $item_id
+        ];
+        $iterator = $agent->find($criteria);
+
+
+        $count = count($iterator);
+
+        if ($count === 0) {
+            return null;
+        }
+
+        if ($count > 1) {
+            throw new \RuntimeException("Element collection exceeded limit 1.");
+        }
+
+        $data = reset($iterator);
+
+        if (isset($data['id'])) {
+            $agent->getFromDB($data['id']);
+            return $agent;
+        }
+        return null;
+   }
+   
    /**
     * Funkcja instalacji tabeli agentów
     * @param object $migration
@@ -110,14 +139,20 @@ class PluginWazuhAgent extends CommonDBTM {
       global $DB;
       
       $table = self::getTable();
-      
-      if (!$DB->tableExists($table)) {
+        $default_charset = DBConnection::getDefaultCharset();
+        $default_collation = DBConnection::getDefaultCollation();
+        $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
+        $table = self::getTable();
+        $config_fkey = PluginWazuhConfig::getForeignKeyField();
+
+        if (!$DB->tableExists($table)) {
          $migration->displayMessage("Installing $table");
          
          $query = "CREATE TABLE IF NOT EXISTS `$table` (
                      `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                      `agent_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                     `$config_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `ip` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                      `version` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                      `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -138,6 +173,7 @@ class PluginWazuhAgent extends CommonDBTM {
                      KEY `status` (`status`),
                      KEY `item_id` (`item_id`),
                      KEY `entities_id` (`entities_id`),
+                     KEY `$config_fkey` (`$config_fkey`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
                      KEY `is_recursive` (`is_recursive`),
@@ -324,9 +360,8 @@ class PluginWazuhAgent extends CommonDBTM {
         $api_user = $config->fields['api_username'];
         $api_password = (new \GLPIKey())->decrypt($config->fields['api_password']);
 
-        // First - get the JWT token
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://$wazuh_server:$api_port/security/user/authenticate");
+        curl_setopt($ch, CURLOPT_URL, "$wazuh_server:$api_port/security/user/authenticate");
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
         curl_setopt($ch, CURLOPT_USERPWD, "$api_user:$api_password");
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -340,7 +375,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        Logger::addDebug("Authentication attempt to Wazuh API: $status_code, URL: https://$wazuh_server:$api_port/security/user/authenticate");
+        Logger::addDebug("Authentication attempt to Wazuh API: $status_code, URL: $wazuh_server:$api_port/security/user/authenticate");
 
         if ($curl_error) {
             Logger::addDebug("cURL Error: $curl_error");
@@ -377,7 +412,7 @@ class PluginWazuhAgent extends CommonDBTM {
 
         // Now use the token to fetch agents
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://$wazuh_server:$api_port/agents?pretty=true&limit=500");
+        curl_setopt($ch, CURLOPT_URL, "$wazuh_server:$api_port/agents?pretty=true&limit=500");
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'Content-Type: application/json',
             "Authorization: Bearer $token"
@@ -391,7 +426,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        Logger::addDebug("Fetching agents from Wazuh API: $status_code, URL: https://$wazuh_server:$api_port/agents?pretty=true&limit=500");
+        Logger::addDebug("Fetching agents from Wazuh API: $status_code, URL: $wazuh_server:$api_port/agents?pretty=true&limit=500");
 
         if ($curl_error) {
             Logger::addDebug("cURL Error: $curl_error");
@@ -486,7 +521,8 @@ class PluginWazuhAgent extends CommonDBTM {
                     'os_name' => $agent['os']['name'] ?? '',
                     'os_version' => $agent['os']['version'] ?? '',
                     'groups' => isset($agent['group']) ? json_encode($agent['group']) : '',
-                    'date_mod' => $currentDate
+                    'date_mod' => $currentDate,
+                    PluginWazuhConfig::getForeignKeyField() => $wazuhConfig->fields['id']
                 ];
             } catch (Exception $e) {
                 Logger::addError("Error preparing agent data for ID " . $agent['id'] . ": " . $e->getMessage());
