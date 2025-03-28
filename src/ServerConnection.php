@@ -49,7 +49,6 @@ class ServerConnection extends \CommonDropdown
     {
         global $DB;
         $query = self::generateCreateTableQuery();
-        Logger::addWarning("*********  " . $query);
         $DB->query($query) or die($DB->error());
     }
 
@@ -57,7 +56,6 @@ class ServerConnection extends \CommonDropdown
     {
         global $DB;
         $query = self::generateDropTableQuery();
-        Logger::addWarning("*********  " . $query);
         $DB->query($query) or die($DB->error());
     }
 
@@ -360,7 +358,7 @@ class ServerConnection extends \CommonDropdown
     #[\Override]
     public static function getTypeName($nb = 0)
     {
-        return _n("Server Connection", "Server Connections", $nb, "wazuh");
+        return _n('Server Connection', 'Server Connections', $nb, 'wazuh');
     }
 
     #[\Override]
@@ -369,33 +367,33 @@ class ServerConnection extends \CommonDropdown
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
-            "id" => 3,
-            "name" => __("URL", "wazuh"),
-            "table" => self::getTable(),
-            "field" => "url",
-            "searchtype" => "contains",
-            "datatype" => "text",
-            "massiveaction" => false,
+            'id' => 3,
+            'name' => __('URL', 'wazuh'),
+            'table' => self::getTable(),
+            'field' => 'url',
+            'searchtype' => 'contains',
+            'datatype' => 'text',
+            'massiveaction' => false,
         ];
 
         $tab[] = [
-            "id" => 4,
-            "name" => __("User Name", "wazuh"),
-            "table" => self::getTable(),
-            "field" => "user_name",
-            "searchtype" => "contains",
-            "datatype" => "text",
-            "massiveaction" => false,
+            'id' => 4,
+            'name' => __('User Name', 'wazuh'),
+            'table' => self::getTable(),
+            'field' => 'user_name',
+            'searchtype' => 'contains',
+            'datatype' => 'text',
+            'massiveaction' => false,
         ];
 
         $tab[] = [
-            "id" => 5,
-            "name" => __("Port", "wazuh"),
-            "table" => self::getTable(),
-            "field" => "port",
-            "searchtype" => "equals",
-            "datatype" => "number",
-            "massiveaction" => false,
+            'id' => 5,
+            'name' => __('Port', 'wazuh'),
+            'table' => self::getTable(),
+            'field' => 'port',
+            'searchtype' => 'equals',
+            'datatype' => 'number',
+            'massiveaction' => false,
         ];
 
         return $tab;

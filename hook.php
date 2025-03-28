@@ -38,6 +38,7 @@ require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\ServerConnection;
+use GlpiPlugin\Wazuh\Connection;
 
 /**
  * Plugin install process
@@ -53,12 +54,12 @@ function plugin_wazuh_install() {
 
     \GlpiPlugin\Wazuh\ServerConnection::createTable();
 
-    \GlpiPlugin\Wazuh\PluginWazuhConfig::install($migration);
+    \GlpiPlugin\Wazuh\Connection::install($migration);
     \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
     \GlpiPlugin\Wazuh\WazuhComputerTab::install($migration);
 
-    \GlpiPlugin\Wazuh\Profile::initProfile();
+    \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
 //    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
 
     $migration->executeMigration();
@@ -83,7 +84,7 @@ function plugin_wazuh_uninstall() {
     $migration->displayMessage("UnMigrating tables from " . PLUGIN_WAZUH_VERSION);
     
     \GlpiPlugin\Wazuh\PluginWazuhAgent::uninstall($migration);
-    \GlpiPlugin\Wazuh\PluginWazuhConfig::uninstall($migration);
+    \GlpiPlugin\Wazuh\Connection::uninstall($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::uninstall($migration);
     \GlpiPlugin\Wazuh\WazuhComputerTab::uninstall($migration);
 
@@ -97,7 +98,8 @@ function plugin_wazuh_getDropdown()
 
     if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            '\\GlpiPlugin\\Wazuh\\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
+            'GlpiPlugin\\Wazuh\\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
+            'GlpiPlugin\\Wazuh\\Connection' => Connection::getTypeName(Session::getPluralNumber()),
         ];
     }
 

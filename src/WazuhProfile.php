@@ -28,7 +28,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class Profile extends \Profile {
+class WazuhProfile extends \Profile {
     
      #[\Override]
      static function getTypeName($nb = 0) {
@@ -45,16 +45,11 @@ class Profile extends \Profile {
          }
       }
       
-//      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], ['plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT]);
-//      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], [PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT]);
-//      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'], [PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT]);
-      
-      self::addDefaultProfileInfos(
-                $_SESSION['glpiactiveprofile']['id'],
+      self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'],
                 [
-                    'plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT,
+                    ServerConnection::$rightname => \ALLSTANDARDRIGHT,
                     PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
-                    PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT
+                    Connection::$rightname => \ALLSTANDARDRIGHT
                 ]
         );
     }
@@ -66,34 +61,30 @@ class Profile extends \Profile {
       $profileRight = new \ProfileRight();
       
       foreach ($rights as $right => $value) {
-         if (!countElementsInTable('glpi_profilerights', 
-                                  ['profiles_id' => $profiles_id, 'name' => $right])) {
-            $profileRight->add(['profiles_id' => $profiles_id,
-                              'name'        => $right,
-                              'rights'      => $value]);
+         if (!countElementsInTable('glpi_profilerights', ['profiles_id' => $profiles_id, 'name' => $right])) {
+            $profileRight->add(['profiles_id' => $profiles_id, 'name' => $right, 'rights' => $value]);
          }
       }
    }
    
-   /**
-    */
-   static function createFirstAccess($profiles_id) {
-      self::addDefaultProfileInfos(
-                $profiles_id,
-                [
-                    'plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT,
-                    PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
-                    PluginWazuhConfig::$rightname => \ALLSTANDARDRIGHT
-                ]
-        );
-    }
+//   /**
+//    */
+//   static function createFirstAccess($profiles_id) {
+//      self::addDefaultProfileInfos(
+//                $profiles_id,
+//                [
+//                    'plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT,
+//                    PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
+//                    Connection::$rightname => \ALLSTANDARDRIGHT
+//                ]
+//        );
+//    }
    
    /**
     */
    static function install(\Migration $migration) {
       self::initProfile();
    }
-    
     
 }
 

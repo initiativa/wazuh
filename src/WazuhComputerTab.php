@@ -49,7 +49,30 @@ class WazuhComputerTab extends \CommonDBChild {
 
     #[\Override]
     function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
-        return PluginConfig::APP_NAME;
+        if (!$withtemplate && $item instanceof Computer) {
+            global $DB;
+            $count = $this->countElementsForComputer($item->getID());
+            return self::createTabEntry(__(PluginConfig::APP_NAME, PluginConfig::APP_CODE), $count);
+        }
+        return '';
+    }
+
+    private function countElementsForComputer($computers_id) {
+        global $DB;
+
+        $count = 0;
+        $iterator = $DB->request([
+            'COUNT' => 'count',
+            'FROM' => $this->getTable(),
+            'WHERE' => [Computer::getForeignKeyField() => $computers_id]
+        ]);
+
+        if (count($iterator)) {
+            $data = $iterator->current();
+            $count = $data['count'];
+        }
+
+        return $count;
     }
 
     private static function createItem($result, \Computer $computer) {
@@ -92,7 +115,7 @@ class WazuhComputerTab extends \CommonDBChild {
             Logger::addDebug($item->fields['id']);
             $agent = PluginWazuhAgent::getByDeviceTypeAndId($item->getType(), $item->fields['id']);
             if ($agent) {
-                $config = PluginWazuhConfig::getById($agent->fields[PluginWazuhConfig::getForeignKeyField()]);
+                $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
                     $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
@@ -212,7 +235,7 @@ class WazuhComputerTab extends \CommonDBChild {
                      `v_published` timestamp DEFAULT NULL,
                      `v_enum` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_severity` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `v_reference` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `v_reference` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `v_score` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,

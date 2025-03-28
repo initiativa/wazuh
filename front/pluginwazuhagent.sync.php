@@ -5,14 +5,14 @@
 
 include ('../../../inc/includes.php');
 
-use GlpiPlugin\Wazuh\PluginWazuhConfig;
+use GlpiPlugin\Wazuh\Connection;
 use GlpiPlugin\Wazuh\PluginWazuhAgent;
 
 // Check if user has access to this page
 //Session::checkRight("plugin_wazuh_agent", UPDATE);
 
 // Get configuration
-$config = new PluginWazuhConfig();
+$config = new Connection();
 $config->getFromDB(1);
 
 // Synchronize agents

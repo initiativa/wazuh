@@ -53,10 +53,6 @@ define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "10.0.11");
 // Maximum GLPI version, exclusive
 define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "10.0.99");
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 /**
  * Init hooks of the plugin.
  * REQUIRED
@@ -66,12 +62,16 @@ error_reporting(E_ALL);
 function plugin_init_wazuh() {
     global $PLUGIN_HOOKS;
 
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+
     $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT][PluginConfig::APP_CODE] = true;
 
     if (Plugin::isPluginActive(PluginConfig::APP_CODE)) {
 
         if (Session::haveRight('config', UPDATE)) {
-            $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/config.php';
+            $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/connection.php';
             Logger::addNotice(__FUNCTION__ . " plugin configuration registered.");
 
             $PLUGIN_HOOKS[Hooks::USE_MASSIVE_ACTION][PluginConfig::APP_CODE] = true;
@@ -83,9 +83,10 @@ function plugin_init_wazuh() {
 
         $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
             'admin' => [
-                'GlpiPlugin\Wazuh\PluginWazuhConfig',
                 'GlpiPlugin\Wazuh\PluginWazuhAgent'],
-            'config' => 'GlpiPlugin\Wazuh\ServerConnection'
+            'config' => [
+                'GlpiPlugin\Wazuh\ServerConnection'
+            ]
         ];
 
         $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];
@@ -102,7 +103,7 @@ function plugin_wazuh_registerClasses() {
         'addtabon' => ['NetworkEquipment']
     ]);
     Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhAgent');
-    Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhConfig');
+    Plugin::registerClass('GlpiPlugin\Wazuh\Connection');
     Plugin::registerClass('GlpiPlugin\Wazuh\ServerConnection');
 //    Plugin::registerClass('GlpiPlugin\Wazuh\WazuhAgentAssetsRelation', [
 //        'addtabon' => ['Computer', 'NetworkEquipment']

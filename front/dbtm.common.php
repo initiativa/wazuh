@@ -12,7 +12,7 @@ if (!$common::canView()) {
 Html::header(
     $common::getTypeName(2),
     $_SERVER['PHP_SELF'],
-    'admin',
+    $place ?? 'admin',
     $common::class
 );
 

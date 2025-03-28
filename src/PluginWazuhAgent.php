@@ -143,7 +143,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $default_collation = DBConnection::getDefaultCollation();
         $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
         $table = self::getTable();
-        $config_fkey = PluginWazuhConfig::getForeignKeyField();
+        $config_fkey = Connection::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
          $migration->displayMessage("Installing $table");
@@ -353,7 +353,7 @@ class PluginWazuhAgent extends CommonDBTM {
     * Fetch Wazuh data
     * @return array
     */
-   static function fetchAgentsFromWazuh(PluginWazuhConfig $config) {
+   static function fetchAgentsFromWazuh(Connection $config) {
 
         $wazuh_server = $config->fields['server_url'];
         $api_port = $config->fields['api_port'];
@@ -455,10 +455,10 @@ class PluginWazuhAgent extends CommonDBTM {
 
     
     static function syncAgents(): bool {
-        $ids = (new PluginWazuhConfig())->find();
+        $ids = (new Connection())->find();
         foreach ($ids as $id) {
             Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
-            $wazuhConfig = new PluginWazuhConfig();
+            $wazuhConfig = new Connection();
             $wazuhConfig->getFromDB($id['id']);
             if (!self::syncAgent($wazuhConfig)) {
                 return false;
@@ -472,7 +472,7 @@ class PluginWazuhAgent extends CommonDBTM {
     * @return boolean
     */
     
-   static function syncAgent(PluginWazuhConfig $wazuhConfig): bool {
+   static function syncAgent(Connection $wazuhConfig): bool {
         global $DB;
 
         $agents = self::fetchAgentsFromWazuh($wazuhConfig);
@@ -522,7 +522,7 @@ class PluginWazuhAgent extends CommonDBTM {
                     'os_version' => $agent['os']['version'] ?? '',
                     'groups' => isset($agent['group']) ? json_encode($agent['group']) : '',
                     'date_mod' => $currentDate,
-                    PluginWazuhConfig::getForeignKeyField() => $wazuhConfig->fields['id']
+                    Connection::getForeignKeyField() => $wazuhConfig->fields['id']
                 ];
             } catch (Exception $e) {
                 Logger::addError("Error preparing agent data for ID " . $agent['id'] . ": " . $e->getMessage());
@@ -717,7 +717,6 @@ class PluginWazuhAgent extends CommonDBTM {
                                 value: parts[1]
                             }).appendTo('form');
                         } else {
-                            // Gdy wybrano pusty element
                             $('<input>').attr({
                                 type: 'hidden',
                                 name: 'itemtype',

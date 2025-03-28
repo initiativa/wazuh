@@ -5,6 +5,9 @@
 {% block form_fields %}
     {% set rand = random() %}
     
+    {{ fields.textField('name', item.fields['name'], __('Connection Name', 'wazuh'), {
+        'rand': rand
+    }) }}
     {{ fields.textField('server_url', item.fields['server_url'], __('Wazuh Server URL', 'wazuh'), {
         'rand': rand
     }) }}
@@ -26,8 +29,6 @@
         'rand': rand
     }) }}
 
-    <div></div>
-    
     {{ fields.textField('indexer_url', item.fields['indexer_url'], __('Indexer Server URL', 'wazuh'), {
         'rand': rand
     }) }}

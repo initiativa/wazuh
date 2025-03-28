@@ -29,7 +29,7 @@
  */
 
 include('../../../inc/includes.php');
-use GlpiPlugin\Wazuh\PluginWazuhConfig;
+use GlpiPlugin\Wazuh\Connection;
 
-$common = new PluginWazuhConfig();
-include('dbtm.common.php');
+$dropdown = new Connection();
+include(GLPI_ROOT . '/front/dropdown.common.php');

@@ -60,7 +60,7 @@ class PluginWazuhMenu extends CommonGLPI {
       }
       
       if (Session::haveRight('config', UPDATE)) {
-         $menu['options']['config']['title'] = PluginWazuhConfig::getTypeName(2);
+         $menu['options']['config']['title'] = Connection::getTypeName(2);
          $menu['options']['config']['page'] = "/plugins/wazuh/front/config.form.php?id=1";
          $menu['options']['config']['icon'] = "fas fa-cog";
       }
