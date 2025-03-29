@@ -29,7 +29,7 @@ if (isset($_POST["add"])) {
     $item->redirectToList();
 }
 
-Html::header($item::getTypeName(), $_SERVER['PHP_SELF'], '\\GlpiPlugin\\Wazuh\\PluginWazuhMenu', $item::class, ['config']);
+Html::header($item::getTypeName(), $_SERVER['PHP_SELF'], '\GlpiPlugin\Wazuh\PluginWazuhMenu', $item::class, ['config']);
 
 if (isset($_GET["id"])) {
     $item->check($_GET["id"], READ);

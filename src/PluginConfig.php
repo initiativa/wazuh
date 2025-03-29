@@ -30,6 +30,7 @@ class PluginConfig
 {
     public const APP_NAME = "Wazuh";
     public const APP_CODE = "wazuh";
+    public const VQUERY_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_time";
 
     public const PLUGIN_ROOT = GLPI_ROOT . "/plugins/" . self::APP_CODE;
 

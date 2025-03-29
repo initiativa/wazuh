@@ -98,8 +98,8 @@ function plugin_wazuh_getDropdown()
 
     if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            'GlpiPlugin\\Wazuh\\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
-            'GlpiPlugin\\Wazuh\\Connection' => Connection::getTypeName(Session::getPluralNumber()),
+            'GlpiPlugin\Wazuh\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
+            'GlpiPlugin\Wazuh\Connection' => Connection::getTypeName(Session::getPluralNumber()),
         ];
     }
 

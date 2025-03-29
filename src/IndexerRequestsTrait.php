@@ -166,6 +166,17 @@ trait IndexerRequestsTrait {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
 
+        $currentTime = time();
+
+        $lastExecutionTime = isset($_SESSION[PluginConfig::VQUERY_TIME_SESSION_KEY]) ? $_SESSION[PluginConfig::VQUERY_TIME_SESSION_KEY] : -1;
+
+        // 5 minutes = 300 seconds
+        if ($currentTime - $lastExecutionTime < 300) {
+            return [];
+        }
+
+        $_SESSION[PluginConfig::VQUERY_TIME_SESSION_KEY] = $currentTime;
+
         $query = [
             'size' => $size,
             'from' => $offset,

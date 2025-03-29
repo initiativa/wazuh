@@ -23,7 +23,14 @@ use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use Migration;
 use Computer;
+use Ticket;
 use DBConnection;
+use Html;
+use Entity;
+use Search;
+use Session;
+use ITILFollowup;
+use Item_Ticket;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -112,40 +119,43 @@ class WazuhComputerTab extends \CommonDBChild {
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
         Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
         if ($item instanceof Computer) {
-            Logger::addDebug($item->fields['id']);
+            Logger::addDebug($item->fields['name']);
             $agent = PluginWazuhAgent::getByDeviceTypeAndId($item->getType(), $item->fields['id']);
             if ($agent) {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
                     $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
-                    foreach ($result['data']['hits']['hits'] as $res) {
-                        Logger::addDebug(json_encode($res['_source']['vulnerability']['severity']) . " -- " . json_encode($res['_id']));
-                        self::createItem($res, $item);
+                    if (!empty($result)) {
+                        foreach ($result['data']['hits']['hits'] as $res) {
+//                        Logger::addDebug(json_encode($res['_source']['vulnerability']['severity']) . " -- " . json_encode($res['_id']));
+                            self::createItem($res, $item);
+                        }
                     }
-                    $dropdown_options = [
-                        'name' => 'plugin_wazuh_agents_id',
-                        'value' => $agent->fields['id'],
-                        'entity' => $_SESSION['glpiactive_entity'],
-                        'rand' => mt_rand(),
-                        'disabled' => true,
-                        'width' => '30em'
-                    ];
-//                    PluginWazuhAgent::dropdown($dropdown_options);
 
-                    $params = [
+                    $p = [
+                        'addhidden' => [// some hidden inputs added to the criteria form
+                            'hidden_input' => 'OK'
+                        ],
+                        'actionname' => 'preview', //change the submit button name
+                        'actionvalue' => __('Preview'), //change the submit button label
+                    ];
+                    Search::showGenericSearch(WazuhComputerTab::class, $p);
+
+                    $options = [
+                        'reset' => true,
                         'criteria' => [
                             [
-                                'field' => 4, // ID pola v_severity
-                                'searchtype' => 'all',
-                                'value' => ''
+                                'link' => 'AND',
+                                'field' => 7,
+                                'searchtype' => 'equals',
+                                'value' => $item->getID()
                             ]
                         ],
-                        'sort' => 4,
-                        'order' => 'DESC'
+                        'display_type' => Search::HTML_OUTPUT
                     ];
-
-                    \Search::show(WazuhComputerTab::class, $params);
+                    Search::showList(WazuhComputerTab::class, $options);
+                    
                 }
             } else {
                 $dropdown_options = [
@@ -190,9 +200,7 @@ class WazuhComputerTab extends \CommonDBChild {
             'field' => 'v_description',
             'name' => __('Description', PluginConfig::APP_CODE),
             'datatype' => 'text',
-            'massiveaction' => false,
-            'nosearch' => true,
-            'nodisplay' => true,
+            'massiveaction' => false
         ];
 
         $tab[] = [
@@ -204,7 +212,291 @@ class WazuhComputerTab extends \CommonDBChild {
             'massiveaction' => false
         ];
 
+        $tab[] = [
+            'id' => 7,
+            'table' => Computer::getTable(),
+            'field' => 'name',
+            'name' => __('Computer', PluginConfig::APP_CODE),
+            'datatype' => 'dropdown',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Computer::getForeignKeyField()
+            ]
+        ];
+
+        $tab[] = [
+            'id' => 8,
+            'table' => Ticket::getTable(),
+            'field' => 'name',
+            'name' => __('Ticket', PluginConfig::APP_CODE),
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Ticket::getForeignKeyField()
+            ]
+        ];
+
         return $tab;
+    }
+    
+    #[\Override]
+    public static function canCreate(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public static function canDelete(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public static function canPurge(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public static function canUpdate(): bool {
+        return true;
+    }
+
+    
+    /**
+     * @param integer $ID
+     * @param array $options
+     * @return boolean
+     */
+    #[\Override]
+    function showForm($ID, array $options = []) {
+        global $CFG_GLPI;
+
+        $this->initForm($ID, $options);
+        $this->showFormHeader($options);
+
+        $options['formfooter'] = true;
+        $options['formactions'] = [
+            Html::submit(__('Save'), ['name' => 'update', 'class' => 'btn btn-primary me-2']),
+            Html::link(__('Back to list'), 'front/vulnerability.php', ['class' => 'btn btn-outline-secondary'])
+        ];
+
+        TemplateRenderer::getInstance()->display('@wazuh/device_tab.html.twig', [
+            'item' => $this,
+            'params' => $options,
+        ]);
+        return true;
+    }
+
+    
+    #[\Override]
+    public function getSpecificMassiveActions($checkitem = null) {
+        $actions = parent::getSpecificMassiveActions($checkitem);
+
+        $actions["GlpiPlugin\Wazuh\WazuhComputerTab:create_ticket"] = __("Create ticket", PluginConfig::APP_CODE);
+
+        return $actions;
+    }
+
+    static function showMassiveActionsSubForm(\MassiveAction $ma) {
+        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction());
+        switch ($ma->getAction()) {
+            case "create_ticket":
+                echo "<div class='d-flex flex-column align-items-center gap-2 mb-2'>";
+
+                echo "<div class='d-flex gap-2 align-items-baseline'>";
+                echo "<label for='ticket_title'>" . __('Title', PluginConfig::APP_CODE) . ":</label>";
+                echo Html::input(
+                        'ticket_title',
+                        [
+                            'id' => 'ticket_title',
+                            'value' => 'Wazuh alert',
+                            'class' => 'form-control',
+                            'required' => true,
+                            'display' => false
+                        ]
+                );
+                echo "</div>";
+                echo "<span class='align-self-start'>" . __("Additional ticket comment:", PluginConfig::APP_CODE) . "</span>";
+                echo Html::textarea([
+                    "name" => "ticket_comment",
+                    "value" => "",
+                    "cols" => 50,
+                    "rows" => 4,
+                    "display" => false
+                ]);
+                echo Entity::dropdown([
+                    'name' => 'entities_id',
+                    'value' => \Session::getActiveEntity(),
+                    'entity' => $_SESSION['glpiactiveentities'],
+                    'rand' => mt_rand(),
+                    'display' => false
+                ]);
+//                echo Html::submit(__('Create', PluginConfig::APP_CODE), [
+//                    'name' => 'ticket_submit',
+//                    'class' => 'btn btn-primary w-50',
+//                    'icon' => 'fas fa-save',
+//                ]);
+
+                echo "</div>";
+                break;
+        }
+        return parent::showMassiveActionsSubForm($ma);
+    }
+
+    static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
+        global $DB;
+
+        Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
+        switch ($ma->getAction()) {
+            case "create_ticket":
+                $input = $ma->getInput();
+                Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . Logger::implodeWithKeys($input));
+                
+                if (!isset($input['entities_id'])) {
+                    Logger::addWarning("Missing entity while ticket creating.");
+                    return false;
+                }
+
+                if (!isset($input['ticket_title']) || empty($input['ticket_title'])) {
+                    Logger::addWarning("Missing ticket title while ticket creating.");
+                    return false;
+                }
+ 
+                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment']);
+                if ($ticket_id) {
+                    $ticketUrl = Ticket::getFormURLWithID($ticket_id);
+                    $message = sprintf(
+                            __('Ticket created successfully. <a href="%s">View ticket #%s</a>'),
+                            $ticketUrl,
+                            $ticket_id
+                    );
+                    Session::addMessageAfterRedirect($message, true, INFO);
+                    Html::back();
+                }
+                return;
+        }
+        parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
+    }
+
+    /**
+     * Ticket creation
+     * 
+     * @param int $entity_id ID encji
+     * @param int $computer_id 
+     * @param int $network_id ID 
+     * @param string $title
+     * @return int|boolean ticket ID or false
+     */
+    private static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "") {
+        global $DB;
+        $full_cves = [];
+
+        $cve_id = reset($cves);
+        
+        $cve = WazuhComputerTab::getById($cve_id);
+        $computer_id = $cve->fields[Computer::getForeignKeyField()];
+        $network_id = null;
+        
+        if (!$computer_id && !$network_id) {
+            return false;
+        }
+
+        $content = __('Wazuh auto ticket', PluginConfig::APP_CODE) . "<br>";
+        Logger::addDebug(__FUNCTION__ . " Computer: $computer_id");
+
+        if ($computer_id) {
+            $computer = new Computer();
+            if ($computer->getFromDB($computer_id)) {
+        Logger::addDebug(__FUNCTION__ . " Computer: $computer_id");
+                $computer_name = $computer->fields['name'];
+                $content = $comment  . "<br>";
+                $content .= sprintf(
+                        __('Linked Computer: %s', PluginConfig::APP_CODE) . "<br>",
+                        "<a href='computer.form.php?id=" . $computer_id . "'>" . $computer_name . "</a>"
+                );
+                $content .= "Links: ";
+                foreach ($cves as $cveid) {
+                    $cve = WazuhComputerTab::getById($cveid);
+                    array_push($full_cves, $cve);
+                    $name = $cve->fields['name'];
+                    $content .= sprintf(
+                            " <a href='../plugins/wazuh/front/wazuhcomputertab.form.php?id=$cveid'>$name</a> "
+                    );
+                }
+            }
+        }
+
+        if ($network_id) {
+            $network = new NetworkEquipment();
+            if ($network->getFromDB($network_id)) {
+                $network_name = $network->fields['name'];
+                $content .= sprintf(
+                        __('Network Eq Link: %s', PluginConfig::APP_CODE) . "<br>",
+                        "<a href='networkequipment.form.php?id=" . $network_id . "'>" . $network_name . "</a>"
+                );
+                $content .= sprintf(
+                        __('Link do zakładki Wazuh: %s', PluginConfig::APP_CODE),
+                        "<a href='../plugins/wazuh/front/wazuhnetworktab.form.php?id=" . $network_id . "'>Details</a>"
+                );
+            }
+        }
+
+        $ticket = new Ticket();
+        $ticket_input = [
+            'name' => $title,
+            'content' => \Toolbox::addslashes_deep($content),
+            'status' => Ticket::INCOMING,
+            'priority' => 3,
+            'urgency' => 3,
+            'impact' => 3,
+            'entities_id' => $entity_id,
+            '_add_items' => [],
+        ];
+
+        $ticket_id = $ticket->add($ticket_input);
+        
+        if ($ticket_id) {
+            //linking cve's to ticket
+            foreach ($full_cves as $cve) {
+                $cve->fields[Ticket::getForeignKeyField()] = $ticket_id;
+                $cve->update($cve->fields);
+            }
+            
+            $additional_content = __('More details in Device Wazuh menu.', PluginConfig::APP_CODE);
+
+            $followup = new ITILFollowup();
+            $followup_input = [
+                'itemtype' => 'Ticket',
+                'items_id' => $ticket_id,
+                'content' => $additional_content,
+                'is_private' => 0,
+            ];
+
+            $followup->add($followup_input);
+            
+            
+            if ($computer_id) {
+                $ticket_item = new Item_Ticket();
+                $ticket_item_input = [
+                    'tickets_id' => $ticket_id,
+                    'itemtype' => 'Computer',
+                    'items_id' => $computer_id
+                ];
+                $ticket_item->add($ticket_item_input);
+            }
+
+            if ($network_id) {
+                $ticket_item = new Item_Ticket();
+                $ticket_item_input = [
+                    'tickets_id' => $ticket_id,
+                    'itemtype' => 'NetworkEquipment',
+                    'items_id' => $network_id
+                ];
+                $ticket_item->add($ticket_item_input);
+            }
+        }
+
+        return $ticket_id;
     }
 
     /**
@@ -218,7 +510,8 @@ class WazuhComputerTab extends \CommonDBChild {
         $default_collation = DBConnection::getDefaultCollation();
         $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
         $table = self::getTable();
-        $agent_fkey = Computer::getForeignKeyField();
+        $computer_fkey = Computer::getForeignKeyField();
+        $ticket_fkey = \Ticket::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
             $migration->displayMessage("Installing $table");
@@ -227,7 +520,8 @@ class WazuhComputerTab extends \CommonDBChild {
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `key` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `$agent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `$computer_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `v_category` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `v_classification` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `v_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
@@ -243,8 +537,9 @@ class WazuhComputerTab extends \CommonDBChild {
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
-                     KEY `$agent_fkey` (`$agent_fkey`),
-                     KEY `key` (`key`),
+                     KEY `$computer_fkey` (`$computer_fkey`),
+                     KEY `$ticket_fkey` (`$ticket_fkey`),
+                     UNIQUE KEY `key` (`key`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
