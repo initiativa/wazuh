@@ -131,6 +131,76 @@ abstract class DeviceTab extends \CommonDBChild {
         return parent::showMassiveActionsSubForm($ma);
     }
 
+    
+    #[\Override]
+    public function rawSearchOptions() {
+        $tab = parent::rawSearchOptions();
+
+        $tab[] = [
+            'id' => 3,
+            'name' => __('Key', PluginConfig::APP_CODE),
+            'table' => static::getTable(),
+            'field' => 'key',
+            'datatype' => 'text',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 4,
+            'name' => __('Severity', PluginConfig::APP_CODE),
+            'table' => static::getTable(),
+            'field' => 'v_severity',
+            'datatype' => 'text',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 5,
+            'table' => static::getTable(),
+            'field' => 'v_description',
+            'name' => __('Description', PluginConfig::APP_CODE),
+            'datatype' => 'text',
+            'massiveaction' => false
+        ];
+
+        $tab[] = [
+            'id' => 6,
+            'table' => static::getTable(),
+            'field' => 'v_reference',
+            'name' => __('Reference', PluginConfig::APP_CODE),
+            'datatype' => 'weblink',
+            'massiveaction' => false
+        ];
+
+        $tab[] = [
+            'id' => 8,
+            'table' => Ticket::getTable(),
+            'field' => 'name',
+            'name' => __('Ticket', PluginConfig::APP_CODE),
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Ticket::getForeignKeyField()
+            ]
+        ];
+
+        $tab[] = [
+            'id' => 9,
+            'table' => Ticket::getTable(),
+            'field' => 'status',
+            'name' => __('Ticket Status', PluginConfig::APP_CODE),
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Ticket::getForeignKeyField()
+            ]
+        ];
+
+        return $tab;
+    }
+
     /**
      * @param object $migration
      * @return boolean

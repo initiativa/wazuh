@@ -162,42 +162,6 @@ class NetworkEqTab extends DeviceTab {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
-            'id' => 3,
-            'name' => __('Key', PluginConfig::APP_CODE),
-            'table' => self::getTable(),
-            'field' => 'key',
-            'datatype' => 'text',
-            'massiveaction' => false,
-        ];
-
-        $tab[] = [
-            'id' => 4,
-            'name' => __('Severity', PluginConfig::APP_CODE),
-            'table' => self::getTable(),
-            'field' => 'v_severity',
-            'datatype' => 'text',
-            'massiveaction' => false,
-        ];
-        
-         $tab[] = [
-            'id' => 5,
-            'table' => $this->getTable(),
-            'field' => 'v_description',
-            'name' => __('Description', PluginConfig::APP_CODE),
-            'datatype' => 'text',
-            'massiveaction' => false
-        ];
-
-        $tab[] = [
-            'id' => 6,
-            'table' => $this->getTable(),
-            'field' => 'v_reference',
-            'name' => __('Reference', PluginConfig::APP_CODE),
-            'datatype' => 'weblink',
-            'massiveaction' => false
-        ];
-
-        $tab[] = [
             'id' => 7,
             'table' => NetworkEquipment::getTable(),
             'field' => 'name',
@@ -207,19 +171,6 @@ class NetworkEqTab extends DeviceTab {
             'joinparams' => [
                 'jointype' => 'standard',
                 'foreignkey' => NetworkEquipment::getForeignKeyField()
-            ]
-        ];
-
-        $tab[] = [
-            'id' => 8,
-            'table' => Ticket::getTable(),
-            'field' => 'name',
-            'name' => __('Ticket', PluginConfig::APP_CODE),
-            'datatype' => 'itemlink',
-            'massiveaction' => true,
-            'joinparams' => [
-                'jointype' => 'standard',
-                'foreignkey' => Ticket::getForeignKeyField()
             ]
         ];
 
@@ -418,7 +369,7 @@ class NetworkEqTab extends DeviceTab {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\NetworkEqTab' => [1, 3, 4, 8]
+                        'GlpiPlugin\Wazuh\NetworkEqTab' => [1, 3, 4, 8 ,9, 7]
                     ],
             );
         }
