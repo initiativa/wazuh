@@ -84,12 +84,17 @@ class ComputerTab extends DeviceTab {
             'name' => $result['_source']['vulnerability']['id'],
             'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
             'v_severity' => $result['_source']['vulnerability']['severity'],
-//            'v_detected' => new \DateTime($result['_source']['vulnerability']['detected_at']),
-//            'v_published' => new \DateTime($result['_source']['vulnerability']['published_at']),
+            'v_detected' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
+            'v_published' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
             'v_enum' => $result['_source']['vulnerability']['enumeration'],
             'v_category' => $result['_source']['vulnerability']['category'],
             'v_classification' => $result['_source']['vulnerability']['classification'],
             'v_reference' => $result['_source']['vulnerability']['reference'],
+            'p_name' => $result['_source']['package']['name'],
+            'p_version' => $result['_source']['package']['version'],
+            'p_type' => $result['_source']['package']['type'],
+            'p_description' => $DB->escape($result['_source']['package']['description']),
+            'p_installed' => self::convertIsoToMysqlDatetime($result['_source']['package']['installed']),
         ];
 
         if (!$founded) {
@@ -262,7 +267,7 @@ class ComputerTab extends DeviceTab {
                 foreach ($cves as $cveid) {
                     $cve = ComputerTab::getById($cveid);
                     array_push($full_cves, $cve);
-                    $name = $cve->fields['name'];
+                    $name = $cve->fields['name'] . "/" . $cve->fields['p_name'];
                     $content .= sprintf(
                             " <a href='../plugins/wazuh/front/computertab.form.php?id=$cveid'>$name</a> "
                     );
@@ -351,6 +356,11 @@ class ComputerTab extends DeviceTab {
                      `v_severity` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_reference` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `v_score` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `p_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `p_version` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `p_installed` TIMESTAMP DEFAULT NULL,
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',

@@ -137,6 +137,15 @@ abstract class DeviceTab extends \CommonDBChild {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
+            'id' => 2,
+            'name' => __('Id', PluginConfig::APP_CODE),
+            'table' => static::getTable(),
+            'field' => 'id',
+            'datatype' => 'number',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
             'id' => 3,
             'name' => __('Key', PluginConfig::APP_CODE),
             'table' => static::getTable(),

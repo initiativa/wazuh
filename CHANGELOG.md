@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ToDo
+- pagination for wazuhs fetching elements
+- consider how to group/collapse the same cve's
+
+## [0.0.3]
+
+### Added
+- Ticket creation for vulnerable devices (Computer, NetworkEq): Wazuh tab
+
+## [0.0.2] 2025-03-31
+
 ### Added
 
-- v0.0.1 Plugin initial.
-- v0.0.2 Device Wazuh's Tabs
+- Plugin initial.
+- Device Wazuh's Tabs

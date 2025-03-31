@@ -1,120 +1,130 @@
 {% extends 'generic_show_form.html.twig' %}
 
 {% block form_fields %}
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Name') }}</label>
-         <span class="form-control">{{ item.fields['name'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Name') }}</label>
+            <span class="form-control">{{ item.fields['name'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Key') }}</label>
-         <span class="form-control">{{ item.fields['key'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Key') }}</label>
+            <span class="form-control">{{ item.fields['key'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Category') }}</label>
-         <span class="form-control">{{ item.fields['v_category'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Category') }}</label>
+            <span class="form-control">{{ item.fields['v_category'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Classification') }}</label>
-         <span class="form-control">{{ item.fields['v_classification'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Classification') }}</label>
+            <span class="form-control">{{ item.fields['v_classification'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Severity') }}</label>
-         <span class="form-control">{{ item.fields['v_severity'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Severity') }}</label>
+            <span class="form-control">{{ item.fields['v_severity'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Score') }}</label>
-         <span class="form-control">{{ item.fields['v_score'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Score') }}</label>
+            <span class="form-control">{{ item.fields['v_score'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Enum') }}</label>
-         <span class="form-control">{{ item.fields['v_enum'] }}</span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Enum') }}</label>
+            <span class="form-control">{{ item.fields['v_enum'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Detected') }}</label>
-         <span class="form-control">
-            {% if item.fields['v_detected'] %}
-               {{ item.fields['v_detected']|date('Y-m-d H:i:s') }}
-            {% else %}
-               -
-            {% endif %}
-         </span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Detected') }}</label>
+            <span class="form-control">
+                {% if item.fields['v_detected'] %}
+                    {{ item.fields['v_detected']|date('Y-m-d H:i:s') }}
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Published') }}</label>
-         <span class="form-control">
-            {% if item.fields['v_published'] %}
-               {{ item.fields['v_published']|date('Y-m-d H:i:s') }}
-            {% else %}
-               -
-            {% endif %}
-         </span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Published') }}</label>
+            <span class="form-control">
+                {% if item.fields['v_published'] %}
+                    {{ item.fields['v_published']|date('Y-m-d H:i:s') }}
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </div>
+    </div>
 
-   <div class="col-12">
-      <div class="form-group">
-         <label class="form-label">{{ __('Description') }}</label>
-         <div class="form-control-plaintext border p-2">{{ item.fields['v_description']|nl2br }}</div>
-      </div>
-   </div>
+    <div class="col-12 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Description') }}</label>
+            <div class="form-control-plaintext border p-2 text-start">{{ item.fields['v_description']|nl2br }}</div>
+        </div>
+    </div>
 
-   <div class="col-12">
-      <div class="form-group">
-         <label class="form-label">{{ __('References') }}</label>
-         <div class="form-control-plaintext border p-2">{{ item.fields['v_reference']|nl2br }}</div>
-      </div>
-   </div>
+    <div class="col-12 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('References') }}</label>
+            <div class="form-control-plaintext border p-2">{{ item.fields['v_reference']|nl2br }}</div>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Creation date') }}</label>
-         <span class="form-control">
-            {% if item.fields['date_creation'] %}
-               {{ item.fields['date_creation']|date('Y-m-d H:i:s') }}
-            {% else %}
-               -
-            {% endif %}
-         </span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Package name') }}</label>
+            <span class="form-control">{{ item.fields['p_name'] }}</span>
+        </div>
+    </div>
 
-   <div class="col-12 col-sm-6 col-md-4">
-      <div class="form-group">
-         <label class="form-label">{{ __('Last update') }}</label>
-         <span class="form-control">
-            {% if item.fields['date_mod'] %}
-               {{ item.fields['date_mod']|date('Y-m-d H:i:s') }}
-            {% else %}
-               -
-            {% endif %}
-         </span>
-      </div>
-   </div>
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Package type') }}</label>
+            <span class="form-control">{{ item.fields['p_type'] }}</span>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Package installed') }}</label>
+            <span class="form-control">
+                {% if item.fields['p_installed'] %}
+                    {{ item.fields['p_installed']|date('Y-m-d H:i:s') }}
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <div class="col-12 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Package description') }}</label>
+            <div class="form-control-plaintext border p-2 text-start">{{ item.fields['p_description']|nl2br }}</div>
+        </div>
+    </div>
+
+
 {% endblock %}
 
 {% block more_fields %}

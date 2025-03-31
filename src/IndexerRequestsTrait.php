@@ -212,4 +212,23 @@ trait IndexerRequestsTrait {
 
         return self::executeQuery($query);
     }
+    
+    protected static function convertIsoToMysqlDatetime($isoDate) {
+        if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z') {
+            return null;
+        }
+
+        try {
+            $dateTime = new \DateTime($isoDate);
+            $year = (int) $dateTime->format('Y');
+
+            if ($year <= 1) {
+                return null;
+            }
+
+            return $dateTime->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            return null;
+        }
+    }
 }
