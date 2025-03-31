@@ -1,0 +1,66 @@
+{% import 'components/form/fields_macros.html.twig' as fields %}
+{% extends "generic_show_form.html.twig" %}
+
+{% block form_fields %}
+   {% set rand = random() %}
+   
+   {{ fields.textField(
+      'name',
+      item.fields['name'],
+      __('Name'),
+      {
+         'rand': rand
+      }
+   ) }}
+   
+   {{ fields.textField(
+      'url',
+      item.fields['url'],
+      __('url', 'wazuh'),
+      {
+         'rand': rand
+      }
+   ) }}
+
+   {{ fields.numberField(
+          'port',
+          item.fields['port'] ?? '',
+          __('port', 'wazuh')
+      ) }}
+   
+   
+   {{ fields.textField(
+      'user_name',
+      item.fields['user_name'],
+      __('user_name', 'wazuh'),
+      {
+         'rand': rand
+      }
+   ) }}
+   
+   {{ fields.passwordField(
+      'password',
+      item.fields['password'],
+      __('password', 'wazuh'),
+      {
+         'rand': rand
+      }
+   ) }}
+   
+   {{ fields.checkboxField(
+          'enabled',
+          item.fields['enabled'] ?? '',
+          __('enabled', 'wazuh')
+      ) }}
+
+   {{ fields.textareaField(
+      'description',
+      item.fields['description'],
+      __('description', 'wazuh'),
+      {
+         'rand': rand,
+         'enable_richtext': true,
+         'col_lg': 12,
+      }
+   ) }}
+{% endblock %}

@@ -20,3 +20,43 @@ msgstr ""
 
 msgid "config_title"
 msgstr "Configuration"
+
+msgid "vulnerable_title"
+msgstr "Active vulnerabilities"
+
+msgid "add_new_connection"
+msgstr "Add new connection"
+
+msgid "server_name"
+msgstr "Server name:"
+
+msgid "address_url"
+msgstr "Url address:"
+
+msgid "port"
+msgstr "Port:"
+
+msgid "user_name"
+msgstr "User name:"
+
+msgid "password"
+msgstr "Password:"
+
+msgid "description"
+msgstr "Description:"
+
+msgid "active"
+msgstr "Active"
+
+msgid "add_connection"
+msgstr "Add connection"
+
+msgid "clean"
+msgstr "Clean"
+
+msgid "server_connection_added"
+msgstr "Server: %1$s connection added."
+
+msgid "server_adding_connection_error"
+msgstr "Error adding server: %1$s"
+

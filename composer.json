@@ -8,13 +8,13 @@
     "config": {
         "optimize-autoloader": true,
         "platform": {
-            "php": "8.4.0"
+            "php": "8.1.0"
         },
         "sort-packages": true
     },
     "autoload": {
         "psr-4": {
-            "src\\": "src/"
+            "\\GlpiPlugin\\Wazuh\\": "src/"
         }
     }
 }

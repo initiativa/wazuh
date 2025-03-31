@@ -1,2 +1,5 @@
 /nbproject/private/
 .DS_Store
+.zed
+/vendor/
+/.phpactor.json

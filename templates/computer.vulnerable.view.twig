@@ -1,0 +1,13 @@
+{% import 'components/form/fields_macros.html.twig' as fields %}
+{% import '@wazuh/wazuh_fields_macros.html.twig' as wazuh_fields %}
+
+<div class="center">
+    {{ __('vulnerable_title', APP_NAME) }}
+    {{  APP_NAME | raw }}
+    <h1>Computer Just test !!</h1>
+    {{  APP_VER | raw }}
+    
+    {{ fields.dropdownField('\GlpiPlugin\Wazuh\PluginWazuhAgent', 'server_url', item.fields['parent'], __('Wazuh Server URL', 'wazuh'), {
+        'rand': rand
+    }) }}
+</div>

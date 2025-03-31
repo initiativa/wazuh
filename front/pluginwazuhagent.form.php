@@ -1,0 +1,50 @@
+<?php
+
+/**
+ * -------------------------------------------------------------------------
+ * OauthIMAP plugin for GLPI
+ * -------------------------------------------------------------------------
+ *
+ * LICENSE
+ *
+ * This file is part of OauthIMAP.
+ *
+ * OauthIMAP is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * OauthIMAP is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with OauthIMAP. If not, see <http://www.gnu.org/licenses/>.
+ * -------------------------------------------------------------------------
+ * @copyright Copyright (C) 2020-2022 by OauthIMAP plugin team.
+ * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
+ * @link      https://github.com/pluginsGLPI/oauthimap
+ * -------------------------------------------------------------------------
+ */
+
+include('../../../inc/includes.php');
+use GlpiPlugin\Wazuh\PluginWazuhAgent;
+
+global $_UPOST;
+
+$item = new PluginWazuhAgent();
+
+if (isset($_POST['id']) && isset($_POST['request_authorization'])) {
+    $item->check($_POST['id'], UPDATE);
+    $item->redirectToAuthorizationUrl();
+} else {
+    Html::requireJs('clipboard');
+
+    if (array_key_exists('api_password', $_POST) && array_key_exists('api_password', $_UPOST)) {
+        $_POST['api_password'] = $_UPOST['api_password'];
+    }
+
+    include('dbtm.common.form.php');
+}
+

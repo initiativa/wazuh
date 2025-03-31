@@ -1,6 +1,6 @@
 <?php
 
-/* 
+/*
  * Copyright (C) 2025 w-tomasz
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,4 +17,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-echo "****** HERE I'AM";
+namespace GlpiPlugin\Wazuh;
+
+/**
+ * Array helper
+ *
+ * @author w-tomasz
+ */
+trait LoggerArrayTrait {
+
+    public static function implodeWithKeys(array $array, string $separator = ', '): string {
+        $result = [];
+        foreach ($array as $key => $value) {
+            $result[] = "$key: $value";
+        }
+        return implode($separator, $result);
+    }
+}

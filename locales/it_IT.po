@@ -9,54 +9,56 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2024-12-30 01:37+0000\n"
-"PO-Revision-Date: 2025-03-05 19:46+0100\n"
+"PO-Revision-Date: 2025-03-05 19:47+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
-"Language: pl_PL\n"
+"Language: it_IT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 3.5\n"
 
 msgid "config_title"
-msgstr "Konfiguracja"
+msgstr "Configuration"
 
 msgid "vulnerable_title"
-msgstr "Aktywne luki w zabezpieczeniach"
+msgstr "Vulnerabilità attive"
 
 msgid "add_new_connection"
-msgstr "Dodaj nowe połączenie"
+msgstr ""
 
 msgid "server_name"
-msgstr "Server name:"
+msgstr ""
 
 msgid "address_url"
-msgstr "Url address:"
+msgstr ""
 
 msgid "port"
-msgstr "Port:"
+msgstr ""
 
 msgid "user_name"
-msgstr "Nazwa użytkownika:"
+msgstr ""
 
 msgid "password"
-msgstr "Hasło:"
+msgstr ""
 
 msgid "description"
-msgstr "Opis:"
+msgstr ""
 
 msgid "active"
-msgstr "Aktywne:"
+msgstr ""
 
 msgid "add_connection"
-msgstr "Dodaj połączenie"
+msgstr ""
 
 msgid "clean"
-msgstr "Wyczyść"
+msgstr ""
 
 msgid "server_connection_added"
-msgstr "Dodano połączenie servera: %1$s"
+msgstr ""
 
 msgid "server_adding_connection_error"
-msgstr "Błąd podczas dodawania servera: %1$s"
+msgstr "Error adding server: %1$s"
+
+
 

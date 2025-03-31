@@ -33,20 +33,43 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
     define('PLUGIN_WAZUH_DIR', __DIR__);
 }
 
-require_once (PLUGIN_WAZUH_DIR . "/src/PluginConfig.php");
-require_once (PLUGIN_WAZUH_DIR .  "/src/Logger.php");
+require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
-use src\Logger;
+use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\ServerConnection;
+use GlpiPlugin\Wazuh\Connection;
 
 /**
  * Plugin install process
  *
  * @return boolean
  */
-function plugin_wazuh_install()
-{
-    Logger::addWarning(__FUNCTION__ . " Installing.");
+function plugin_wazuh_install() {
+    Logger::addNotice(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
+
+
+    $migration = new \Migration(PLUGIN_WAZUH_VERSION);
+    $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
+
+    \GlpiPlugin\Wazuh\ServerConnection::createTable();
+
+    \GlpiPlugin\Wazuh\Connection::install($migration);
+    \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
+    \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
+    \GlpiPlugin\Wazuh\ComputerTab::install($migration);
+    \GlpiPlugin\Wazuh\NetworkEqTab::install($migration);
+
+    \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
+//    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
+
+    $migration->executeMigration();
     return true;
+}
+
+function plugin_myplugin_upgrade($old_version) {
+    Logger::addNotice(__FUNCTION__ . " Upgrading.");
+    
 }
 
 /**
@@ -54,18 +77,34 @@ function plugin_wazuh_install()
  *
  * @return boolean
  */
-function plugin_wazuh_uninstall()
-{
-    Logger::addWarning(__FUNCTION__ . " Uninstalling.");
+function plugin_wazuh_uninstall() {
+    Logger::addNotice(__FUNCTION__ . " Uninstalling.");
+    \GlpiPlugin\Wazuh\ServerConnection::dropTable();
+    
+    $migration = new Migration(PLUGIN_WAZUH_VERSION);
+    $migration->displayMessage("UnMigrating tables from " . PLUGIN_WAZUH_VERSION);
+    
+    \GlpiPlugin\Wazuh\PluginWazuhAgent::uninstall($migration);
+    \GlpiPlugin\Wazuh\Connection::uninstall($migration);
+    \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::uninstall($migration);
+    \GlpiPlugin\Wazuh\ComputerTab::uninstall($migration);
+    \GlpiPlugin\Wazuh\NetworkEqTab::uninstall($migration);
+
     return true;
 }
 
-function get_wazuh_menu()
-    {
-    return [
-        'title' => 'Wazuh',
-        'page' => '/plugins/wazuh/front/index.php',
-        'icon' => 'ti-shield',
-    ];
+
+function plugin_wazuh_getDropdown()
+{
+    $plugin = new Plugin();
+
+    if ($plugin->isActivated(PluginConfig::APP_CODE)) {
+        return [
+            'GlpiPlugin\Wazuh\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
+            'GlpiPlugin\Wazuh\Connection' => Connection::getTypeName(Session::getPluralNumber()),
+        ];
+    }
+
+    return [];
 }
 

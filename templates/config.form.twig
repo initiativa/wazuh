@@ -1,6 +1,117 @@
-<div class="center">
-    {{ __('config_title', APP_NAME) }}
-    {{  APP_NAME | raw }}
-    <h1>Just test</h1>
-    {{  APP_VER | raw }}
+<div class="row justify-content-center h-100">
+{% block content %}
+<div class="server-connections-container col-sm-5 row">
+    <h2>{{ __('Połączenia do serwera', APP_NAME) }}</h2>
+
+    {# Tabela z istniejącymi połączeniami #}
+    {% if connections|length > 0 %}
+        <div class="existing-connections">
+            <h3>{{ __('Istniejące połączenia', APP_NAME) }}</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{{ __('ID', APP_NAME) }}</th>
+                        <th>{{ __('server_name', APP_NAME) }}</th>
+                        <th>{{ __('address_url', APP_NAME) }}</th>
+                        <th>{{ __('port', APP_NAME) }}</th>
+                        <th>{{ __('user_name', APP_NAME) }}</th>
+                        <th>{{ __('status', APP_NAME) }}</th>
+                        <th>{{ __('created', APP_NAME) }}</th>
+                        <th>{{ __('action', APP_NAME) }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for connection in connections %}
+                        <tr>
+                            <td>{{ connection.id }}</td>
+                            <td>{{ connection.name }}</td>
+                            <td>{{ connection.url }}</td>
+                            <td>{{ connection.port }}</td>
+                            <td>{{ connection.user_name }}</td>
+                            <td>
+                                {% if connection.status == 1 %}
+                                    <span class="badge bg-success">{{ __('active', APP_NAME) }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ __('inactive', APP_NAME) }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ connection.date_created|date('Y-m-d H:i:s') }}</td>
+                            <td>
+                                <a href="{{ path('plugin_wazuh_connection_edit', {'id': connection.id}) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{{ path('plugin_wazuh_connection_delete', {'id': connection.id}) }}" class="btn btn-sm btn-danger"
+                                   onclick="return confirm('{{ __('connection_delete_confirmation', APP_NAME) }}')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                <a href="{{ path('plugin_wazuh_connection_list') }}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-sync"></i> {{ __('Testuj', APP_NAME) }}
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            {{ __('Brak zarejestrowanych połączeń do serwera.', APP_NAME) }}
+        </div>
+    {% endif %}
+
+    {# Formularz do dodawania nowego połączenia #}
+    <div class="new-connection-form">
+        <h3>{{ __('add_new_connection', APP_NAME) }}</h3>
+        <form method="post" action="config.php" class="form" >
+            <input type="hidden" name="_glpi_csrf_token" value="{{ csrf_token }}">
+
+            <div class="form-group mb-3">
+                <label for="server_name">{{ __('server_name', APP_NAME) }} <span class="required">*</span></label>
+                <input type="text" class="form-control" id="server_name" name="server_name" required>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="ip_address">{{ __('address_url', APP_NAME) }} <span class="required">*</span></label>
+                <input type="text" class="form-control" id="ip_address" name="server_url" required pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$">
+                <small class="form-text text-muted">{{ __('Format: xxx.xxx.xxx.xxx', APP_NAME) }}</small>
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="port">{{ __('port', APP_NAME) }} <span class="required">*</span></label>
+                <input type="number" class="form-control" id="port" name="server_port" required min="1" max="65535">
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="username">{{ __('user_name', APP_NAME) }}</label>
+                <input type="text" class="form-control" id="username" name="server_username">
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="password">{{ __('password', APP_NAME) }}</label>
+                <input type="password" class="form-control" id="password" name="server_password">
+            </div>
+
+            <div class="form-group mb-3">
+                <label for="description">{{ __('description', APP_NAME) }}</label>
+                <textarea class="form-control" id="description" name="server_description" rows="3"></textarea>
+            </div>
+
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="active" name="server_active" checked>
+                <label class="form-check-label" for="active">{{ __('active', APP_NAME) }}</label>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i> {{ __('add_connection', APP_NAME) }}
+                </button>
+                <button type="reset" class="btn btn-secondary">
+                    <i class="fas fa-undo"></i> {{ __('clean', APP_NAME) }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
 </div>

@@ -28,9 +28,10 @@
  * -------------------------------------------------------------------------
  */
 
-namespace src;
+namespace GlpiPlugin\Wazuh;
 
 class Logger {
+    use LoggerArrayTrait;
 
     protected static $DEBUG = 100;
     protected static $INFO = 200;
@@ -42,13 +43,14 @@ class Logger {
     protected static $EMERGENCY = 600;
 
     /**
-     * 
+     *
      * @global Logger $PHPLOGGER
      * @param int $type
      * @param string $message
      * @param array $details
      */
-    protected static function add($type, $message, $details = []) {
+    protected static function add($type, $message, $details = [])
+    {
         global $PHPLOGGER;
         switch ($type) {
             case self::$DEBUG:
@@ -76,28 +78,33 @@ class Logger {
         $PHPLOGGER->addRecord($recordType, $message, $details);
     }
 
-    public static function addDebug($message, $details = []) {
+    public static function addDebug($message, $details = [])
+    {
         self::add(self::$DEBUG, $message, $details);
     }
 
-    public static function addInfo($message, $details = []) {
+    public static function addInfo($message, $details = [])
+    {
         self::add(self::$INFO, $message, $details);
     }
 
-    public static function addNotice($message, $details = []) {
+    public static function addNotice($message, $details = [])
+    {
         self::add(self::$NOTICE, $message, $details);
     }
 
-    public static function addWarning($message, $details = []) {
+    public static function addWarning($message, $details = [])
+    {
         self::add(self::$WARNING, $message, $details);
     }
 
-    public static function addError($message, $details = []) {
+    public static function addError($message, $details = [])
+    {
         self::add(self::$ERROR, $message, $details);
     }
 
-    public static function addCritical($message, $details = []) {
+    public static function addCritical($message, $details = [])
+    {
         self::add(self::$CRITICAL, $message, $details);
     }
-
 }
