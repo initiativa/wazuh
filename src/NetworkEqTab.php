@@ -22,7 +22,7 @@ namespace GlpiPlugin\Wazuh;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use Migration;
-use Computer;
+use NetworkEquipment;
 use Ticket;
 use DBConnection;
 use Html;
@@ -37,41 +37,26 @@ if (!defined('GLPI_ROOT')) {
 }
 
 /**
- * Wazuh computer vulenrable tab
+ * Wazuh network equipment vulenrable tab
  *
  * @author w-tomasz
  */
-class WazuhComputerTab extends \CommonDBChild {
+class NetworkEqTab extends DeviceTab {
 
     use IndexerRequestsTrait;
 
     public $dohistory = true;
-    public static $itemtype = 'Computer';
-    public static $items_id = 'computers_id';
+    public static $itemtype = 'NetworkEquipment';
+    public static $items_id = 'networkequipments_id';
 
-    #[\Override]
-    static function getTypeName($nb = 0) {
-        return _n('Wazuh Vulnerable', 'Wazuh Vulnerabilities', $nb, PluginConfig::APP_CODE);
-    }
-
-    #[\Override]
-    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
-        if (!$withtemplate && $item instanceof Computer) {
-            global $DB;
-            $count = $this->countElementsForComputer($item->getID());
-            return self::createTabEntry(__(PluginConfig::APP_NAME, PluginConfig::APP_CODE), $count);
-        }
-        return '';
-    }
-
-    private function countElementsForComputer($computers_id) {
+    protected function countElements($device_id) {
         global $DB;
 
         $count = 0;
         $iterator = $DB->request([
             'COUNT' => 'count',
             'FROM' => $this->getTable(),
-            'WHERE' => [Computer::getForeignKeyField() => $computers_id]
+            'WHERE' => [NetworkEquipment::getForeignKeyField() => $device_id]
         ]);
 
         if (count($iterator)) {
@@ -82,19 +67,19 @@ class WazuhComputerTab extends \CommonDBChild {
         return $count;
     }
 
-    private static function createItem($result, \Computer $computer) {
+    private static function createItem($result, NetworkEquipment $device) {
         global $DB;
         $key = $result['_id'];
         $item = new self();
         $founded = $item->find(['key' => $key]);
         
         if (count($founded) > 1) {
-            throw new \RuntimeException("Founded WazuhComputerTab collection exceeded limit 1.");
+            throw new \RuntimeException("Founded NetworkEqTab collection exceeded limit 1.");
         }
 
         $item_data = [
             'key' => $key,
-            Computer::getForeignKeyField() => $computer->getID(),
+            NetworkEquipment::getForeignKeyField() => $device->getID(),
             'name' => $result['_source']['vulnerability']['id'],
             'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
             'v_severity' => $result['_source']['vulnerability']['severity'],
@@ -118,7 +103,7 @@ class WazuhComputerTab extends \CommonDBChild {
     #[\Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
         Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
-        if ($item instanceof Computer) {
+        if ($item instanceof NetworkEquipment) {
             Logger::addDebug($item->fields['name']);
             $agent = PluginWazuhAgent::getByDeviceTypeAndId($item->getType(), $item->fields['id']);
             if ($agent) {
@@ -140,7 +125,7 @@ class WazuhComputerTab extends \CommonDBChild {
                         'actionname' => 'preview', //change the submit button name
                         'actionvalue' => __('Preview'), //change the submit button label
                     ];
-                    Search::showGenericSearch(WazuhComputerTab::class, $p);
+                    Search::showGenericSearch(static::class, $p);
 
                     $options = [
                         'reset' => true,
@@ -154,7 +139,7 @@ class WazuhComputerTab extends \CommonDBChild {
                         ],
                         'display_type' => Search::HTML_OUTPUT
                     ];
-                    Search::showList(WazuhComputerTab::class, $options);
+                    Search::showList(static::class, $options);
                     
                 }
             } else {
@@ -214,14 +199,14 @@ class WazuhComputerTab extends \CommonDBChild {
 
         $tab[] = [
             'id' => 7,
-            'table' => Computer::getTable(),
+            'table' => NetworkEquipment::getTable(),
             'field' => 'name',
-            'name' => __('Computer', PluginConfig::APP_CODE),
+            'name' => __('Network Eq', PluginConfig::APP_CODE),
             'datatype' => 'dropdown',
             'massiveaction' => true,
             'joinparams' => [
                 'jointype' => 'standard',
-                'foreignkey' => Computer::getForeignKeyField()
+                'foreignkey' => NetworkEquipment::getForeignKeyField()
             ]
         ];
 
@@ -241,106 +226,14 @@ class WazuhComputerTab extends \CommonDBChild {
         return $tab;
     }
     
-    #[\Override]
-    public static function canCreate(): bool {
-        return false;
-    }
 
-    #[\Override]
-    public static function canDelete(): bool {
-        return false;
-    }
-
-    #[\Override]
-    public static function canPurge(): bool {
-        return false;
-    }
-
-    #[\Override]
-    public static function canUpdate(): bool {
-        return true;
-    }
-
-    
-    /**
-     * @param integer $ID
-     * @param array $options
-     * @return boolean
-     */
-    #[\Override]
-    function showForm($ID, array $options = []) {
-        global $CFG_GLPI;
-
-        $this->initForm($ID, $options);
-        $this->showFormHeader($options);
-
-        $options['formfooter'] = true;
-        $options['formactions'] = [
-            Html::submit(__('Save'), ['name' => 'update', 'class' => 'btn btn-primary me-2']),
-            Html::link(__('Back to list'), 'front/vulnerability.php', ['class' => 'btn btn-outline-secondary'])
-        ];
-
-        TemplateRenderer::getInstance()->display('@wazuh/device_tab.html.twig', [
-            'item' => $this,
-            'params' => $options,
-        ]);
-        return true;
-    }
-
-    
     #[\Override]
     public function getSpecificMassiveActions($checkitem = null) {
         $actions = parent::getSpecificMassiveActions($checkitem);
 
-        $actions["GlpiPlugin\Wazuh\WazuhComputerTab:create_ticket"] = __("Create ticket", PluginConfig::APP_CODE);
+        $actions["GlpiPlugin\Wazuh\NetworkEqTab:create_ticket"] = __("Create ticket", PluginConfig::APP_CODE);
 
         return $actions;
-    }
-
-    static function showMassiveActionsSubForm(\MassiveAction $ma) {
-        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction());
-        switch ($ma->getAction()) {
-            case "create_ticket":
-                echo "<div class='d-flex flex-column align-items-center gap-2 mb-2'>";
-
-                echo "<div class='d-flex gap-2 align-items-baseline'>";
-                echo "<label for='ticket_title'>" . __('Title', PluginConfig::APP_CODE) . ":</label>";
-                echo Html::input(
-                        'ticket_title',
-                        [
-                            'id' => 'ticket_title',
-                            'value' => 'Wazuh alert',
-                            'class' => 'form-control',
-                            'required' => true,
-                            'display' => false
-                        ]
-                );
-                echo "</div>";
-                echo "<span class='align-self-start'>" . __("Additional ticket comment:", PluginConfig::APP_CODE) . "</span>";
-                echo Html::textarea([
-                    "name" => "ticket_comment",
-                    "value" => "",
-                    "cols" => 50,
-                    "rows" => 4,
-                    "display" => false
-                ]);
-                echo Entity::dropdown([
-                    'name' => 'entities_id',
-                    'value' => \Session::getActiveEntity(),
-                    'entity' => $_SESSION['glpiactiveentities'],
-                    'rand' => mt_rand(),
-                    'display' => false
-                ]);
-//                echo Html::submit(__('Create', PluginConfig::APP_CODE), [
-//                    'name' => 'ticket_submit',
-//                    'class' => 'btn btn-primary w-50',
-//                    'icon' => 'fas fa-save',
-//                ]);
-
-                echo "</div>";
-                break;
-        }
-        return parent::showMassiveActionsSubForm($ma);
     }
 
     static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
@@ -382,7 +275,7 @@ class WazuhComputerTab extends \CommonDBChild {
      * Ticket creation
      * 
      * @param int $entity_id ID encji
-     * @param int $computer_id 
+     * @param int $device_id 
      * @param int $network_id ID 
      * @param string $title
      * @return int|boolean ticket ID or false
@@ -393,51 +286,35 @@ class WazuhComputerTab extends \CommonDBChild {
 
         $cve_id = reset($cves);
         
-        $cve = WazuhComputerTab::getById($cve_id);
-        $computer_id = $cve->fields[Computer::getForeignKeyField()];
-        $network_id = null;
+        $cve = self::getById($cve_id);
+        $device_id = $cve->fields[NetworkEquipment::getForeignKeyField()];
         
-        if (!$computer_id && !$network_id) {
+        if (!$device_id) {
             return false;
         }
 
         $content = __('Wazuh auto ticket', PluginConfig::APP_CODE) . "<br>";
-        Logger::addDebug(__FUNCTION__ . " Computer: $computer_id");
+        Logger::addDebug(__FUNCTION__ . " Network Eq: $device_id");
 
-        if ($computer_id) {
-            $computer = new Computer();
-            if ($computer->getFromDB($computer_id)) {
-        Logger::addDebug(__FUNCTION__ . " Computer: $computer_id");
-                $computer_name = $computer->fields['name'];
+        if ($device_id) {
+            $device = new \NetworkEquipment();
+            if ($device->getFromDB($device_id)) {
+                Logger::addDebug(__FUNCTION__ . " Network Eq: $device_id");
+                $device_name = $device->fields['name'];
                 $content = $comment  . "<br>";
                 $content .= sprintf(
-                        __('Linked Computer: %s', PluginConfig::APP_CODE) . "<br>",
-                        "<a href='computer.form.php?id=" . $computer_id . "'>" . $computer_name . "</a>"
+                        __('Linked Network Device: %s', PluginConfig::APP_CODE) . "<br>",
+                        "<a href='networkequipment.form.php?id=" . $device_id . "'>" . $device_name . "</a>"
                 );
                 $content .= "Links: ";
                 foreach ($cves as $cveid) {
-                    $cve = WazuhComputerTab::getById($cveid);
+                    $cve = self::getById($cveid);
                     array_push($full_cves, $cve);
                     $name = $cve->fields['name'];
                     $content .= sprintf(
-                            " <a href='../plugins/wazuh/front/wazuhcomputertab.form.php?id=$cveid'>$name</a> "
+                            " <a href='../plugins/wazuh/front/networkeqtab.form.php?id=$cveid'>$name</a> "
                     );
                 }
-            }
-        }
-
-        if ($network_id) {
-            $network = new NetworkEquipment();
-            if ($network->getFromDB($network_id)) {
-                $network_name = $network->fields['name'];
-                $content .= sprintf(
-                        __('Network Eq Link: %s', PluginConfig::APP_CODE) . "<br>",
-                        "<a href='networkequipment.form.php?id=" . $network_id . "'>" . $network_name . "</a>"
-                );
-                $content .= sprintf(
-                        __('Link do zakładki Wazuh: %s', PluginConfig::APP_CODE),
-                        "<a href='../plugins/wazuh/front/wazuhnetworktab.form.php?id=" . $network_id . "'>Details</a>"
-                );
             }
         }
 
@@ -475,25 +352,16 @@ class WazuhComputerTab extends \CommonDBChild {
             $followup->add($followup_input);
             
             
-            if ($computer_id) {
-                $ticket_item = new Item_Ticket();
-                $ticket_item_input = [
-                    'tickets_id' => $ticket_id,
-                    'itemtype' => 'Computer',
-                    'items_id' => $computer_id
-                ];
-                $ticket_item->add($ticket_item_input);
-            }
-
-            if ($network_id) {
+            if ($device_id) {
                 $ticket_item = new Item_Ticket();
                 $ticket_item_input = [
                     'tickets_id' => $ticket_id,
                     'itemtype' => 'NetworkEquipment',
-                    'items_id' => $network_id
+                    'items_id' => $device_id
                 ];
                 $ticket_item->add($ticket_item_input);
             }
+
         }
 
         return $ticket_id;
@@ -510,7 +378,7 @@ class WazuhComputerTab extends \CommonDBChild {
         $default_collation = DBConnection::getDefaultCollation();
         $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
         $table = self::getTable();
-        $computer_fkey = Computer::getForeignKeyField();
+        $networkeq_fkey = NetworkEquipment::getForeignKeyField();
         $ticket_fkey = \Ticket::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
@@ -520,7 +388,7 @@ class WazuhComputerTab extends \CommonDBChild {
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `key` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `$computer_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `$networkeq_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `v_category` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `v_classification` varchar(255) COLLATE {$default_collation} NOT NULL,
@@ -537,7 +405,7 @@ class WazuhComputerTab extends \CommonDBChild {
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
-                     KEY `$computer_fkey` (`$computer_fkey`),
+                     KEY `$networkeq_fkey` (`$networkeq_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      UNIQUE KEY `key` (`key`),
                      KEY `entities_id` (`entities_id`),
@@ -550,7 +418,7 @@ class WazuhComputerTab extends \CommonDBChild {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\WazuhComputerTab' => [1, 5, 6, 7]
+                        'GlpiPlugin\Wazuh\NetworkEqTab' => [1, 3, 4, 8]
                     ],
             );
         }
@@ -570,5 +438,4 @@ class WazuhComputerTab extends \CommonDBChild {
         return true;
     }
 
-    
 }

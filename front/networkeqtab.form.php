@@ -1,11 +1,11 @@
 <?php
 
 include('../../../inc/includes.php');
-use GlpiPlugin\Wazuh\WazuhComputerTab;
+use GlpiPlugin\Wazuh\NetworkEqTab;
 
 global $_UPOST;
 
-$item = new WazuhComputerTab();
+$item = new NetworkEqTab();
 
 if (isset($_POST['id']) && isset($_POST['request_authorization'])) {
     $item->check($_POST['id'], UPDATE);

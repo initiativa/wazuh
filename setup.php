@@ -40,7 +40,7 @@ require_once (PLUGIN_WAZUH_DIR . "/vendor/autoload.php");
 
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\Logger;
-use GlpiPlugin\Wazuh\WazuhComputerTab;
+use GlpiPlugin\Wazuh\ComputerTab;
 use GlpiPlugin\Wazuh\WazuhNetworkDeviceTab;
 use Glpi\Plugin\Hooks;
 use GlpiPlugin\Wazuh\PluginWazuhMenu;
@@ -72,7 +72,7 @@ function plugin_init_wazuh() {
 
         if (Session::haveRight('config', UPDATE)) {
             $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/connection.php';
-            Logger::addNotice(__FUNCTION__ . " plugin configuration registered.");
+//            Logger::addNotice(__FUNCTION__ . " plugin configuration registered.");
 
             $PLUGIN_HOOKS[Hooks::USE_MASSIVE_ACTION][PluginConfig::APP_CODE] = true;
         }
@@ -95,11 +95,11 @@ function plugin_init_wazuh() {
 }
 
 function plugin_wazuh_registerClasses() {
-    Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhComputerTab::class, [
+    Plugin::registerClass(\GlpiPlugin\Wazuh\ComputerTab::class, [
         'addtabon' => ['Computer']
     ]);
 
-    Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhNetworkDeviceTab::class, [
+    Plugin::registerClass(\GlpiPlugin\Wazuh\NetworkEqTab::class, [
         'addtabon' => ['NetworkEquipment']
     ]);
     Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhAgent');

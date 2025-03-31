@@ -118,7 +118,7 @@ class PluginWazuhAgent extends CommonDBTM {
         }
 
         if ($count > 1) {
-            throw new \RuntimeException("Element collection exceeded limit 1.");
+            throw new \RuntimeException("Please check Administration->WazuhAgen't to link only one device per Agent. Itemtype: $itemtype, id: $item_id.");
         }
 
         $data = reset($iterator);
@@ -136,35 +136,35 @@ class PluginWazuhAgent extends CommonDBTM {
     * @return boolean
     */
    static function install(Migration $migration) {
-      global $DB;
-      
-      $table = self::getTable();
+        global $DB;
+
+        $table = self::getTable();
         $default_charset = DBConnection::getDefaultCharset();
         $default_collation = DBConnection::getDefaultCollation();
         $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
         $table = self::getTable();
-        $config_fkey = Connection::getForeignKeyField();
+        $connection_fkey = Connection::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
-         $migration->displayMessage("Installing $table");
-         
-         $query = "CREATE TABLE IF NOT EXISTS `$table` (
-                     `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-                     `name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                     `agent_id` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-                     `$config_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
-                     `ip` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                     `version` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                     `status` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+            $migration->displayMessage("Installing $table");
+
+            $query = "CREATE TABLE IF NOT EXISTS `$table` (
+                     `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
+                     `name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `agent_id` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `$connection_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `ip` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `version` varchar(50) COLLATE {$default_collation} DEFAULT NULL,
+                     `status` varchar(50) COLLATE {$default_collation} DEFAULT NULL,
                      `last_keepalive` timestamp DEFAULT NULL,
-                     `os_name` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                     `os_version` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                     `groups` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                     `os_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `os_version` varchar(100) COLLATE {$default_collation} DEFAULT NULL,
+                     `groups` text COLLATE {$default_collation} DEFAULT NULL,
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
-                     `itemtype` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-                     `item_id` int unsigned NOT NULL DEFAULT '0',
-                     `entities_id` int unsigned NOT NULL DEFAULT '0',
+                     `itemtype` varchar(100) COLLATE {$default_collation} DEFAULT NULL,
+                     `item_id` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
@@ -173,19 +173,25 @@ class PluginWazuhAgent extends CommonDBTM {
                      KEY `status` (`status`),
                      KEY `item_id` (`item_id`),
                      KEY `entities_id` (`entities_id`),
-                     KEY `$config_fkey` (`$config_fkey`),
+                     KEY `$connection_fkey` (`$connection_fkey`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
-                  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-         $DB->query($query) or die("Error creating $table table");
-      }
-      
-      return true;
-   }
-   
-   /**
+                  ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation}";
+            $DB->query($query) or die("Error creating $table table");
+
+            $migration->updateDisplayPrefs(
+                    [
+                        'GlpiPlugin\Wazuh\PluginWazuhAgent' => [3, 4, 5, 6, 7,8]
+                    ],
+            );
+        }
+
+        return true;
+    }
+
+    /**
     * Uninstall db table
     * @param object $migration
     * @return boolean

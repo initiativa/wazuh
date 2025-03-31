@@ -254,7 +254,7 @@ class Connection extends \CommonDropdown {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\Connection' => [3 => 1, 4 => 2]
+                        'GlpiPlugin\Wazuh\Connection' => [3,4,5,6,7]
                     ],
             );
         }

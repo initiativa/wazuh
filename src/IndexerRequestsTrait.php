@@ -167,15 +167,16 @@ trait IndexerRequestsTrait {
         }
 
         $currentTime = time();
+        $session_key = PluginConfig::VQUERY_TIME_SESSION_KEY . $agentIds[0];
 
-        $lastExecutionTime = isset($_SESSION[PluginConfig::VQUERY_TIME_SESSION_KEY]) ? $_SESSION[PluginConfig::VQUERY_TIME_SESSION_KEY] : -1;
+        $lastExecutionTime = isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : -1;
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
             return [];
         }
 
-        $_SESSION[PluginConfig::VQUERY_TIME_SESSION_KEY] = $currentTime;
+        $_SESSION[$session_key] = $currentTime;
 
         $query = [
             'size' => $size,

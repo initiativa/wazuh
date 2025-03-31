@@ -57,7 +57,8 @@ function plugin_wazuh_install() {
     \GlpiPlugin\Wazuh\Connection::install($migration);
     \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
-    \GlpiPlugin\Wazuh\WazuhComputerTab::install($migration);
+    \GlpiPlugin\Wazuh\ComputerTab::install($migration);
+    \GlpiPlugin\Wazuh\NetworkEqTab::install($migration);
 
     \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
 //    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
@@ -86,7 +87,8 @@ function plugin_wazuh_uninstall() {
     \GlpiPlugin\Wazuh\PluginWazuhAgent::uninstall($migration);
     \GlpiPlugin\Wazuh\Connection::uninstall($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::uninstall($migration);
-    \GlpiPlugin\Wazuh\WazuhComputerTab::uninstall($migration);
+    \GlpiPlugin\Wazuh\ComputerTab::uninstall($migration);
+    \GlpiPlugin\Wazuh\NetworkEqTab::uninstall($migration);
 
     return true;
 }
