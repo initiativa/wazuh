@@ -94,7 +94,7 @@ class ComputerTab extends DeviceTab {
             'p_version' => $result['_source']['package']['version'],
             'p_type' => $result['_source']['package']['type'],
             'p_description' => $DB->escape($result['_source']['package']['description']),
-            'p_installed' => self::convertIsoToMysqlDatetime($result['_source']['package']['installed']),
+            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'], $result)),
         ];
 
         if (!$founded) {
@@ -118,11 +118,15 @@ class ComputerTab extends DeviceTab {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
                     $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
                     if (!empty($result)) {
-                        foreach ($result['data']['hits']['hits'] as $res) {
-//                        Logger::addDebug(json_encode($res['_source']['vulnerability']['severity']) . " -- " . json_encode($res['_id']));
-                            self::createItem($res, $item);
+                        Logger::addDebug(__FUNCTION__ . " Response result http code: " . $result['http_code']);
+                        if (isset($result['data']['hits']['hits'])) {
+                            foreach ($result['data']['hits']['hits'] as $res) {
+                                self::createItem($res, $item);
+                            }
                         }
                     }
+
+                    Logger::addDebug(__FUNCTION__ . " Response result http code: " . $result['http_code']);
 
                     $p = [
                         'addhidden' => [// some hidden inputs added to the criteria form
@@ -212,7 +216,7 @@ class ComputerTab extends DeviceTab {
                     return false;
                 }
  
-                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment']);
+                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment'], $input['ticket_urgency']);
                 if ($ticket_id) {
                     $ticketUrl = Ticket::getFormURLWithID($ticket_id);
                     $message = sprintf(
@@ -237,7 +241,7 @@ class ComputerTab extends DeviceTab {
      * @param string $title
      * @return int|boolean ticket ID or false
      */
-    protected static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "") {
+    protected static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "", $urgency = 3) {
         global $DB;
         $full_cves = [];
 
@@ -281,7 +285,7 @@ class ComputerTab extends DeviceTab {
             'content' => \Toolbox::addslashes_deep($content),
             'status' => Ticket::INCOMING,
             'priority' => 3,
-            'urgency' => 3,
+            'urgency' => $urgency,
             'impact' => 3,
             'entities_id' => $entity_id,
             '_add_items' => [],

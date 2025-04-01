@@ -93,7 +93,7 @@ class NetworkEqTab extends DeviceTab {
             'p_version' => $result['_source']['package']['version'],
             'p_type' => $result['_source']['package']['type'],
             'p_description' => $DB->escape($result['_source']['package']['description']),
-            'p_installed' => self::convertIsoToMysqlDatetime($result['_source']['package']['installed']),
+            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'], $result)),
         ];
 
         if (!$founded) {
@@ -211,7 +211,7 @@ class NetworkEqTab extends DeviceTab {
                     return false;
                 }
  
-                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment']);
+                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment'], $input['ticket_urgency']);
                 if ($ticket_id) {
                     $ticketUrl = Ticket::getFormURLWithID($ticket_id);
                     $message = sprintf(
@@ -236,7 +236,7 @@ class NetworkEqTab extends DeviceTab {
      * @param string $title
      * @return int|boolean ticket ID or false
      */
-    private static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "") {
+    private static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "", $urgency = 3) {
         global $DB;
         $full_cves = [];
 
@@ -280,7 +280,7 @@ class NetworkEqTab extends DeviceTab {
             'content' => \Toolbox::addslashes_deep($content),
             'status' => Ticket::INCOMING,
             'priority' => 3,
-            'urgency' => 3,
+            'urgency' => $urgency,
             'impact' => 3,
             'entities_id' => $entity_id,
             '_add_items' => [],

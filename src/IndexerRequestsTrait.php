@@ -231,4 +231,14 @@ trait IndexerRequestsTrait {
             return null;
         }
     }
+    
+    protected static function array_get($dataPath, $res) {
+        if (isset($dataPath)) {
+            return $dataPath;
+        } else {
+            Logger::addWarning('*** No key in ' . json_encode($res));
+            return null;
+        }
+        
+    }
 }
