@@ -714,7 +714,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $elements = $this->collectDevices();
 
         Dropdown::showFromArray('itemtype_item_id', $elements, [
-            'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : '',
+            'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : 0,
             'rand' => mt_rand(),
             'width' => '100%'
         ]);
@@ -750,6 +750,18 @@ class PluginWazuhAgent extends CommonDBTM {
                                 value: '0'
                             }).appendTo('form');
                         }
+                    } else {
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'itemtype',
+                                value: ''
+                            }).appendTo('form');
+
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'item_id',
+                                value: '0'
+                            }).appendTo('form');
                     }
                     return true;
                 });

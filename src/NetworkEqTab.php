@@ -117,9 +117,11 @@ class NetworkEqTab extends DeviceTab {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
                     $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
                     if (!empty($result)) {
-                        foreach ($result['data']['hits']['hits'] as $res) {
-//                        Logger::addDebug(json_encode($res['_source']['vulnerability']['severity']) . " -- " . json_encode($res['_id']));
-                            self::createItem($res, $item);
+                        Logger::addDebug(__FUNCTION__ . " Response result http code: " . $result['http_code']);
+                        if (isset($result['data']['hits']['hits'])) {
+                            foreach ($result['data']['hits']['hits'] as $res) {
+                                self::createItem($res, $item);
+                            }
                         }
                     }
 
