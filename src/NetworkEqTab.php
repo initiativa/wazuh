@@ -92,8 +92,8 @@ class NetworkEqTab extends DeviceTab {
             'p_name' => $result['_source']['package']['name'],
             'p_version' => $result['_source']['package']['version'],
             'p_type' => $result['_source']['package']['type'],
-            'p_description' => $DB->escape($result['_source']['package']['description']),
-            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'], $result)),
+            'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
+            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
         ];
 
         if (!$founded) {
@@ -115,22 +115,15 @@ class NetworkEqTab extends DeviceTab {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
-                    if (!empty($result)) {
-                        Logger::addDebug(__FUNCTION__ . " Response result http code: " . $result['http_code']);
-                        if (isset($result['data']['hits']['hits'])) {
-                            foreach ($result['data']['hits']['hits'] as $res) {
-                                self::createItem($res, $item);
-                            }
-                        }
-                    }
+                    $callback = [self::class, 'createItem'];
+                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $callback, $item);
 
                     $p = [
-                        'addhidden' => [// some hidden inputs added to the criteria form
+                        'addhidden' => [
                             'hidden_input' => 'OK'
                         ],
-                        'actionname' => 'preview', //change the submit button name
-                        'actionvalue' => __('Preview'), //change the submit button label
+                        'actionname' => 'preview',
+                        'actionvalue' => __('Preview'),
                     ];
                     Search::showGenericSearch(static::class, $p);
 
@@ -362,6 +355,7 @@ class NetworkEqTab extends DeviceTab {
                      `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `p_installed` TIMESTAMP DEFAULT NULL,
+                     `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
@@ -371,6 +365,7 @@ class NetworkEqTab extends DeviceTab {
                      KEY `$networkeq_fkey` (`$networkeq_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      UNIQUE KEY `key` (`key`),
+                     KEY `v_detected` (`v_detected`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),

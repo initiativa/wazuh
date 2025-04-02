@@ -91,10 +91,10 @@ class ComputerTab extends DeviceTab {
             'v_classification' => $result['_source']['vulnerability']['classification'],
             'v_reference' => $result['_source']['vulnerability']['reference'],
             'p_name' => $result['_source']['package']['name'],
-            'p_version' => $result['_source']['package']['version'],
-            'p_type' => $result['_source']['package']['type'],
-            'p_description' => $DB->escape($result['_source']['package']['description']),
-            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'], $result)),
+            'p_version' => $result['_source']['package']['version'] ?? '',
+            'p_type' => $result['_source']['package']['type'] ?? '',
+            'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
+            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
         ];
 
         if (!$founded) {
@@ -116,26 +116,19 @@ class ComputerTab extends DeviceTab {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
-                    if (!empty($result)) {
-                        Logger::addDebug(__FUNCTION__ . " Response result http code: " . $result['http_code']);
-                        if (isset($result['data']['hits']['hits'])) {
-                            foreach ($result['data']['hits']['hits'] as $res) {
-                                self::createItem($res, $item);
-                            }
-                        }
-                    }
-
-                    Logger::addDebug(__FUNCTION__ . " Response result http code: " . $result['http_code']);
+                    $callback = [self::class, 'createItem'];
+                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $callback, $item);
 
                     $p = [
-                        'addhidden' => [// some hidden inputs added to the criteria form
+                        'addhidden' => [
                             'hidden_input' => 'OK'
                         ],
-                        'actionname' => 'preview', //change the submit button name
-                        'actionvalue' => __('Preview'), //change the submit button label
+                        'actionname' => 'preview',
+                        'actionvalue' => __('Preview'),
                     ];
                     Search::showGenericSearch(ComputerTab::class, $p);
+                    $is_deleted = isset($_GET['is_deleted']) ? $_GET['is_deleted'] : 0;
+                    $_GET['is_deleted'] = $is_deleted;
 
                     $options = [
                         'reset' => true,
@@ -147,9 +140,17 @@ class ComputerTab extends DeviceTab {
                                 'value' => $item->getID()
                             ]
                         ],
+                        'menu' => [
+                            'assets' => 'Computer',
+                            'id' => $item->fields['id'],
+                            'active' => 'Wazuh'
+                        ],
+                        'is_deleted' => $is_deleted,
+//                        'forcetab' => 'GlpiPlugin\\Wazuh\\ComputerTab$1',
+                        'glpilist_limit' => 15,
                         'display_type' => Search::HTML_OUTPUT
                     ];
-                    Search::showList(ComputerTab::class, $options);
+                    Search::showList(ComputerTab::class, $options, [1,2,3,4]);
                     
                 }
             } else {
@@ -365,6 +366,7 @@ class ComputerTab extends DeviceTab {
                      `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `p_installed` TIMESTAMP DEFAULT NULL,
+                     `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
@@ -374,6 +376,7 @@ class ComputerTab extends DeviceTab {
                      KEY `$computer_fkey` (`$computer_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      UNIQUE KEY `key` (`key`),
+                     KEY `v_detected` (`v_detected`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),

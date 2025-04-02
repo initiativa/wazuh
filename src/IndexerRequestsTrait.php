@@ -19,6 +19,9 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use DateTime;
+use DateTimeZone;
+
 /**
  * Request helper
  *
@@ -119,7 +122,7 @@ trait IndexerRequestsTrait {
         }
 
         $endpoint = self::$indexerUrl . '/wazuh-states-vulnerabilities-*/_search';
-        Logger::addDebug(__FUNCTION__ . $endpoint);
+        Logger::addDebug(__FUNCTION__ . " " . $endpoint . " Query: " . json_encode($query));
 
         $ch = curl_init($endpoint);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -153,15 +156,101 @@ trait IndexerRequestsTrait {
         ];
     }
 
+    protected static function getLatestDeviceVulnerabilityDetectionDate(\CommonDBTM $device): string {
+        $clazz = static::class;
+        $item = new $clazz;
+        
+        if ($device instanceof \Computer) {
+            $records = $item->find(
+                    ['computers_id' => $device->getID()],
+                    ['v_detected DESC'],
+                    1
+            );
+        }
+
+        if ($device instanceof \NetworkEquipment) {
+            $records = $item->find(
+                    ['networkequipments_id' => $device->getID()],
+                    ['v_detected DESC'],
+                    1
+            );
+        }
+
+        $latestRecord = reset($records);
+        if (isset($latestRecord['v_detected'])) {
+            $dt = DateTime::createFromFormat('Y-m-d H:i:s', $latestRecord['v_detected'], new DateTimeZone('UTC'));
+            return $dt->format('Y-m-d\TH:i:s\Z');
+        } else {
+            return '2000-01-01T12:00:00Z';
+        }
+    }
+    
+    public static function getTotalSize($query): int | bool {
+        $query['size'] = 1;
+        $query['from'] = 0;
+        $result = self::executeQuery($query);
+        if ($result['success']) {
+            Logger::addDebug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
+            return $result['data']['hits']['total']['value'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Prepare API query by agent ids
+     * @param type $agentIds
+     * @return string query
+     */
+    public static function getQueryByAgentIds(array $agentIds, \CommonDBTM $computer): array {
+        $latestDtStr = static::getLatestDeviceVulnerabilityDetectionDate($computer);
+        $agentIdsStr = json_encode($agentIds);
+        Logger::addDebug("Quering Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
+
+        $a = $agentIds;
+        if (count($agentIds) == 1) {
+            $a = $agentIds[0];
+        }
+
+        $query = [
+            "sort" => [
+                [
+                    "_id" => [
+                        "order" => "desc"
+                    ]
+                ]
+            ],
+            "query" => [
+                "bool" => [
+                    "must" => [
+                        [
+                            "term" => [
+                                "agent.id" => $a
+                            ]
+                        ],
+                        [
+                            "range" => [
+                                "vulnerability.detected_at" => [
+                                    "gt" => $latestDtStr
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        return $query;
+    }
+
     /**
      * Retrieves vulnerabilities by agent ID
      * 
      * @param string|array $agentIds Agent ID or array of agent IDs
-     * @param int $size Maximum number of results
+     * @param int $pageSize Maximum number of results
      * @param int $offset Offset for pagination (default 0)
      * @return array Query result
      */
-    public static function queryVulnerabilitiesByAgentIds($agentIds, $size = 100, $offset = 0) {
+    public static function queryVulnerabilitiesByAgentIds($agentIds, $createItemCallback, \CommonDBTM $device, $pageSize = 500) {
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
@@ -173,48 +262,36 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-            return [];
+            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
 
-        $query = [
-            'size' => $size,
-            'from' => $offset,
-            'query' => [
-                'bool' => [
-                    'must' => []
-                ]
-            ]
-        ];
+        $query = self::getQueryByAgentIds($agentIds, $device);
+        
+        $total = self::getTotalSize($query);
+        $totalPages = ceil($total / $pageSize);
 
-        if (is_array($agentIds)) {
-            if (count($agentIds) == 1) {
-                $query['query']['bool']['must'][] = [
-                    'term' => [
-                        'agent.id' => $agentIds[0]
-                    ]
-                ];
-            } else {
-                $query['query']['bool']['must'][] = [
-                    'terms' => [
-                        'agent.id' => $agentIds
-                    ]
-                ];
+        Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+        
+        for ($page = 0; $page < $totalPages; $page++) {
+            $from = $page * $pageSize;
+
+            $query['size'] = $pageSize;
+            $query['from'] = $from;
+
+            $result = self::executeQuery($query);
+            if ($result['success']) {
+                foreach ($result['data']['hits']['hits'] as $res) {
+                    $createItemCallback($res, $device);
+                }
             }
-        } else {
-            $query['query']['bool']['must'][] = [
-                'term' => [
-                    'agent.id' => $agentIds
-                ]
-            ];
+            usleep(100000);
         }
-
-        return self::executeQuery($query);
     }
     
     protected static function convertIsoToMysqlDatetime($isoDate) {
-        if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z') {
+        if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z' || $isoDate == null) {
             return null;
         }
 
