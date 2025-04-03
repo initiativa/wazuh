@@ -115,10 +115,6 @@ class ComputerTab extends DeviceTab {
             if ($agent) {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
-                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $callback = [self::class, 'createItem'];
-                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $callback, $item);
-
                     $p = [
                         'addhidden' => [
                             'hidden_input' => 'OK'
@@ -151,7 +147,9 @@ class ComputerTab extends DeviceTab {
                         'display_type' => Search::HTML_OUTPUT
                     ];
                     Search::showList(ComputerTab::class, $options, [1,2,3,4]);
-                    
+                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
+                    $callback = [self::class, 'createItem'];
+                    static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $callback, $item);
                 }
             } else {
                 $dropdown_options = [

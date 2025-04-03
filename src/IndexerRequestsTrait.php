@@ -21,6 +21,7 @@ namespace GlpiPlugin\Wazuh;
 
 use DateTime;
 use DateTimeZone;
+use Session;
 
 /**
  * Request helper
@@ -110,6 +111,23 @@ trait IndexerRequestsTrait {
         return self::executeQuery($query);
     }
 
+    
+    private static function checkHostAvailability($host, $timeout = 5) {
+        $ch = curl_init($host);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+
+        curl_close($ch);
+
+        return $response !== false && $httpCode < 400;
+    }
+
     /**
      * Executes a query to Wazuh Indexer
      * 
@@ -135,6 +153,9 @@ trait IndexerRequestsTrait {
         ]);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
         $response = curl_exec($ch);
         $error = curl_error($ch);
@@ -142,6 +163,9 @@ trait IndexerRequestsTrait {
         curl_close($ch);
 
         if ($error) {
+            Logger::addError(__FUNCTION__ . " HttpCode: " . $httpCode . " " . $error);
+            Session::addMessageAfterRedirect($error, true, ERROR);
+            \Html::back();
             return [
                 'success' => false,
                 'error' => $error,
@@ -270,10 +294,13 @@ trait IndexerRequestsTrait {
         $query = self::getQueryByAgentIds($agentIds, $device);
         
         $total = self::getTotalSize($query);
+        if (!$total) {
+            return false;
+        }
         $totalPages = ceil($total / $pageSize);
 
         Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
-        
+
         for ($page = 0; $page < $totalPages; $page++) {
             $from = $page * $pageSize;
 
@@ -285,6 +312,8 @@ trait IndexerRequestsTrait {
                 foreach ($result['data']['hits']['hits'] as $res) {
                     $createItemCallback($res, $device);
                 }
+            } else {
+                return false;
             }
             usleep(100000);
         }
