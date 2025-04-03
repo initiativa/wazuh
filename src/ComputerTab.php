@@ -68,6 +68,62 @@ class ComputerTab extends DeviceTab {
         return $count;
     }
 
+    #[\Override]
+    protected static function getUpsertStatement(): string {
+        $table = static::getTable();
+        $computer_fkey = Computer::getForeignKeyField();
+        $query = "INSERT INTO `$table` 
+          (`key`, `$computer_fkey`, `name`, `v_description`, `v_severity`, `v_detected`, `v_published`, `v_enum`, `v_category`, `v_classification`, `v_reference`, `p_name`, `p_version`, `p_type`, `p_description`, `p_installed`, `date_mod`) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+              `$computer_fkey` = VALUES(`$computer_fkey`),
+              `name` = VALUES(`name`),
+              `v_description` = VALUES(`v_description`),
+              `v_severity` = VALUES(`v_severity`),
+              `v_detected` = VALUES(`v_detected`),
+              `v_published` = VALUES(`v_published`),
+              `v_enum` = VALUES(`v_enum`),
+              `v_category` = VALUES(`v_category`),
+              `v_classification` = VALUES(`v_classification`),
+              `v_reference` = VALUES(`v_reference`),
+              `p_name` = VALUES(`p_name`),
+              `p_version` = VALUES(`p_version`),
+              `p_type` = VALUES(`p_type`),
+              `p_description` = VALUES(`p_description`),
+              `p_installed` = VALUES(`p_installed`),
+              `date_mod` = VALUES(`date_mod`)
+          ";
+        Logger::addDebug($query, ['computer_fkey' => $computer_fkey]);
+        return $query;
+    }
+
+    #[\Override]
+    protected static function bindStatement($stmt, $result, \CommonDBTM $device): bool {
+        global $DB;
+
+        $d = [
+            $result['_id'],
+            $device->getID(),
+            $result['_source']['vulnerability']['id'],
+            $DB->escape($result['_source']['vulnerability']['description'] ?? ''),
+            $result['_source']['vulnerability']['severity'] ?? '',
+            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
+            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
+            $result['_source']['vulnerability']['enumeration'],
+            $result['_source']['vulnerability']['category'],
+            $result['_source']['vulnerability']['classification'],
+            $result['_source']['vulnerability']['reference'],
+            $result['_source']['package']['name'],
+            $result['_source']['package']['version'] ?? '',
+            $result['_source']['package']['type'] ?? '',
+            $DB->escape($result['_source']['package']['description'] ?? ''),
+            self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
+            (new \DateTime())->format('Y-m-d H:i:s')
+        ];
+        return $stmt->bind_param('sisssssssssssssss', ...$d);
+    }
+
+    
     private static function createItem($result, \Computer $computer) {
         global $DB;
         $key = $result['_id'];
@@ -115,6 +171,8 @@ class ComputerTab extends DeviceTab {
             if ($agent) {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
+                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
+                    static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $item);
                     $p = [
                         'addhidden' => [
                             'hidden_input' => 'OK'
@@ -122,34 +180,31 @@ class ComputerTab extends DeviceTab {
                         'actionname' => 'preview',
                         'actionvalue' => __('Preview'),
                     ];
-                    Search::showGenericSearch(ComputerTab::class, $p);
-                    $is_deleted = isset($_GET['is_deleted']) ? $_GET['is_deleted'] : 0;
-                    $_GET['is_deleted'] = $is_deleted;
-
-                    $options = [
-                        'reset' => true,
-                        'criteria' => [
-                            [
-                                'link' => 'AND',
-                                'field' => 7,
-                                'searchtype' => 'equals',
-                                'value' => $item->getID()
-                            ]
-                        ],
-                        'menu' => [
-                            'assets' => 'Computer',
-                            'id' => $item->fields['id'],
-                            'active' => 'Wazuh'
-                        ],
-                        'is_deleted' => $is_deleted,
-//                        'forcetab' => 'GlpiPlugin\\Wazuh\\ComputerTab$1',
-                        'glpilist_limit' => 15,
-                        'display_type' => Search::HTML_OUTPUT
-                    ];
-                    Search::showList(ComputerTab::class, $options, [1,2,3,4]);
-                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $callback = [self::class, 'createItem'];
-                    static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $callback, $item);
+//                    Search::showGenericSearch(ComputerTab::class, $p);
+//                    $is_deleted = isset($_GET['is_deleted']) ? $_GET['is_deleted'] : 0;
+//                    $_GET['is_deleted'] = $is_deleted;
+//
+//                    $options = [
+//                        'reset' => true,
+//                        'criteria' => [
+//                            [
+//                                'link' => 'AND',
+//                                'field' => 7,
+//                                'searchtype' => 'equals',
+//                                'value' => $item->getID()
+//                            ]
+//                        ],
+//                        'menu' => [
+//                            'assets' => 'Computer',
+//                            'id' => $item->fields['id'],
+//                            'active' => 'Wazuh'
+//                        ],
+//                        'is_deleted' => $is_deleted,
+////                        'forcetab' => 'GlpiPlugin\\Wazuh\\ComputerTab$1',
+//                        'glpilist_limit' => 15,
+//                        'display_type' => Search::HTML_OUTPUT
+//                    ];
+                    Search::show(ComputerTab::class);
                 }
             } else {
                 $dropdown_options = [

@@ -63,6 +63,8 @@ abstract class DeviceTab extends \CommonDBChild {
     }
 
     abstract protected function countElements($device_id);
+    abstract static protected function getUpsertStatement(): string;
+    abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
     /**
      * @param integer $ID

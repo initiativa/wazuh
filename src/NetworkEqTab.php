@@ -66,6 +66,61 @@ class NetworkEqTab extends DeviceTab {
 
         return $count;
     }
+    
+    #[\Override]
+    protected static function bindStatement($stmt, $result, \CommonDBTM $device): bool {
+        global $DB;
+
+        $d = [
+            $result['_id'],
+            $device->getID(),
+            $result['_source']['vulnerability']['id'],
+            $DB->escape($result['_source']['vulnerability']['description'] ?? ''),
+            $result['_source']['vulnerability']['severity'] ?? '',
+            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
+            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
+            $result['_source']['vulnerability']['enumeration'],
+            $result['_source']['vulnerability']['category'],
+            $result['_source']['vulnerability']['classification'],
+            $result['_source']['vulnerability']['reference'],
+            $result['_source']['package']['name'],
+            $result['_source']['package']['version'] ?? '',
+            $result['_source']['package']['type'] ?? '',
+            $DB->escape($result['_source']['package']['description'] ?? ''),
+            self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
+            (new \DateTime())->format('Y-m-d H:i:s')
+        ];
+        return $stmt->bind_param('sisssssssssssssss', ...$d);
+    }
+
+    #[\Override]
+    protected static function getUpsertStatement(): string {
+                $table = static::getTable();
+        $device_fkey = NetworkEquipment::getForeignKeyField();
+        $query = "INSERT INTO `$table` 
+          (`key`, `$device_fkey`, `name`, `v_description`, `v_severity`, `v_detected`, `v_published`, `v_enum`, `v_category`, `v_classification`, `v_reference`, `p_name`, `p_version`, `p_type`, `p_description`, `p_installed`, `date_mod`) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+              `$device_fkey` = VALUES(`$device_fkey`),
+              `name` = VALUES(`name`),
+              `v_description` = VALUES(`v_description`),
+              `v_severity` = VALUES(`v_severity`),
+              `v_detected` = VALUES(`v_detected`),
+              `v_published` = VALUES(`v_published`),
+              `v_enum` = VALUES(`v_enum`),
+              `v_category` = VALUES(`v_category`),
+              `v_classification` = VALUES(`v_classification`),
+              `v_reference` = VALUES(`v_reference`),
+              `p_name` = VALUES(`p_name`),
+              `p_version` = VALUES(`p_version`),
+              `p_type` = VALUES(`p_type`),
+              `p_description` = VALUES(`p_description`),
+              `p_installed` = VALUES(`p_installed`),
+              `date_mod` = VALUES(`date_mod`)
+          ";
+        Logger::addDebug($query, ['computer_fkey' => $device_fkey]);
+        return $query;
+    }
 
     private static function createItem($result, NetworkEquipment $device) {
         global $DB;
@@ -114,6 +169,9 @@ class NetworkEqTab extends DeviceTab {
             if ($agent) {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
+                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
+                    static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $item);
+
                     $p = [
                         'addhidden' => [
                             'hidden_input' => 'OK'
@@ -136,9 +194,6 @@ class NetworkEqTab extends DeviceTab {
                         'display_type' => Search::HTML_OUTPUT
                     ];
                     Search::showList(static::class, $options);
-                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $callback = [self::class, 'createItem'];
-                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $callback, $item);
                 }
             } else {
                 $dropdown_options = [

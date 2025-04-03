@@ -274,7 +274,8 @@ trait IndexerRequestsTrait {
      * @param int $offset Offset for pagination (default 0)
      * @return array Query result
      */
-    public static function queryVulnerabilitiesByAgentIds($agentIds, $createItemCallback, \CommonDBTM $device, $pageSize = 500) {
+    public static function queryVulnerabilitiesByAgentIds($agentIds, \CommonDBTM $device, $pageSize = 500) {
+        global $DB;
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
@@ -286,7 +287,7 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-            return ['success' => false, 'error' => 'To early.'];
+//            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
@@ -309,9 +310,29 @@ trait IndexerRequestsTrait {
 
             $result = self::executeQuery($query);
             if ($result['success']) {
-                foreach ($result['data']['hits']['hits'] as $res) {
-                    $createItemCallback($res, $device);
+                try {
+                    $DB->beginTransaction();
+                    $stmt_query = static::getUpsertStatement();
+                    $stmt = $DB->prepare($stmt_query);
+                    if (!$stmt) {
+                         $error = $DB->error;
+                        Logger::addError('Can not create statement !', ['query' => $stmt_query, 'error' => $error]);
+                        return false;
+                    }
+                    foreach ($result['data']['hits']['hits'] as $res) {
+                        if (static::bindStatement($stmt, $res, $device)) {
+                            $stmt->execute();
+                        }
+                    }
+                    $DB->commit();
+                } catch (Exception $e) {
+                    $DB->rollBack();
+                    Logger::addCritical($e->getMessage());
                 }
+
+//                foreach ($result['data']['hits']['hits'] as $res) {
+//                    static::createItem($res, $device);
+//                }
             } else {
                 return false;
             }

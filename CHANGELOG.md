@@ -8,14 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ToDo
-- speedup inserting elements with UPSERT, prepare query, one transaction
+- static filters for Search::show
 - consider how to group/collapse the same cve's !!!!! if not tree then dialog window
 - onetomany or manytomany for wazych alert -> ticket
 - migrations: install is not upgrade
 - check all defaults columns for search views.
 - check wazuh version
 - wazuh tab: when connection problem then no results at all
-- assets tab, show trash problems
+- assets tab, show trash problems. Not when search::show ????
 
 ## [0.0.3]
 
