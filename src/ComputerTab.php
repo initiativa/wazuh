@@ -173,37 +173,21 @@ class ComputerTab extends DeviceTab {
                 if ($config) {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
                     static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $item);
-                    $p = [
-                        'addhidden' => [
-                            'hidden_input' => 'OK'
+                    
+                    $itemtype  = self::class;
+                    $params = [
+                        'sort' => 1,
+                        'order' => 'DESC',
+                        'reset' => 'reset',
+                        'criteria' => [
+                            [
+                                'field' => 7,
+                                'searchtype' => 'equals',
+                                'value' => $item->getID()
+                            ]
                         ],
-                        'actionname' => 'preview',
-                        'actionvalue' => __('Preview'),
                     ];
-//                    Search::showGenericSearch(ComputerTab::class, $p);
-//                    $is_deleted = isset($_GET['is_deleted']) ? $_GET['is_deleted'] : 0;
-//                    $_GET['is_deleted'] = $is_deleted;
-//
-//                    $options = [
-//                        'reset' => true,
-//                        'criteria' => [
-//                            [
-//                                'link' => 'AND',
-//                                'field' => 7,
-//                                'searchtype' => 'equals',
-//                                'value' => $item->getID()
-//                            ]
-//                        ],
-//                        'menu' => [
-//                            'assets' => 'Computer',
-//                            'id' => $item->fields['id'],
-//                            'active' => 'Wazuh'
-//                        ],
-//                        'is_deleted' => $is_deleted,
-////                        'forcetab' => 'GlpiPlugin\\Wazuh\\ComputerTab$1',
-//                        'glpilist_limit' => 15,
-//                        'display_type' => Search::HTML_OUTPUT
-//                    ];
+                    Search::manageParams($itemtype, $params);
                     Search::show(ComputerTab::class);
                 }
             } else {
@@ -395,6 +379,7 @@ class ComputerTab extends DeviceTab {
         $table = self::getTable();
         $computer_fkey = Computer::getForeignKeyField();
         $ticket_fkey = \Ticket::getForeignKeyField();
+        $parent_fkey = static::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
             $migration->displayMessage("Installing $table");
@@ -403,6 +388,7 @@ class ComputerTab extends DeviceTab {
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `key` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `$parent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$computer_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `v_category` varchar(255) COLLATE {$default_collation} NOT NULL,
@@ -426,6 +412,7 @@ class ComputerTab extends DeviceTab {
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
+                     KEY `$parent_fkey` (`$parent_fkey`),
                      KEY `$computer_fkey` (`$computer_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      UNIQUE KEY `key` (`key`),
@@ -440,7 +427,7 @@ class ComputerTab extends DeviceTab {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\ComputerTab' => [1, 3, 4, 8 ,9, 7]
+                        self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
                     ],
             );
         }
@@ -453,9 +440,15 @@ class ComputerTab extends DeviceTab {
 
         $table = self::getTable();
         if ($DB->tableExists($table)) {
-            $migration->displayMessage("Uninstalling $table");
+            $migration->displayMessage("Uninstalling $table .");
             $migration->dropTable($table);
         }
+        
+        $itemtype = self::class;
+        $migration->displayMessage("Cleaning display preferences for $itemtype.");
+
+        $displayPreference = new \DisplayPreference();
+        $displayPreference->deleteByCriteria(['itemtype' => $itemtype]);
 
         return true;
     }

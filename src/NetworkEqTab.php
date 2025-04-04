@@ -172,28 +172,21 @@ class NetworkEqTab extends DeviceTab {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
                     static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $item);
 
-                    $p = [
-                        'addhidden' => [
-                            'hidden_input' => 'OK'
-                        ],
-                        'actionname' => 'preview',
-                        'actionvalue' => __('Preview'),
-                    ];
-                    Search::showGenericSearch(static::class, $p);
-
-                    $options = [
-                        'reset' => true,
+                    $itemtype = self::class;
+                    $params = [
+                        'sort' => 1,
+                        'order' => 'DESC',
+                        'reset' => 'reset',
                         'criteria' => [
                             [
-                                'link' => 'AND',
                                 'field' => 7,
                                 'searchtype' => 'equals',
                                 'value' => $item->getID()
                             ]
                         ],
-                        'display_type' => Search::HTML_OUTPUT
                     ];
-                    Search::showList(static::class, $options);
+                    Search::manageParams($itemtype, $params);
+                    Search::show(static::class);
                 }
             } else {
                 $dropdown_options = [
@@ -384,6 +377,7 @@ class NetworkEqTab extends DeviceTab {
         $table = self::getTable();
         $networkeq_fkey = NetworkEquipment::getForeignKeyField();
         $ticket_fkey = \Ticket::getForeignKeyField();
+        $parent_fkey = static::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
             $migration->displayMessage("Installing $table");
@@ -392,6 +386,7 @@ class NetworkEqTab extends DeviceTab {
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `key` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `$parent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$networkeq_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `v_category` varchar(255) COLLATE {$default_collation} NOT NULL,
@@ -415,6 +410,7 @@ class NetworkEqTab extends DeviceTab {
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
+                     KEY `$parent_fkey` (`$parent_fkey`),
                      KEY `$networkeq_fkey` (`$networkeq_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      UNIQUE KEY `key` (`key`),
@@ -429,7 +425,7 @@ class NetworkEqTab extends DeviceTab {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\NetworkEqTab' => [1, 3, 4, 8 ,9, 7]
+                        self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
                     ],
             );
         }
@@ -445,6 +441,12 @@ class NetworkEqTab extends DeviceTab {
             $migration->displayMessage("Uninstalling $table");
             $migration->dropTable($table);
         }
+
+        $itemtype = self::class;
+        $migration->displayMessage("Cleaning display preferences for $itemtype.");
+
+        $displayPreference = new \DisplayPreference();
+        $displayPreference->deleteByCriteria(['itemtype' => $itemtype]);
 
         return true;
     }

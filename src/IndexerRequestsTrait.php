@@ -22,6 +22,8 @@ namespace GlpiPlugin\Wazuh;
 use DateTime;
 use DateTimeZone;
 use Session;
+use CommonDBTM;
+use Html;
 
 /**
  * Request helper
@@ -60,58 +62,6 @@ trait IndexerRequestsTrait {
         return self::$isInitialized;
     }
 
-    /**
-     * Executes a query for vulnerabilities for specific hosts
-     * 
-     * @param array $hostnames Array of host names to filter
-     * @param int $size Maximum number of results (default 100)
-     * @param int $offset Offset for pagination (default 0)
-     * @param string $severity Optional filtering by severity level (High, Medium, Low)
-     * @return array Query result
-     */
-    public static function queryVulnerabilitiesByHosts($hostnames = [], $size = 100, $offset = 0, $severity = null) {
-        if (!self::$isInitialized) {
-            return ['success' => false, 'error' => 'Connection not initialized'];
-        }
-
-        $query = [
-            'size' => $size,
-            'from' => $offset,
-            'query' => [
-                'bool' => [
-                    'must' => []
-                ]
-            ]
-        ];
-
-        if (!empty($hostnames)) {
-            if (count($hostnames) == 1) {
-                $query['query']['bool']['must'][] = [
-                    'term' => [
-                        'agent.name' => $hostnames[0]
-                    ]
-                ];
-            } else {
-                $query['query']['bool']['must'][] = [
-                    'terms' => [
-                        'agent.name' => $hostnames
-                    ]
-                ];
-            }
-        }
-
-        if ($severity !== null) {
-            $query['query']['bool']['must'][] = [
-                'term' => [
-                    'data.vulnerability.severity' => $severity
-                ]
-            ];
-        }
-
-        return self::executeQuery($query);
-    }
-
-    
     private static function checkHostAvailability($host, $timeout = 5) {
         $ch = curl_init($host);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
@@ -134,7 +84,7 @@ trait IndexerRequestsTrait {
      * @param array $query Query in JSON/array format
      * @return array Server response
      */
-    private static function executeQuery($query) {
+    private static function executeQuery($query, \CommonDBTM $device) {
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
@@ -165,7 +115,7 @@ trait IndexerRequestsTrait {
         if ($error) {
             Logger::addError(__FUNCTION__ . " HttpCode: " . $httpCode . " " . $error);
             Session::addMessageAfterRedirect($error, true, ERROR);
-            \Html::back();
+            echo Html::scriptBlock("$(function() { displayAjaxMessageAfterRedirect(); }); ");
             return [
                 'success' => false,
                 'error' => $error,
@@ -180,7 +130,7 @@ trait IndexerRequestsTrait {
         ];
     }
 
-    protected static function getLatestDeviceVulnerabilityDetectionDate(\CommonDBTM $device): string {
+    protected static function getLatestDeviceVulnerabilityDetectionDate(CommonDBTM $device): string {
         $clazz = static::class;
         $item = new $clazz;
         
@@ -209,10 +159,10 @@ trait IndexerRequestsTrait {
         }
     }
     
-    public static function getTotalSize($query): int | bool {
+    public static function getTotalSize($query, CommonDBTM $device): int | bool {
         $query['size'] = 1;
         $query['from'] = 0;
-        $result = self::executeQuery($query);
+        $result = self::executeQuery($query, $device);
         if ($result['success']) {
             Logger::addDebug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
             return $result['data']['hits']['total']['value'];
@@ -226,7 +176,7 @@ trait IndexerRequestsTrait {
      * @param type $agentIds
      * @return string query
      */
-    public static function getQueryByAgentIds(array $agentIds, \CommonDBTM $computer): array {
+    public static function getQueryByAgentIds(array $agentIds, CommonDBTM $computer): array {
         $latestDtStr = static::getLatestDeviceVulnerabilityDetectionDate($computer);
         $agentIdsStr = json_encode($agentIds);
         Logger::addDebug("Quering Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
@@ -274,7 +224,7 @@ trait IndexerRequestsTrait {
      * @param int $offset Offset for pagination (default 0)
      * @return array Query result
      */
-    public static function queryVulnerabilitiesByAgentIds($agentIds, \CommonDBTM $device, $pageSize = 500) {
+    public static function queryVulnerabilitiesByAgentIds($agentIds, CommonDBTM $device, $pageSize = 500) {
         global $DB;
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
@@ -294,7 +244,7 @@ trait IndexerRequestsTrait {
 
         $query = self::getQueryByAgentIds($agentIds, $device);
         
-        $total = self::getTotalSize($query);
+        $total = self::getTotalSize($query, $device);
         if (!$total) {
             return false;
         }
@@ -308,7 +258,7 @@ trait IndexerRequestsTrait {
             $query['size'] = $pageSize;
             $query['from'] = $from;
 
-            $result = self::executeQuery($query);
+            $result = self::executeQuery($query, $device);
             if ($result['success']) {
                 try {
                     $DB->beginTransaction();

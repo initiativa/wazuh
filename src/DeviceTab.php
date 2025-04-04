@@ -273,6 +273,24 @@ abstract class DeviceTab extends \CommonDBChild {
             ]
         ];
 
+        $tab[] = [
+            'id' => 10,
+            'table' => static::getTable(),
+            'field' => 'is_discontinue',
+            'name' => __('Discontinued', PluginConfig::APP_CODE),
+            'datatype' => 'bool',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 11,
+            'table' => static::getTable(),
+            'field' => 'v_detected',
+            'name' => __('Detected', PluginConfig::APP_CODE),
+            'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
         return $tab;
     }
 
