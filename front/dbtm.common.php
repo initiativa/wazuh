@@ -12,8 +12,9 @@ if (!$common::canView()) {
 Html::header(
     $common::getTypeName(2),
     $_SERVER['PHP_SELF'],
-    $place ?? 'admin',
-    $common::class
+    $place[0] ?? 'admin',
+    $place[1] ?? $common::class,
+    $place[2] ?? '',
 );
 
 Search::show($common::class);

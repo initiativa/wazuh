@@ -168,12 +168,12 @@ class PluginWazuhAgent extends CommonDBTM {
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
-                     UNIQUE KEY `unicity` (`agent_id`),
                      KEY `name` (`name`),
                      KEY `status` (`status`),
                      KEY `item_id` (`item_id`),
                      KEY `entities_id` (`entities_id`),
                      KEY `$connection_fkey` (`$connection_fkey`),
+                     UNIQUE KEY `connection_aggent_id` (`agent_id`, `$connection_fkey`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
                      KEY `is_recursive` (`is_recursive`),
@@ -306,6 +306,19 @@ class PluginWazuhAgent extends CommonDBTM {
             "datatype" => "specific",
             "massiveaction" => false,
             "additionalfields" => ['itemtype'],
+        ];
+        
+        $tab[] = [
+            'id' => 10,
+            'table' => Connection::getTable(),
+            'field' => 'name',
+            'name' => __('Wazuh Server Name', PluginConfig::APP_CODE),
+            'datatype' => 'dropdown',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Connection::getForeignKeyField()
+            ]
         ];
 
         return $tab;
@@ -464,8 +477,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $ids = (new Connection())->find();
         foreach ($ids as $id) {
             Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
-            $wazuhConfig = new Connection();
-            $wazuhConfig->getFromDB($id['id']);
+            $wazuhConfig = Connection::getById($id['id']);
             if (!self::syncAgent($wazuhConfig)) {
                 return false;
             }
@@ -540,7 +552,10 @@ class PluginWazuhAgent extends CommonDBTM {
             // Sprawdź, czy agent już istnieje
             $existing_agent = $DB->request([
                         'FROM' => $table,
-                        'WHERE' => ['agent_id' => $agent['id']]
+                        'WHERE' => [
+                            'agent_id' => $agent['id'],
+                            Connection::getForeignKeyField() => $wazuhConfig->fields['id']
+                    ]
                     ])->current();
 
             // Za każdym razem tworzymy nowy obiekt aby uniknąć potencjalnych problemów
@@ -699,7 +714,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $elements = $this->collectDevices();
 
         Dropdown::showFromArray('itemtype_item_id', $elements, [
-            'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : '',
+            'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : 0,
             'rand' => mt_rand(),
             'width' => '100%'
         ]);
@@ -735,6 +750,18 @@ class PluginWazuhAgent extends CommonDBTM {
                                 value: '0'
                             }).appendTo('form');
                         }
+                    } else {
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'itemtype',
+                                value: ''
+                            }).appendTo('form');
+
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'item_id',
+                                value: '0'
+                            }).appendTo('form');
                     }
                     return true;
                 });

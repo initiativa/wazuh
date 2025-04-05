@@ -19,6 +19,12 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use DateTime;
+use DateTimeZone;
+use Session;
+use CommonDBTM;
+use Html;
+
 /**
  * Request helper
  *
@@ -56,55 +62,20 @@ trait IndexerRequestsTrait {
         return self::$isInitialized;
     }
 
-    /**
-     * Executes a query for vulnerabilities for specific hosts
-     * 
-     * @param array $hostnames Array of host names to filter
-     * @param int $size Maximum number of results (default 100)
-     * @param int $offset Offset for pagination (default 0)
-     * @param string $severity Optional filtering by severity level (High, Medium, Low)
-     * @return array Query result
-     */
-    public static function queryVulnerabilitiesByHosts($hostnames = [], $size = 100, $offset = 0, $severity = null) {
-        if (!self::$isInitialized) {
-            return ['success' => false, 'error' => 'Connection not initialized'];
-        }
+    private static function checkHostAvailability($host, $timeout = 5) {
+        $ch = curl_init($host);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
 
-        $query = [
-            'size' => $size,
-            'from' => $offset,
-            'query' => [
-                'bool' => [
-                    'must' => []
-                ]
-            ]
-        ];
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
 
-        if (!empty($hostnames)) {
-            if (count($hostnames) == 1) {
-                $query['query']['bool']['must'][] = [
-                    'term' => [
-                        'agent.name' => $hostnames[0]
-                    ]
-                ];
-            } else {
-                $query['query']['bool']['must'][] = [
-                    'terms' => [
-                        'agent.name' => $hostnames
-                    ]
-                ];
-            }
-        }
+        curl_close($ch);
 
-        if ($severity !== null) {
-            $query['query']['bool']['must'][] = [
-                'term' => [
-                    'data.vulnerability.severity' => $severity
-                ]
-            ];
-        }
-
-        return self::executeQuery($query);
+        return $response !== false && $httpCode < 400;
     }
 
     /**
@@ -113,13 +84,13 @@ trait IndexerRequestsTrait {
      * @param array $query Query in JSON/array format
      * @return array Server response
      */
-    private static function executeQuery($query) {
+    private static function executeQuery($query, \CommonDBTM $device) {
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
 
         $endpoint = self::$indexerUrl . '/wazuh-states-vulnerabilities-*/_search';
-        Logger::addDebug(__FUNCTION__ . $endpoint);
+        Logger::addDebug(__FUNCTION__ . " " . $endpoint . " Query: " . json_encode($query));
 
         $ch = curl_init($endpoint);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -132,6 +103,9 @@ trait IndexerRequestsTrait {
         ]);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
         $response = curl_exec($ch);
         $error = curl_error($ch);
@@ -139,6 +113,9 @@ trait IndexerRequestsTrait {
         curl_close($ch);
 
         if ($error) {
+            Logger::addError(__FUNCTION__ . " HttpCode: " . $httpCode . " " . $error);
+            Session::addMessageAfterRedirect($error, true, ERROR);
+            echo Html::scriptBlock("$(function() { displayAjaxMessageAfterRedirect(); }); ");
             return [
                 'success' => false,
                 'error' => $error,
@@ -153,15 +130,102 @@ trait IndexerRequestsTrait {
         ];
     }
 
+    protected static function getLatestDeviceVulnerabilityDetectionDate(CommonDBTM $device): string {
+        $clazz = static::class;
+        $item = new $clazz;
+        
+        if ($device instanceof \Computer) {
+            $records = $item->find(
+                    ['computers_id' => $device->getID()],
+                    ['v_detected DESC'],
+                    1
+            );
+        }
+
+        if ($device instanceof \NetworkEquipment) {
+            $records = $item->find(
+                    ['networkequipments_id' => $device->getID()],
+                    ['v_detected DESC'],
+                    1
+            );
+        }
+
+        $latestRecord = reset($records);
+        if (isset($latestRecord['v_detected'])) {
+            $dt = DateTime::createFromFormat('Y-m-d H:i:s', $latestRecord['v_detected'], new DateTimeZone('UTC'));
+            return $dt->format('Y-m-d\TH:i:s\Z');
+        } else {
+            return '2000-01-01T12:00:00Z';
+        }
+    }
+    
+    public static function getTotalSize($query, CommonDBTM $device): int | bool {
+        $query['size'] = 1;
+        $query['from'] = 0;
+        $result = self::executeQuery($query, $device);
+        if ($result['success']) {
+            Logger::addDebug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
+            return $result['data']['hits']['total']['value'];
+        } else {
+            return false;
+        }
+    }
+    
+    /**
+     * Prepare API query by agent ids
+     * @param type $agentIds
+     * @return string query
+     */
+    public static function getQueryByAgentIds(array $agentIds, CommonDBTM $computer): array {
+        $latestDtStr = static::getLatestDeviceVulnerabilityDetectionDate($computer);
+        $agentIdsStr = json_encode($agentIds);
+        Logger::addDebug("Quering Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
+
+        $a = $agentIds;
+        if (count($agentIds) == 1) {
+            $a = $agentIds[0];
+        }
+
+        $query = [
+            "sort" => [
+                [
+                    "_id" => [
+                        "order" => "desc"
+                    ]
+                ]
+            ],
+            "query" => [
+                "bool" => [
+                    "must" => [
+                        [
+                            "term" => [
+                                "agent.id" => $a
+                            ]
+                        ],
+                        [
+                            "range" => [
+                                "vulnerability.detected_at" => [
+                                    "gt" => $latestDtStr
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        return $query;
+    }
+
     /**
      * Retrieves vulnerabilities by agent ID
      * 
      * @param string|array $agentIds Agent ID or array of agent IDs
-     * @param int $size Maximum number of results
+     * @param int $pageSize Maximum number of results
      * @param int $offset Offset for pagination (default 0)
      * @return array Query result
      */
-    public static function queryVulnerabilitiesByAgentIds($agentIds, $size = 100, $offset = 0) {
+    public static function queryVulnerabilitiesByAgentIds($agentIds, CommonDBTM $device, $pageSize = 500) {
+        global $DB;
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
@@ -173,43 +237,85 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-            return [];
+//            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
 
-        $query = [
-            'size' => $size,
-            'from' => $offset,
-            'query' => [
-                'bool' => [
-                    'must' => []
-                ]
-            ]
-        ];
+        $query = self::getQueryByAgentIds($agentIds, $device);
+        
+        $total = self::getTotalSize($query, $device);
+        if (!$total) {
+            return false;
+        }
+        $totalPages = ceil($total / $pageSize);
 
-        if (is_array($agentIds)) {
-            if (count($agentIds) == 1) {
-                $query['query']['bool']['must'][] = [
-                    'term' => [
-                        'agent.id' => $agentIds[0]
-                    ]
-                ];
+        Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+
+        for ($page = 0; $page < $totalPages; $page++) {
+            $from = $page * $pageSize;
+
+            $query['size'] = $pageSize;
+            $query['from'] = $from;
+
+            $result = self::executeQuery($query, $device);
+            if ($result['success']) {
+                try {
+                    $DB->beginTransaction();
+                    $stmt_query = static::getUpsertStatement();
+                    $stmt = $DB->prepare($stmt_query);
+                    if (!$stmt) {
+                         $error = $DB->error;
+                        Logger::addError('Can not create statement !', ['query' => $stmt_query, 'error' => $error]);
+                        return false;
+                    }
+                    foreach ($result['data']['hits']['hits'] as $res) {
+                        if (static::bindStatement($stmt, $res, $device)) {
+                            $stmt->execute();
+                        }
+                    }
+                    $DB->commit();
+                } catch (Exception $e) {
+                    $DB->rollBack();
+                    Logger::addCritical($e->getMessage());
+                }
+
+//                foreach ($result['data']['hits']['hits'] as $res) {
+//                    static::createItem($res, $device);
+//                }
             } else {
-                $query['query']['bool']['must'][] = [
-                    'terms' => [
-                        'agent.id' => $agentIds
-                    ]
-                ];
+                return false;
             }
-        } else {
-            $query['query']['bool']['must'][] = [
-                'term' => [
-                    'agent.id' => $agentIds
-                ]
-            ];
+            usleep(100000);
+        }
+    }
+    
+    protected static function convertIsoToMysqlDatetime($isoDate) {
+        if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z' || $isoDate == null) {
+            return null;
         }
 
-        return self::executeQuery($query);
+        try {
+            $dateTime = new \DateTime($isoDate);
+            $year = (int) $dateTime->format('Y');
+
+            if ($year <= 1) {
+                return null;
+            }
+
+            return $dateTime->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+    
+    protected static function array_get($dataPath, $res) {
+        if (isset($dataPath)) {
+            return $dataPath;
+        } else {
+            Logger::addWarning('*** No key in ' . json_encode($res));
+            return null;
+        }
+        
     }
 }

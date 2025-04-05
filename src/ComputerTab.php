@@ -68,6 +68,62 @@ class ComputerTab extends DeviceTab {
         return $count;
     }
 
+    #[\Override]
+    protected static function getUpsertStatement(): string {
+        $table = static::getTable();
+        $computer_fkey = Computer::getForeignKeyField();
+        $query = "INSERT INTO `$table` 
+          (`key`, `$computer_fkey`, `name`, `v_description`, `v_severity`, `v_detected`, `v_published`, `v_enum`, `v_category`, `v_classification`, `v_reference`, `p_name`, `p_version`, `p_type`, `p_description`, `p_installed`, `date_mod`) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE
+              `$computer_fkey` = VALUES(`$computer_fkey`),
+              `name` = VALUES(`name`),
+              `v_description` = VALUES(`v_description`),
+              `v_severity` = VALUES(`v_severity`),
+              `v_detected` = VALUES(`v_detected`),
+              `v_published` = VALUES(`v_published`),
+              `v_enum` = VALUES(`v_enum`),
+              `v_category` = VALUES(`v_category`),
+              `v_classification` = VALUES(`v_classification`),
+              `v_reference` = VALUES(`v_reference`),
+              `p_name` = VALUES(`p_name`),
+              `p_version` = VALUES(`p_version`),
+              `p_type` = VALUES(`p_type`),
+              `p_description` = VALUES(`p_description`),
+              `p_installed` = VALUES(`p_installed`),
+              `date_mod` = VALUES(`date_mod`)
+          ";
+        Logger::addDebug($query, ['computer_fkey' => $computer_fkey]);
+        return $query;
+    }
+
+    #[\Override]
+    protected static function bindStatement($stmt, $result, \CommonDBTM $device): bool {
+        global $DB;
+
+        $d = [
+            $result['_id'],
+            $device->getID(),
+            $result['_source']['vulnerability']['id'],
+            $DB->escape($result['_source']['vulnerability']['description'] ?? ''),
+            $result['_source']['vulnerability']['severity'] ?? '',
+            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
+            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
+            $result['_source']['vulnerability']['enumeration'],
+            $result['_source']['vulnerability']['category'],
+            $result['_source']['vulnerability']['classification'],
+            $result['_source']['vulnerability']['reference'],
+            $result['_source']['package']['name'],
+            $result['_source']['package']['version'] ?? '',
+            $result['_source']['package']['type'] ?? '',
+            $DB->escape($result['_source']['package']['description'] ?? ''),
+            self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
+            (new \DateTime())->format('Y-m-d H:i:s')
+        ];
+        return $stmt->bind_param('sisssssssssssssss', ...$d);
+    }
+
+    
     private static function createItem($result, \Computer $computer) {
         global $DB;
         $key = $result['_id'];
@@ -84,12 +140,17 @@ class ComputerTab extends DeviceTab {
             'name' => $result['_source']['vulnerability']['id'],
             'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
             'v_severity' => $result['_source']['vulnerability']['severity'],
-//            'v_detected' => new \DateTime($result['_source']['vulnerability']['detected_at']),
-//            'v_published' => new \DateTime($result['_source']['vulnerability']['published_at']),
+            'v_detected' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
+            'v_published' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
             'v_enum' => $result['_source']['vulnerability']['enumeration'],
             'v_category' => $result['_source']['vulnerability']['category'],
             'v_classification' => $result['_source']['vulnerability']['classification'],
             'v_reference' => $result['_source']['vulnerability']['reference'],
+            'p_name' => $result['_source']['package']['name'],
+            'p_version' => $result['_source']['package']['version'] ?? '',
+            'p_type' => $result['_source']['package']['type'] ?? '',
+            'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
+            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
         ];
 
         if (!$founded) {
@@ -111,37 +172,25 @@ class ComputerTab extends DeviceTab {
                 $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($config) {
                     static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $result = static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']]);
-                    if (!empty($result)) {
-                        foreach ($result['data']['hits']['hits'] as $res) {
-//                        Logger::addDebug(json_encode($res['_source']['vulnerability']['severity']) . " -- " . json_encode($res['_id']));
-                            self::createItem($res, $item);
-                        }
-                    }
-
-                    $p = [
-                        'addhidden' => [// some hidden inputs added to the criteria form
-                            'hidden_input' => 'OK'
-                        ],
-                        'actionname' => 'preview', //change the submit button name
-                        'actionvalue' => __('Preview'), //change the submit button label
-                    ];
-                    Search::showGenericSearch(ComputerTab::class, $p);
-
-                    $options = [
-                        'reset' => true,
+                    static::queryVulnerabilitiesByAgentIds([$agent->fields['agent_id']], $item);
+                    
+                    $itemtype  = self::class;
+                    $params = [
+                        'sort' => '2',
+                        'order' => 'DESC',
+                        'reset' => 'reset',
                         'criteria' => [
                             [
-                                'link' => 'AND',
                                 'field' => 7,
                                 'searchtype' => 'equals',
                                 'value' => $item->getID()
                             ]
                         ],
-                        'display_type' => Search::HTML_OUTPUT
                     ];
-                    Search::showList(ComputerTab::class, $options);
-                    
+                    Search::manageParams($itemtype, $params);
+                    $_SESSION['glpisearch'][$itemtype]['sort'] = 1;
+                    $_SESSION['glpisearch'][$itemtype]['order'] = 'ASC';
+                    Search::show(ComputerTab::class);
                 }
             } else {
                 $dropdown_options = [
@@ -163,42 +212,6 @@ class ComputerTab extends DeviceTab {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
-            'id' => 3,
-            'name' => __('Key', PluginConfig::APP_CODE),
-            'table' => self::getTable(),
-            'field' => 'key',
-            'datatype' => 'text',
-            'massiveaction' => false,
-        ];
-
-        $tab[] = [
-            'id' => 4,
-            'name' => __('Severity', PluginConfig::APP_CODE),
-            'table' => self::getTable(),
-            'field' => 'v_severity',
-            'datatype' => 'text',
-            'massiveaction' => false,
-        ];
-        
-         $tab[] = [
-            'id' => 5,
-            'table' => $this->getTable(),
-            'field' => 'v_description',
-            'name' => __('Description', PluginConfig::APP_CODE),
-            'datatype' => 'text',
-            'massiveaction' => false
-        ];
-
-        $tab[] = [
-            'id' => 6,
-            'table' => $this->getTable(),
-            'field' => 'v_reference',
-            'name' => __('Reference', PluginConfig::APP_CODE),
-            'datatype' => 'weblink',
-            'massiveaction' => false
-        ];
-
-        $tab[] = [
             'id' => 7,
             'table' => Computer::getTable(),
             'field' => 'name',
@@ -208,19 +221,6 @@ class ComputerTab extends DeviceTab {
             'joinparams' => [
                 'jointype' => 'standard',
                 'foreignkey' => Computer::getForeignKeyField()
-            ]
-        ];
-
-        $tab[] = [
-            'id' => 8,
-            'table' => Ticket::getTable(),
-            'field' => 'name',
-            'name' => __('Ticket', PluginConfig::APP_CODE),
-            'datatype' => 'itemlink',
-            'massiveaction' => true,
-            'joinparams' => [
-                'jointype' => 'standard',
-                'foreignkey' => Ticket::getForeignKeyField()
             ]
         ];
 
@@ -256,7 +256,7 @@ class ComputerTab extends DeviceTab {
                     return false;
                 }
  
-                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment']);
+                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment'], $input['ticket_urgency']);
                 if ($ticket_id) {
                     $ticketUrl = Ticket::getFormURLWithID($ticket_id);
                     $message = sprintf(
@@ -281,7 +281,7 @@ class ComputerTab extends DeviceTab {
      * @param string $title
      * @return int|boolean ticket ID or false
      */
-    protected static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "") {
+    protected static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "", $urgency = 3) {
         global $DB;
         $full_cves = [];
 
@@ -311,7 +311,7 @@ class ComputerTab extends DeviceTab {
                 foreach ($cves as $cveid) {
                     $cve = ComputerTab::getById($cveid);
                     array_push($full_cves, $cve);
-                    $name = $cve->fields['name'];
+                    $name = $cve->fields['name'] . "/" . $cve->fields['p_name'];
                     $content .= sprintf(
                             " <a href='../plugins/wazuh/front/computertab.form.php?id=$cveid'>$name</a> "
                     );
@@ -325,7 +325,7 @@ class ComputerTab extends DeviceTab {
             'content' => \Toolbox::addslashes_deep($content),
             'status' => Ticket::INCOMING,
             'priority' => 3,
-            'urgency' => 3,
+            'urgency' => $urgency,
             'impact' => 3,
             'entities_id' => $entity_id,
             '_add_items' => [],
@@ -381,6 +381,7 @@ class ComputerTab extends DeviceTab {
         $table = self::getTable();
         $computer_fkey = Computer::getForeignKeyField();
         $ticket_fkey = \Ticket::getForeignKeyField();
+        $parent_fkey = static::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
             $migration->displayMessage("Installing $table");
@@ -389,6 +390,7 @@ class ComputerTab extends DeviceTab {
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
                      `key` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `$parent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$computer_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `v_category` varchar(255) COLLATE {$default_collation} NOT NULL,
@@ -400,15 +402,23 @@ class ComputerTab extends DeviceTab {
                      `v_severity` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_reference` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `v_score` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `p_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `p_version` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `p_installed` TIMESTAMP DEFAULT NULL,
+                     `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
                      PRIMARY KEY (`id`),
+                     KEY `$parent_fkey` (`$parent_fkey`),
                      KEY `$computer_fkey` (`$computer_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      UNIQUE KEY `key` (`key`),
+                     KEY `v_detected` (`v_detected`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
@@ -419,7 +429,7 @@ class ComputerTab extends DeviceTab {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\ComputerTab' => [1, 3, 4, 8]
+                        self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
                     ],
             );
         }
@@ -432,9 +442,15 @@ class ComputerTab extends DeviceTab {
 
         $table = self::getTable();
         if ($DB->tableExists($table)) {
-            $migration->displayMessage("Uninstalling $table");
+            $migration->displayMessage("Uninstalling $table .");
             $migration->dropTable($table);
         }
+        
+        $itemtype = self::class;
+        $migration->displayMessage("Cleaning display preferences for $itemtype.");
+
+        $displayPreference = new \DisplayPreference();
+        $displayPreference->deleteByCriteria(['itemtype' => $itemtype]);
 
         return true;
     }

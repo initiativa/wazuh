@@ -63,6 +63,8 @@ abstract class DeviceTab extends \CommonDBChild {
     }
 
     abstract protected function countElements($device_id);
+    abstract static protected function getUpsertStatement(): string;
+    abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
     /**
      * @param integer $ID
@@ -90,9 +92,64 @@ abstract class DeviceTab extends \CommonDBChild {
     }
 
     
+    private static function getSeverityValue(string $severity): int | null {
+        $levels = [
+            'very low' => 1,
+            'low' => 2,
+            'medium' => 3,
+            'high' => 4,
+            'very high' => 5,
+            'critical' => 6
+        ];
+        
+        return $levels[strtolower($severity)] ?? 3;
+    }
+    
+    protected static function getAvgUrgencyLevel($iids): int | null {
+        global $DB;
+        $default = 3;
+
+        $table = static::getTable();
+        
+//        $ids = array_map('intval', array_keys($iids));
+        $key = array_keys($iids)[0];
+        $ids = array_map('intval', array_values($iids[$key]));
+
+        Logger::addDebug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
+
+         $criteria = [
+            'SELECT' => ['v_severity'],
+            'FROM' => $table,
+             'WHERE' => [
+                 'id' => $ids,
+                 'is_deleted' => 0,
+                 ]
+        ];
+
+        $data = [];
+        $average = 0;
+        $iterator = $DB->request($criteria);
+        $size = count($iterator);
+        if ($size === 0) {
+            return $default;
+        }
+        foreach ($iterator as $record) {
+            $average += self::getSeverityValue($record['v_severity']);
+        }
+
+        $result = (int)($average / $size);
+        if ($result < 1 || $result > 6) {
+            Logger::addError("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
+            throw new \RuntimeException("Average urgency level outof expecting values.");
+        }
+        
+        return $result;
+
+    }
+    
     #[\Override]
     static function showMassiveActionsSubForm(\MassiveAction $ma) {
-        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction());
+        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
         switch ($ma->getAction()) {
             case "create_ticket":
                 echo "<div class='d-flex flex-column align-items-center gap-2 mb-2'>";
@@ -109,6 +166,15 @@ abstract class DeviceTab extends \CommonDBChild {
                             'display' => false
                         ]
                 );
+
+                echo "<label for='ticket_urgency'>" . __('Urgency', PluginConfig::APP_CODE) . ":</label>";
+                $uparams = [
+                    'name' => 'ticket_urgency',
+                    'value' => static::getAvgUrgencyLevel($ma->getItems()),
+                    'display' => false
+                ];
+                echo \Ticket::dropdownUrgency($uparams);
+
                 echo "</div>";
                 echo "<span class='align-self-start'>" . __("Additional ticket comment:", PluginConfig::APP_CODE) . "</span>";
                 echo Html::textarea([
@@ -125,10 +191,107 @@ abstract class DeviceTab extends \CommonDBChild {
                     'rand' => mt_rand(),
                     'display' => false
                 ]);
-                echo "</div>";
+//                echo "</div>";
                 break;
         }
         return parent::showMassiveActionsSubForm($ma);
+    }
+
+    
+    #[\Override]
+    public function rawSearchOptions() {
+        $tab = parent::rawSearchOptions();
+
+        $tab[] = [
+            'id' => 2,
+            'name' => __('Id', PluginConfig::APP_CODE),
+            'table' => static::getTable(),
+            'field' => 'id',
+            'datatype' => 'number',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 3,
+            'name' => __('Key', PluginConfig::APP_CODE),
+            'table' => static::getTable(),
+            'field' => 'key',
+            'datatype' => 'string',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 4,
+            'name' => __('Severity', PluginConfig::APP_CODE),
+            'table' => static::getTable(),
+            'field' => 'v_severity',
+            'datatype' => 'string',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 5,
+            'table' => static::getTable(),
+            'field' => 'v_description',
+            'name' => __('Description', PluginConfig::APP_CODE),
+            'datatype' => 'text',
+            'massiveaction' => false
+        ];
+
+        $tab[] = [
+            'id' => 6,
+            'table' => static::getTable(),
+            'field' => 'v_reference',
+            'name' => __('Reference', PluginConfig::APP_CODE),
+            'datatype' => 'weblink',
+            'massiveaction' => false
+        ];
+
+        $tab[] = [
+            'id' => 8,
+            'table' => Ticket::getTable(),
+            'field' => 'id',
+            'name' => __('Ticket', PluginConfig::APP_CODE),
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Ticket::getForeignKeyField()
+            ]
+        ];
+
+        $tab[] = [
+            'id' => 9,
+            'table' => Ticket::getTable(),
+            'field' => 'status',
+            'name' => __('Ticket Status', PluginConfig::APP_CODE),
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Ticket::getForeignKeyField()
+            ]
+        ];
+
+        $tab[] = [
+            'id' => 10,
+            'table' => static::getTable(),
+            'field' => 'is_discontinue',
+            'name' => __('Discontinued', PluginConfig::APP_CODE),
+            'datatype' => 'bool',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 11,
+            'table' => static::getTable(),
+            'field' => 'v_detected',
+            'name' => __('Detected', PluginConfig::APP_CODE),
+            'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
+        return $tab;
     }
 
     /**
