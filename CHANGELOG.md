@@ -15,10 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - assets tab, show trash problems. Not when search::show but then sort problems ????
 - upsert could be the wrong way because of loosing items history
 - agent sync lower timeout
+- #8 perhaps i need to get wazuh setup to aquire scanning time
 
 ## [0.0.5] 2025-04-05
 ### Added
 - Default ticket ITIL Category
+- Columns improvements
 
 ## [0.0.3] 2025-04-04
 

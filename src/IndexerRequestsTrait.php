@@ -297,6 +297,7 @@ trait IndexerRequestsTrait {
 
         try {
             $dateTime = new \DateTime($isoDate);
+            $dateTime->setTimezone(new DateTimeZone('UTC'));
             $year = (int) $dateTime->format('Y');
 
             if ($year <= 1) {
