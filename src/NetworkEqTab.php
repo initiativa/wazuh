@@ -485,7 +485,7 @@ class NetworkEqTab extends DeviceTab {
 
         $migration->updateDisplayPrefs(
                 [
-                    self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
+                    self::class => [1, 10, 13, 11, 3, 6, 4, 8, 9, 7]
                 ],
         );
         

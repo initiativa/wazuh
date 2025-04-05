@@ -333,6 +333,24 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
             'massiveaction' => false,
         ];
 
+        $tab[] = [
+            'id' => 12,
+            'table' => static::getTable(),
+            'field' => 'v_published',
+            'name' => __('Published', PluginConfig::APP_CODE),
+            'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 13,
+            'table' => static::getTable(),
+            'field' => 'date_creation',
+            'name' => __('Fetched', PluginConfig::APP_CODE),
+            'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
         return $tab;
     }
 
