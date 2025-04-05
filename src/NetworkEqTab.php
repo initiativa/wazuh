@@ -222,7 +222,61 @@ class NetworkEqTab extends DeviceTab {
 
         return $tab;
     }
-    
+
+    #[\Override]
+    protected static function getConnectionId($iids): int {
+        global $DB;
+
+        $table = static::getTable();
+        $key = array_keys($iids)[0];
+        $ids = array_map('intval', array_values($iids[$key]));
+
+        if (empty($ids)) {
+            return 0;
+        }
+
+        $criteria = [
+            'SELECT' => [NetworkEquipment::getForeignKeyField()],
+            'FROM' => $table,
+            'WHERE' => [
+                'id' => $ids[0],
+                'is_deleted' => 0,
+            ]
+        ];
+
+        $iterator = $DB->request($criteria);
+        $size = count($iterator);
+        if ($size === 0) {
+            return 0;
+        }
+
+        $device = $iterator->current();
+        $device_id = $device[NetworkEquipment::getForeignKeyField()] ?? 0;
+        if ($device_id === 0) {
+            return 0;
+        }
+
+        $agents_table = PluginWazuhAgent::getTable();
+        $agents_criteria = [
+            'SELECT' => [Connection::getForeignKeyField()],
+            'FROM' => $agents_table,
+            'WHERE' => [
+                'itemtype' => 'Computer',
+                'item_id' => $device_id,
+                'is_deleted' => 0,
+            ]
+        ];
+
+        $agents_iterator = $DB->request($agents_criteria);
+        $agents_size = count($agents_iterator);
+        if ($agents_size === 0) {
+            return 0;
+        }
+        $agent = $agents_iterator->current();
+        $connection_id = $agent[Connection::getForeignKeyField()] ?? 0;
+
+        return $connection_id;
+    }
 
     #[\Override]
     public function getSpecificMassiveActions($checkitem = null) {
@@ -252,7 +306,7 @@ class NetworkEqTab extends DeviceTab {
                     return false;
                 }
  
-                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input['ticket_title'], $input['ticket_comment'], $input['ticket_urgency']);
+                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input);
                 if ($ticket_id) {
                     $ticketUrl = Ticket::getFormURLWithID($ticket_id);
                     $message = sprintf(
@@ -277,9 +331,14 @@ class NetworkEqTab extends DeviceTab {
      * @param string $title
      * @return int|boolean ticket ID or false
      */
-    private static function createTicketWithDevice($entity_id, array $cves, $title = "Alert Wazuh", $comment = "", $urgency = 3) {
+    private static function createTicketWithDevice($entity_id, array $cves, $input) {
         global $DB;
         $full_cves = [];
+
+        $itil_category_id = $input['ticket_category'] ?? 0;
+        $title = $input['ticket_title'] ?? 'Wazuh Vulnerable';
+        $comment = $input['ticket_comment'] ?? '';
+        $urgency = $input['ticket_urgency'] ?? 3;
 
         $cve_id = reset($cves);
         
@@ -319,6 +378,7 @@ class NetworkEqTab extends DeviceTab {
         $ticket_input = [
             'name' => $title,
             'content' => \Toolbox::addslashes_deep($content),
+            'itilcategories_id' => $itil_category_id,
             'status' => Ticket::INCOMING,
             'priority' => 3,
             'urgency' => $urgency,
@@ -336,18 +396,16 @@ class NetworkEqTab extends DeviceTab {
                 $cve->update($cve->fields);
             }
             
-            $additional_content = __('More details in Device Wazuh menu.', PluginConfig::APP_CODE);
-
-            $followup = new ITILFollowup();
-            $followup_input = [
-                'itemtype' => 'Ticket',
-                'items_id' => $ticket_id,
-                'content' => $additional_content,
-                'is_private' => 0,
-            ];
-
-            $followup->add($followup_input);
-            
+//            $additional_content = __('More details in Device Wazuh menu.', PluginConfig::APP_CODE);
+//            $followup = new ITILFollowup();
+//            $followup_input = [
+//                'itemtype' => 'Ticket',
+//                'items_id' => $ticket_id,
+//                'content' => $additional_content,
+//                'is_private' => 0,
+//            ];
+//            $followup->add($followup_input);
+           
             
             if ($device_id) {
                 $ticket_item = new Item_Ticket();
@@ -358,7 +416,6 @@ class NetworkEqTab extends DeviceTab {
                 ];
                 $ticket_item->add($ticket_item_input);
             }
-
         }
 
         return $ticket_id;
@@ -368,7 +425,8 @@ class NetworkEqTab extends DeviceTab {
      * @param object $migration
      * @return boolean
      */
-    static function install(Migration $migration) {
+    #[\Override]
+    static function install(Migration $migration, string $version): bool {
         global $DB;
 
         $default_charset = DBConnection::getDefaultCharset();
@@ -423,17 +481,26 @@ class NetworkEqTab extends DeviceTab {
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
             $DB->query($query) or die("Error creating $table table");
 
-            $migration->updateDisplayPrefs(
-                    [
-                        self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
-                    ],
-            );
         }
+
+        $migration->updateDisplayPrefs(
+                [
+                    self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
+                ],
+        );
+        
+        if (version_compare('0.0.4', $version, '<=')) {
+            $itil_category_fkey = \ITILCategory::getForeignKeyField();
+            $migration->addField($table, $itil_category_fkey, "fkey");
+            $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
+        }
+
 
         return true;
     }
 
-    static function uninstall(Migration $migration) {
+    #[\Override]
+    static function uninstall(Migration $migration): bool {
         global $DB;
 
         $table = self::getTable();

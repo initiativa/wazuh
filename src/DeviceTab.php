@@ -25,6 +25,7 @@ use Migration;
 use Computer;
 use NetworkEquipment;
 use Ticket;
+use MassiveAction;
 use DBConnection;
 use Html;
 use Entity;
@@ -42,7 +43,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceTab extends \CommonDBChild {
+abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -111,7 +112,6 @@ abstract class DeviceTab extends \CommonDBChild {
 
         $table = static::getTable();
         
-//        $ids = array_map('intval', array_keys($iids));
         $key = array_keys($iids)[0];
         $ids = array_map('intval', array_values($iids[$key]));
 
@@ -152,51 +152,93 @@ abstract class DeviceTab extends \CommonDBChild {
         Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
         switch ($ma->getAction()) {
             case "create_ticket":
-                echo "<div class='d-flex flex-column align-items-center gap-2 mb-2'>";
-
-                echo "<div class='d-flex gap-2 align-items-baseline'>";
-                echo "<label for='ticket_title'>" . __('Title', PluginConfig::APP_CODE) . ":</label>";
-                echo Html::input(
-                        'ticket_title',
-                        [
-                            'id' => 'ticket_title',
-                            'value' => 'Wazuh alert',
-                            'class' => 'form-control',
-                            'required' => true,
-                            'display' => false
-                        ]
-                );
-
-                echo "<label for='ticket_urgency'>" . __('Urgency', PluginConfig::APP_CODE) . ":</label>";
-                $uparams = [
-                    'name' => 'ticket_urgency',
-                    'value' => static::getAvgUrgencyLevel($ma->getItems()),
-                    'display' => false
-                ];
-                echo \Ticket::dropdownUrgency($uparams);
-
-                echo "</div>";
-                echo "<span class='align-self-start'>" . __("Additional ticket comment:", PluginConfig::APP_CODE) . "</span>";
-                echo Html::textarea([
-                    "name" => "ticket_comment",
-                    "value" => "",
-                    "cols" => 50,
-                    "rows" => 4,
-                    "display" => false
-                ]);
-                echo Entity::dropdown([
-                    'name' => 'entities_id',
-                    'value' => \Session::getActiveEntity(),
-                    'entity' => $_SESSION['glpiactiveentities'],
-                    'rand' => mt_rand(),
-                    'display' => false
-                ]);
-//                echo "</div>";
+                self::createTicketForm($ma);
                 break;
         }
         return parent::showMassiveActionsSubForm($ma);
     }
 
+    protected abstract static function getConnectionId($iids): int;
+    
+    private static function getConnectionItilCategory(int $connection_id): int {
+        if ($connection_id === 0) {
+            return 0;
+        }
+        global $DB;
+
+        $table = Connection::getTable();
+        $criteria = [
+            'SELECT' => [\ITILCategory::getForeignKeyField()],
+            'FROM' => $table,
+            'WHERE' => [
+                'id' => $connection_id,
+                'is_deleted' => 0,
+            ]
+        ];
+        $iterator = $DB->request($criteria);
+        $size = count($iterator);
+        if ($size === 0 || $size > 1) {
+            return 0;
+        }
+        $connection = $iterator->current();
+        $category_id = $connection[\ITILCategory::getForeignKeyField()] ?? 0;
+        return $category_id;
+    }
+    
+    
+    private static function createTicketForm(MassiveAction $ma) {
+        $connection_id = static::getConnectionId($ma->getItems());
+        
+        echo "<div class='d-flex flex-column align-items-center gap-2 mb-2'>";
+
+        echo "<div class='d-flex gap-2 align-items-baseline'>";
+        echo "<label for='ticket_title'>" . __('Title', PluginConfig::APP_CODE) . ":</label>";
+        echo Html::input(
+                'ticket_title',
+                [
+                    'id' => 'ticket_title',
+                    'value' => 'Wazuh Vulnerable',
+                    'class' => 'form-control',
+                    'required' => true,
+                    'display' => false
+                ]
+        );
+
+        echo "<label for='ticket_urgency'>" . __('Urgency', PluginConfig::APP_CODE) . ":</label>";
+        $uparams = [
+            'name' => 'ticket_urgency',
+            'value' => static::getAvgUrgencyLevel($ma->getItems()),
+            'display' => false
+        ];
+        echo \Ticket::dropdownUrgency($uparams);
+
+
+        echo "<label class='no-wrap' for='ticket_category'>" . __('ITIL Category', PluginConfig::APP_CODE) . ":</label>";
+        $cparams = [
+            'name' => 'ticket_category',
+            'entity' => $_SESSION['glpiactive_entity'],
+            'value' => self::getConnectionItilCategory($connection_id),
+            'display' => false
+        ];
+        echo \ITILCategory::dropdown($cparams);
+        
+        echo "</div>";
+        echo "<span class='align-self-start'>" . __("Additional ticket comment:", PluginConfig::APP_CODE) . "</span>";
+        echo Html::textarea([
+            "name" => "ticket_comment",
+            "value" => "",
+            "cols" => 50,
+            "rows" => 4,
+            "display" => false
+        ]);
+        echo Entity::dropdown([
+            'name' => 'entities_id',
+            'value' => \Session::getActiveEntity(),
+            'entity' => $_SESSION['glpiactiveentities'],
+            'rand' => mt_rand(),
+            'display' => false
+        ]);
+    }
     
     #[\Override]
     public function rawSearchOptions() {
@@ -294,23 +336,4 @@ abstract class DeviceTab extends \CommonDBChild {
         return $tab;
     }
 
-    /**
-     * @param object $migration
-     * @return boolean
-     */
-    abstract static function install(Migration $migration);
-
-    static function uninstall(Migration $migration) {
-        global $DB;
-
-        $table = self::getTable();
-        if ($DB->tableExists($table)) {
-            $migration->displayMessage("Uninstalling $table");
-            $migration->dropTable($table);
-        }
-
-        return true;
-    }
-
-    
 }

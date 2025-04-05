@@ -28,7 +28,6 @@ trait DefaultsTrait {
 
     protected static function defaultsConfigData($table) {
         global $DB;
-        Logger::addDebug(__FUNCTION__ . " ** " . getenv('WPASS2'));
         
         $DB->insert($table, [
             'id' => 1,

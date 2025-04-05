@@ -49,16 +49,19 @@ function plugin_wazuh_install() {
     Logger::addNotice(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
 
 
+    $version = getOldVersion();
+    Logger::addDebug(__FUNCTION__ . " Version: " . $version);
+    
     $migration = new \Migration(PLUGIN_WAZUH_VERSION);
     $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
 
     \GlpiPlugin\Wazuh\ServerConnection::createTable();
 
-    \GlpiPlugin\Wazuh\Connection::install($migration);
+    \GlpiPlugin\Wazuh\Connection::install($migration, $version);
     \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
-    \GlpiPlugin\Wazuh\ComputerTab::install($migration);
-    \GlpiPlugin\Wazuh\NetworkEqTab::install($migration);
+    \GlpiPlugin\Wazuh\ComputerTab::install($migration, $version);
+    \GlpiPlugin\Wazuh\NetworkEqTab::install($migration, $version);
 
     \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
 //    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
@@ -67,9 +70,15 @@ function plugin_wazuh_install() {
     return true;
 }
 
+/**
+ * Plugin upgrade process
+ * @param type $old_version
+ * @return bool
+ */
 function plugin_myplugin_upgrade($old_version) {
-    Logger::addNotice(__FUNCTION__ . " Upgrading.");
-    
+    Logger::addNotice(__FUNCTION__ . " ############# Upgrading from $old_version.");
+
+    return true;
 }
 
 /**
@@ -108,3 +117,11 @@ function plugin_wazuh_getDropdown()
     return [];
 }
 
+function getOldVersion(): string | false {
+    $plugin = new \Plugin();
+    
+    if ($plugin->getFromDBbyDir(PluginConfig::APP_CODE)) {
+        return $plugin->fields['version'];
+    }
+    return false;
+}

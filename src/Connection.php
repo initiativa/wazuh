@@ -30,7 +30,7 @@ use Glpi\Application\View\TemplateRenderer;
  * @author w-tomasz
  */
 
-class Connection extends \CommonDropdown {
+class Connection extends \CommonDropdown implements Upgradeable {
     use DefaultsTrait;
 
     public static $rightname = 'plugin_wazuh_connection';
@@ -213,7 +213,7 @@ class Connection extends \CommonDropdown {
      * @param object $migration
      * @return boolean
      */
-    static function install(Migration $migration) {
+    static function install(Migration $migration, string $version): bool {
         global $DB;
 
         $table = self::getTable();
@@ -252,14 +252,21 @@ class Connection extends \CommonDropdown {
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation}";
             $DB->query($query) or die("Error creating $table table");
 
+            self::defaultsConfigData($table);
+
             $migration->updateDisplayPrefs(
                     [
                         'GlpiPlugin\Wazuh\Connection' => [3,4,5,6,7]
                     ],
             );
+            
         }
 
-        self::defaultsConfigData($table);
+        if (version_compare('0.0.5', $version, '<=')) {
+            $itil_category_fkey = \ITILCategory::getForeignKeyField();
+            $migration->addField($table, $itil_category_fkey, "fkey");
+            $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
+        }
 
         return true;
     }
@@ -268,7 +275,7 @@ class Connection extends \CommonDropdown {
      * @param object $migration
      * @return boolean
      */
-    static function uninstall(Migration $migration) {
+    static function uninstall(Migration $migration): bool {
         global $DB;
 
         $table = self::getTable();
