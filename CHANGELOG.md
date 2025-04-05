@@ -12,9 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - onetomany or manytomany for wazych alert -> ticket
 - migrations: install is not upgrade
 - check wazuh version
-- assets tab, show trash problems. Not when search::show ????
+- assets tab, show trash problems. Not when search::show but then sort problems ????
+- upsert could be the wrong way because of loosing items history
 
-## [0.0.3]
+## [0.0.3] 2025-04-04
 
 ### Added
 - Ticket creation for vulnerable devices (Computer, NetworkEq): Wazuh tab
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - fetching only data older than latest time discovered ?
 - static filters for Search::show
 - wazuh tab: connection problem fix
+- upsert items
 
 
 ## [0.0.2] 2025-03-31

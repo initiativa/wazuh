@@ -176,7 +176,7 @@ class ComputerTab extends DeviceTab {
                     
                     $itemtype  = self::class;
                     $params = [
-                        'sort' => 1,
+                        'sort' => '2',
                         'order' => 'DESC',
                         'reset' => 'reset',
                         'criteria' => [
@@ -188,6 +188,8 @@ class ComputerTab extends DeviceTab {
                         ],
                     ];
                     Search::manageParams($itemtype, $params);
+                    $_SESSION['glpisearch'][$itemtype]['sort'] = 1;
+                    $_SESSION['glpisearch'][$itemtype]['order'] = 'ASC';
                     Search::show(ComputerTab::class);
                 }
             } else {

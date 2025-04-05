@@ -216,7 +216,7 @@ abstract class DeviceTab extends \CommonDBChild {
             'name' => __('Key', PluginConfig::APP_CODE),
             'table' => static::getTable(),
             'field' => 'key',
-            'datatype' => 'text',
+            'datatype' => 'string',
             'massiveaction' => false,
         ];
 
@@ -225,7 +225,7 @@ abstract class DeviceTab extends \CommonDBChild {
             'name' => __('Severity', PluginConfig::APP_CODE),
             'table' => static::getTable(),
             'field' => 'v_severity',
-            'datatype' => 'text',
+            'datatype' => 'string',
             'massiveaction' => false,
         ];
 
@@ -250,7 +250,7 @@ abstract class DeviceTab extends \CommonDBChild {
         $tab[] = [
             'id' => 8,
             'table' => Ticket::getTable(),
-            'field' => 'name',
+            'field' => 'id',
             'name' => __('Ticket', PluginConfig::APP_CODE),
             'datatype' => 'itemlink',
             'massiveaction' => true,
