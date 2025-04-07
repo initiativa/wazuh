@@ -41,10 +41,7 @@ require_once (PLUGIN_WAZUH_DIR . "/vendor/autoload.php");
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\ComputerTab;
-use GlpiPlugin\Wazuh\WazuhNetworkDeviceTab;
 use Glpi\Plugin\Hooks;
-use GlpiPlugin\Wazuh\PluginWazuhMenu;
-use GlpiPlugin\Wazuh\ServerConnection;
 
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
@@ -82,11 +79,7 @@ function plugin_init_wazuh() {
         }
 
         $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
-            'admin' => [
-                'GlpiPlugin\Wazuh\PluginWazuhAgent'],
-            'config' => [
-                'GlpiPlugin\Wazuh\ServerConnection'
-            ]
+            'admin' => [\GlpiPlugin\Wazuh\PluginWazuhAgent::class],
         ];
 
         $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];
@@ -99,15 +92,20 @@ function plugin_wazuh_registerClasses() {
         'addtabon' => ['Computer']
     ]);
 
+    Plugin::registerClass(\GlpiPlugin\Wazuh\ComputerAlertsTab::class, [
+        'addtabon' => ['Computer']
+    ]);
+
     Plugin::registerClass(\GlpiPlugin\Wazuh\NetworkEqTab::class, [
         'addtabon' => ['NetworkEquipment']
     ]);
-    Plugin::registerClass('GlpiPlugin\Wazuh\PluginWazuhAgent');
-    Plugin::registerClass('GlpiPlugin\Wazuh\Connection');
-    Plugin::registerClass('GlpiPlugin\Wazuh\ServerConnection');
-//    Plugin::registerClass('GlpiPlugin\Wazuh\WazuhAgentAssetsRelation', [
-//        'addtabon' => ['Computer', 'NetworkEquipment']
-//    ]);
+
+    Plugin::registerClass(\GlpiPlugin\Wazuh\NetworkEqAlertsTab::class, [
+        'addtabon' => ['NetworkEquipment']
+    ]);
+
+    Plugin::registerClass(\GlpiPlugin\Wazuh\PluginWazuhAgent::class);
+    Plugin::registerClass(\GlpiPlugin\Wazuh\Connection::class);
 }
 
 /**
@@ -150,7 +148,7 @@ function plugin_wazuh_check_prerequisites() {
  * @return boolean
  */
 function plugin_wazuh_check_config($verbose = false) {
-    if (true) { // Your configuration check
+    if (true) {
         return true;
     }
 

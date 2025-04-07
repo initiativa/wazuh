@@ -43,7 +43,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
+abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -80,14 +80,83 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
             Html::link(__('Back to list'), 'front/vulnerability.php', ['class' => 'btn btn-outline-secondary'])
         ];
 
-        TemplateRenderer::getInstance()->display('@wazuh/device_tab.html.twig', [
+        $twig = TemplateRenderer::getInstance();
+        $twig->display('@wazuh/device_alerts_tab.html.twig', [
             'item' => $this,
             'params' => $options,
+            'syscheck_content' => $this->sanitizeOutput($this->formatJsonToHtml($this->fields['syscheck'])),
+            'data_content' => $this->sanitizeOutput($this->formatJsonToHtml($this->fields['data'])),
+            'rule_content' => $this->sanitizeOutput($this->formatJsonToHtml($this->fields['rule'])),
         ]);
         return true;
     }
 
-    
+    function sanitizeOutput($input) {
+        //after json_encode just javascript
+        return preg_replace('#</script#i', '<\/script', $input);
+    }
+
+    /**
+     * Format JSON data to HTML for display in GLPI
+     * 
+     * @param string|array $json JSON string or already decoded array
+     * @return string Formatted HTML
+     */
+    function formatJsonToHtml($json) {
+        // If string provided, decode it first
+        if (is_string($json)) {
+            $data = json_decode($json, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return "<div class='alert alert-warning'>Invalid JSON format</div>";
+            }
+        } else {
+            $data = $json;
+        }
+
+        // Start building HTML output
+        $html = "<div class='json-viewer'>";
+
+        // Use recursive function to build nested structure
+        $html .= $this->formatJsonNodeToHtml($data);
+
+        $html .= "</div>";
+
+        return $html;
+    }
+
+    /**
+     * Helper function to recursively format JSON nodes
+     * 
+     * @param mixed $node Current JSON node
+     * @param int $level Nesting level
+     * @return string HTML representation
+     */
+    function formatJsonNodeToHtml($node, $level = 0) {
+        $html = "";
+        $padding = str_repeat("&nbsp;&nbsp;", $level);
+
+        if (is_array($node)) {
+            $html .= "<ul class='json-list'>";
+            foreach ($node as $key => $value) {
+                $html .= "<li>";
+                $html .= "<span class='json-key'>" . htmlspecialchars($key) . "</span>: ";
+
+                if (is_array($value)) {
+                    $html .= $this->formatJsonNodeToHtml($value, $level + 1);
+                } else {
+                    $html .= "<span class='json-value'>" . htmlspecialchars($value) . "</span>";
+                }
+
+                $html .= "</li>";
+            }
+            $html .= "</ul>";
+        } else {
+            $html .= "<span class='json-value'>" . htmlspecialchars($node) . "</span>";
+        }
+
+        return $html;
+    }
+
     private static function getSeverityValue(string $severity): int | null {
         $levels = [
             'very low' => 1,
@@ -107,38 +176,7 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
 
         $table = static::getTable();
         
-        $key = array_keys($iids)[0];
-        $ids = array_map('intval', array_values($iids[$key]));
-
-        Logger::addDebug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
-
-         $criteria = [
-            'SELECT' => ['v_severity'],
-            'FROM' => $table,
-             'WHERE' => [
-                 'id' => $ids,
-                 'is_deleted' => 0,
-                 ]
-        ];
-
-        $data = [];
-        $average = 0;
-        $iterator = $DB->request($criteria);
-        $size = count($iterator);
-        if ($size === 0) {
-            return $default;
-        }
-        foreach ($iterator as $record) {
-            $average += self::getSeverityValue($record['v_severity']);
-        }
-
-        $result = (int)($average / $size);
-        if ($result < 1 || $result > 6) {
-            Logger::addError("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
-            throw new \RuntimeException("Average urgency level outof expecting values.");
-        }
-        
-        return $result;
+        return $default;
 
     }
     
@@ -259,9 +297,9 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
 
         $tab[] = [
             'id' => 4,
-            'name' => __('Severity', PluginConfig::APP_CODE),
+            'name' => __('Agent IP', PluginConfig::APP_CODE),
             'table' => static::getTable(),
-            'field' => 'v_severity',
+            'field' => 'a_ip',
             'datatype' => 'string',
             'massiveaction' => false,
         ];
@@ -269,18 +307,18 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
         $tab[] = [
             'id' => 5,
             'table' => static::getTable(),
-            'field' => 'v_description',
-            'name' => __('Description', PluginConfig::APP_CODE),
-            'datatype' => 'text',
+            'field' => 'a_name',
+            'name' => __('Agent name', PluginConfig::APP_CODE),
+            'datatype' => 'string',
             'massiveaction' => false
         ];
 
         $tab[] = [
             'id' => 6,
             'table' => static::getTable(),
-            'field' => 'v_reference',
-            'name' => __('Reference', PluginConfig::APP_CODE),
-            'datatype' => 'weblink',
+            'field' => 'a_id',
+            'name' => __('Agent id', PluginConfig::APP_CODE),
+            'datatype' => 'string',
             'massiveaction' => false
         ];
 
@@ -322,17 +360,8 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
         $tab[] = [
             'id' => 11,
             'table' => static::getTable(),
-            'field' => 'v_detected',
+            'field' => 'source_timestamp',
             'name' => __('Detected', PluginConfig::APP_CODE),
-            'datatype' => 'datetime',
-            'massiveaction' => false,
-        ];
-
-        $tab[] = [
-            'id' => 12,
-            'table' => static::getTable(),
-            'field' => 'v_published',
-            'name' => __('Published', PluginConfig::APP_CODE),
             'datatype' => 'datetime',
             'massiveaction' => false,
         ];

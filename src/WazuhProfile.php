@@ -47,7 +47,6 @@ class WazuhProfile extends \Profile {
       
       self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'],
                 [
-                    ServerConnection::$rightname => \ALLSTANDARDRIGHT,
                     PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
                     Connection::$rightname => \ALLSTANDARDRIGHT
                 ]
@@ -66,19 +65,6 @@ class WazuhProfile extends \Profile {
          }
       }
    }
-   
-//   /**
-//    */
-//   static function createFirstAccess($profiles_id) {
-//      self::addDefaultProfileInfos(
-//                $profiles_id,
-//                [
-//                    'plugin_wazuh_serverconnection' => \ALLSTANDARDRIGHT,
-//                    PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
-//                    Connection::$rightname => \ALLSTANDARDRIGHT
-//                ]
-//        );
-//    }
    
    /**
     */
