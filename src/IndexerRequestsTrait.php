@@ -155,7 +155,7 @@ trait IndexerRequestsTrait {
             $dt = DateTime::createFromFormat('Y-m-d H:i:s', $latestRecord['source_timestamp'], new DateTimeZone('UTC'));
             return $dt->format('Y-m-d\TH:i:s\Z');
         } else {
-            return '2000-01-01T12:00:00Z';
+            return 'now-7d/d';
         }
     }
 
@@ -254,7 +254,7 @@ trait IndexerRequestsTrait {
     public static function getAlertsQueryByAgentIds(array $agentIds, CommonDBTM $computer): array {
         $latestDtStr = static::getLatestDeviceAlertDetectionDate($computer);
         $agentIdsStr = json_encode($agentIds);
-        Logger::addDebug("Quering Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
+        Logger::addDebug("Alerts Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
 
         $a = $agentIds;
         if (count($agentIds) == 1) {
@@ -264,7 +264,7 @@ trait IndexerRequestsTrait {
         $query = [
             "sort" => [
                 [
-                    "timestamp" => [
+                    "_id" => [
                         "order" => "desc"
                     ]
                 ]
@@ -280,8 +280,8 @@ trait IndexerRequestsTrait {
                         [
                             "range" => [
                                 "timestamp" => [
-                                    'gte' => 'now-7d/d',
-                                    'lte' => 'now/d'  
+                                    'gte' => $latestDtStr,
+                                    'lte' => 'now'
                                 ]
                             ]
                         ]
@@ -313,7 +313,7 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-//            return ['success' => false, 'error' => 'To early.'];
+            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
@@ -371,20 +371,21 @@ trait IndexerRequestsTrait {
      * @param int $offset Offset for pagination (default 0)
      * @return array Query result
      */
-    public static function queryAlertsByAgentIds($agentIds, CommonDBTM $device, $pageSize = 500) {
+    public static function queryAlertsByAgentIds(array $agentIds, CommonDBTM $device, $pageSize = 500) {
         global $DB;
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
 
         $currentTime = time();
-        $session_key = PluginConfig::VQUERY_TIME_SESSION_KEY . $agentIds[0];
+        $session_key = PluginConfig::VQUERY_ALERT_TIME_SESSION_KEY . $agentIds[0];
 
         $lastExecutionTime = isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : -1;
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-//            return ['success' => false, 'error' => 'To early.'];
+            Logger::addDebug("To early: " . $currentTime - $lastExecutionTime);
+            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
