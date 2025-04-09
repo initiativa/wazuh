@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - migrations: install is not upgrade
 - check wazuh version
 - assets tab, show trash problems. Not when search::show but then sort problems ????
-- upsert could be the wrong way because of loosing items history
+- upsert could be the wrong way because of loosing items history and also tree dropdown functions doesn't work
 - agent sync lower timeout
 - #8 perhaps i need to get wazuh setup to aquire scanning time
 - consider some wazuhs tab access profiles

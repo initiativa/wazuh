@@ -313,7 +313,7 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-            return ['success' => false, 'error' => 'To early.'];
+//            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
@@ -336,31 +336,71 @@ trait IndexerRequestsTrait {
 
             $result = self::executeQuery($query, $device);
             if ($result['success']) {
-                try {
-                    $DB->beginTransaction();
-                    $stmt_query = static::getUpsertStatement();
-                    $stmt = $DB->prepare($stmt_query);
-                    if (!$stmt) {
-                         $error = $DB->error;
-                        Logger::addError('Can not create statement !', ['query' => $stmt_query, 'error' => $error]);
-                        return false;
-                    }
-                    foreach ($result['data']['hits']['hits'] as $res) {
-                        if (static::bindStatement($stmt, $res, $device)) {
-                            $stmt->execute();
-                        }
-                    }
-                    $DB->commit();
-                } catch (Exception $e) {
-                    $DB->rollBack();
-                    Logger::addCritical($e->getMessage());
+                foreach ($result['data']['hits']['hits'] as $res) {
+                    static::createItem($res, $device);
                 }
+                
+//                try {
+//                    $DB->beginTransaction();
+//                    $stmt_query = static::getUpsertStatement();
+//                    $stmt = $DB->prepare($stmt_query);
+//                    if (!$stmt) {
+//                         $error = $DB->error;
+//                        Logger::addError('Can not create statement !', ['query' => $stmt_query, 'error' => $error]);
+//                        return false;
+//                    }
+//                    foreach ($result['data']['hits']['hits'] as $res) {
+//                        if (static::bindStatement($stmt, $res, $device)) {
+//                            $stmt->execute();
+//                        }
+//                    }
+//                    $DB->commit();
+//                } catch (Exception $e) {
+//                    $DB->rollBack();
+//                    Logger::addCritical($e->getMessage());
+//                }
 
             } else {
                 return false;
             }
             usleep(100000);
         }
+    }
+
+    public static function getLatestMonitoringTime(array $agentIds, \CommonDBTM $device): string | false {
+        $query = [
+            "size" => 1,
+            "from" => 0,
+            "sort" => [
+                [
+                    "timestamp" => [
+                        "order" => "desc"
+                    ]
+                ]
+            ],
+            "query" => [
+                "bool" => [
+                    "must" => [
+                        [
+                            "term" => [
+                                "id" => $agentIds[0]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        
+        $result = self::executeQuery($query, $device, '/wazuh-monitoring-*/_search');
+        if ($result['success']) {
+            $source = $result['data']['hits']['hits'][0]['_source'] ?? false;
+            $isoDateTime = $source['timestamp'] ?? false;
+            if ($isoDateTime) {
+                Logger::addDebug(__FUNCTION__ . " Latest time fetched: $isoDateTime");
+                return self::convertIsoToMysqlDatetime($isoDateTime);
+            }
+        }
+        return false;
     }
 
     /**
@@ -443,7 +483,7 @@ trait IndexerRequestsTrait {
 
         try {
             $dateTime = new \DateTime($isoDate);
-            $dateTime->setTimezone(new DateTimeZone('UTC'));
+//            $dateTime->setTimezone(new DateTimeZone('UTC'));
             $year = (int) $dateTime->format('Y');
 
             if ($year <= 1) {
@@ -456,13 +496,15 @@ trait IndexerRequestsTrait {
         }
     }
     
-    protected static function array_get($dataPath, $res) {
-        if (isset($dataPath)) {
-            return $dataPath;
-        } else {
-            Logger::addWarning('*** No key in ' . json_encode($res));
-            return null;
+    protected static function array_getvalue(array $res, array $path) {
+        $current = $res;
+        foreach ($path as $key) {
+            if (!isset($current[$key])) {
+                Logger::addWarning(__FUNCTION__ . " *** No key $key in path " . json_encode($path));
+                return null;
+            }
+            $current = $current[$key];
         }
-        
+        return $current;
     }
 }

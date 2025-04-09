@@ -114,7 +114,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
             json_encode($result['_source']['rule'] ?? ''),
             $DB->escape($result['_source']['input']['type'] ?? ''),
             (new \DateTime())->format('Y-m-d H:i:s'),
-            self::convertIsoToMysqlDatetime(self::array_get($result['_source']['timestamp'] ?? null, $result)),
+            self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
             json_encode($result['_source']['syscheck'] ?? '')
         ];
         return $stmt->bind_param('sissssssssss', ...$d);

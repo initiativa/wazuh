@@ -21,6 +21,7 @@ namespace GlpiPlugin\Wazuh;
 
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
+use CommonDBTM;
 use Migration;
 use Computer;
 use NetworkEquipment;
@@ -33,6 +34,7 @@ use Search;
 use Session;
 use ITILFollowup;
 use Item_Ticket;
+use CommonTreeDropdown;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -43,7 +45,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
+abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -101,6 +103,29 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
         return $levels[strtolower($severity)] ?? 3;
     }
     
+    protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+        $founded = $item->find([
+            'name' => $item_data['name'],
+            static::getForeignKeyField() => 0
+        ]);
+        
+        
+        if ($founded) {
+            return reset($founded)['id'];
+        }
+        
+        $id = $item->add([
+            'name' => $item_data['name']
+        ]);
+
+        if (!$id) {
+            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+        }
+
+        return $id;
+        
+    }
+
     protected static function getAvgUrgencyLevel($iids): int | null {
         global $DB;
         $default = 3;
@@ -239,14 +264,14 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
     public function rawSearchOptions() {
         $tab = parent::rawSearchOptions();
 
-        $tab[] = [
-            'id' => 2,
-            'name' => __('Id', PluginConfig::APP_CODE),
-            'table' => static::getTable(),
-            'field' => 'id',
-            'datatype' => 'number',
-            'massiveaction' => false,
-        ];
+//        $tab[] = [
+//            'id' => 2,
+//            'name' => __('Id', PluginConfig::APP_CODE),
+//            'table' => static::getTable(),
+//            'field' => 'id',
+//            'datatype' => 'number',
+//            'massiveaction' => false,
+//        ];
 
         $tab[] = [
             'id' => 3,
@@ -337,14 +362,14 @@ abstract class DeviceTab extends \CommonDBChild implements Upgradeable {
             'massiveaction' => false,
         ];
 
-        $tab[] = [
-            'id' => 13,
-            'table' => static::getTable(),
-            'field' => 'date_creation',
-            'name' => __('Fetched', PluginConfig::APP_CODE),
-            'datatype' => 'datetime',
-            'massiveaction' => false,
-        ];
+//        $tab[] = [
+//            'id' => 13,
+//            'table' => static::getTable(),
+//            'field' => 'date_creation',
+//            'name' => __('Fetched', PluginConfig::APP_CODE),
+//            'datatype' => 'datetime',
+//            'massiveaction' => false,
+//        ];
 
         return $tab;
     }

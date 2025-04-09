@@ -21,6 +21,7 @@ namespace GlpiPlugin\Wazuh;
 
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
+use CommonDBTM;
 use Migration;
 use NetworkEquipment;
 use Ticket;
@@ -95,7 +96,7 @@ class NetworkEqTab extends DeviceTab {
             $result['_source']['package']['version'] ?? '',
             $result['_source']['package']['type'] ?? '',
             $DB->escape($result['_source']['package']['description'] ?? ''),
-            self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
+            self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
             (new \DateTime())->format('Y-m-d H:i:s')
         ];
         return $stmt->bind_param('sisssssssssssssss', ...$d);
@@ -130,37 +131,46 @@ class NetworkEqTab extends DeviceTab {
         return $query;
     }
 
-    private static function createItem($result, NetworkEquipment $device) {
+    protected static function createItem($result, CommonDBTM $device) {
         global $DB;
         $key = $result['_id'];
         $item = new self();
         $founded = $item->find(['key' => $key]);
         
         if (count($founded) > 1) {
-            throw new \RuntimeException("Founded NetworkEqTab collection exceeded limit 1.");
+            throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
         }
 
-        $item_data = [
+    $item_data = [
             'key' => $key,
-            NetworkEquipment::getForeignKeyField() => $device->getID(),
-            'name' => $result['_source']['vulnerability']['id'],
+            \NetworkEquipment::getForeignKeyField() => $device->getID(),
+            'name' => $DB->escape($result['_source']['vulnerability']['id']),
             'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
-            'v_severity' => $result['_source']['vulnerability']['severity'],
-            'v_detected' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
-            'v_published' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
-            'v_enum' => $result['_source']['vulnerability']['enumeration'],
-            'v_category' => $result['_source']['vulnerability']['category'],
-            'v_classification' => $result['_source']['vulnerability']['classification'],
-            'v_reference' => $result['_source']['vulnerability']['reference'],
-            'p_name' => $result['_source']['package']['name'],
-            'p_version' => $result['_source']['package']['version'],
-            'p_type' => $result['_source']['package']['type'],
+            'v_severity' => $DB->escape($result['_source']['vulnerability']['severity'] ?? ''),
+            'v_detected' => static::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
+            'v_published' => static::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
+            'v_enum' => $DB->escape($result['_source']['vulnerability']['enumeration'] ?? ''),
+            'v_category' => $DB->escape($result['_source']['vulnerability']['category'] ?? ''),
+            'v_classification' => $DB->escape($result['_source']['vulnerability']['classification'] ?? ''),
+            'v_reference' => $DB->escape($result['_source']['vulnerability']['reference'] ?? ''),
+            'p_name' => $DB->escape($result['_source']['package']['name'] ?? ''),
+            'p_version' => $DB->escape($result['_source']['package']['version'] ?? ''),
+            'p_type' => $DB->escape($result['_source']['package']['type'] ?? ''),
             'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
-            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
+            'p_installed' => static::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
+            'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s')
         ];
+        
+        $parent_id = self::createParentItem($item_data, new self());
+        if ($parent_id) {
+            $item_data[self::getForeignKeyField()] = $parent_id;
+        }
 
         if (!$founded) {
             $newId = $item->add($item_data);
+            if (!$newId) {
+                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+            }
         } else {
             $item->update($item_data);
         }
@@ -451,12 +461,13 @@ class NetworkEqTab extends DeviceTab {
         $query = "CREATE TABLE IF NOT EXISTS `$table` (
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `key` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `completename` TEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `key` varchar(255) COLLATE {$default_collation} NOT NULL DEFAULT (UUID()),
                      `$parent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$networkeq_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
-                     `v_category` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `v_classification` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `v_category` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `v_classification` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `v_detected` timestamp DEFAULT NULL,
                      `v_published` timestamp DEFAULT NULL,
@@ -470,6 +481,11 @@ class NetworkEqTab extends DeviceTab {
                      `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `p_installed` TIMESTAMP DEFAULT NULL,
                      `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
+
+                     `level` int NOT NULL DEFAULT '0',
+                     `ancestors_cache` longtext DEFAULT NULL,
+                     `sons_cache` longtext DEFAULT NULL,
+
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
