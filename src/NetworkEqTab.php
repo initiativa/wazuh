@@ -136,12 +136,12 @@ class NetworkEqTab extends DeviceTab {
         $key = $result['_id'];
         $item = new self();
         $founded = $item->find(['key' => $key]);
-        
+
         if (count($founded) > 1) {
             throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
         }
 
-    $item_data = [
+        $item_data = [
             'key' => $key,
             \NetworkEquipment::getForeignKeyField() => $device->getID(),
             'name' => $DB->escape($result['_source']['vulnerability']['id']),
@@ -158,9 +158,10 @@ class NetworkEqTab extends DeviceTab {
             'p_type' => $DB->escape($result['_source']['package']['type'] ?? ''),
             'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
             'p_installed' => static::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
-            'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s')
+            'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
+            \Entity::getForeignKeyField() => \Session::getActiveEntity(),
         ];
-        
+
         $parent_id = self::createParentItem($item_data, new self());
         if ($parent_id) {
             $item_data[self::getForeignKeyField()] = $parent_id;
@@ -174,10 +175,10 @@ class NetworkEqTab extends DeviceTab {
         } else {
             $item->update($item_data);
         }
-        
+
         return $item;
     }
-    
+
     #[\Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
         Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
@@ -192,15 +193,16 @@ class NetworkEqTab extends DeviceTab {
 
                     $itemtype = self::class;
                     $params = [
-                        'sort' => 1,
+                        'sort' => 2,
                         'order' => 'DESC',
                         'reset' => 'reset',
+                        'browse' => 1,
                         'criteria' => [
                             [
                                 'field' => 7,
                                 'searchtype' => 'equals',
                                 'value' => $item->getID()
-                            ]
+                            ],
                         ],
                     ];
                     Search::manageParams($itemtype, $params);

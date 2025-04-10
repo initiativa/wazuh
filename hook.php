@@ -38,6 +38,8 @@ require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\Connection;
+use GlpiPlugin\Wazuh\ComputerTab;
+use GlpiPlugin\Wazuh\NetworkEqTab;
 
 /**
  * Plugin install process
@@ -108,7 +110,9 @@ function plugin_wazuh_getDropdown()
 
     if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            'GlpiPlugin\Wazuh\Connection' => Connection::getTypeName(Session::getPluralNumber()),
+            Connection::class => Connection::getTypeName(Session::getPluralNumber()),
+            ComputerTab::class => "Computer " . ComputerTab::getTypeName(Session::getPluralNumber()),
+            NetworkEqTab::class => "Network Eq " . NetworkEqTab::getTypeName(Session::getPluralNumber()),
         ];
     }
 

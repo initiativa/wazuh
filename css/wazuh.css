@@ -312,6 +312,23 @@ table.json-table th {
     display: none;
 }
 
+.toggle-node {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.tree-node {
+    transition: background-color 0.2s;
+}
+
+.tree-node:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.children-container table {
+    width: 100%;
+}
+
 
 /* Responsive tables */
 @media screen and (max-width: 768px) {

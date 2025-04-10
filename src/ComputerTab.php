@@ -160,7 +160,8 @@ class ComputerTab extends DeviceTab {
             'p_type' => $DB->escape($result['_source']['package']['type'] ?? ''),
             'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
             'p_installed' => static::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
-            'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s')
+            'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
+            \Entity::getForeignKeyField() => \Session::getActiveEntity(),
         ];
         
         $parent_id = self::createParentItem($item_data, new self());
@@ -202,6 +203,7 @@ class ComputerTab extends DeviceTab {
                         'sort' => '2',
                         'order' => 'DESC',
                         'reset' => 'reset',
+                        'browse' => 1,
                         'criteria' => [
                             [
                                 'field' => 7,
@@ -210,10 +212,8 @@ class ComputerTab extends DeviceTab {
                             ]
                         ],
                     ];
-                    TreeSearch::manageParams($itemtype, $params);
-                    $_SESSION['glpisearch'][$itemtype]['sort'] = 1;
-                    $_SESSION['glpisearch'][$itemtype]['order'] = 'ASC';
-                    TreeSearch::show(ComputerTab::class);
+                    Search::manageParams($itemtype, $params);
+                    Search::show(ComputerTab::class);
                 }
             } else {
                 $dropdown_options = [
