@@ -64,6 +64,7 @@ class ComputerTab extends DeviceTab {
             'FROM' => $this->getTable(),
             'WHERE' => [
                 Computer::getForeignKeyField() => $computers_id,
+                static::getForeignKeyField() => ['<>', 0],
                 'is_deleted' => 0
                 ]
         ]);
@@ -175,6 +176,8 @@ class ComputerTab extends DeviceTab {
                 Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
             }
         } else {
+            $fid = reset($founded)['id'];
+            $item_data['id'] = $fid;
             $item->update($item_data);
         }
         
