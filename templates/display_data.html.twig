@@ -39,12 +39,14 @@
 {% endif %}
 {% set push_history = push_history is defined and push_history %}
 {% set hide_controls = data['search']['hide_controls'] or (hide_controls is defined and hide_controls) %}
+{% set searchform_id = data['searchform_id']|default('search_' ~ rand) %}
 
 {# Remove namespace separators for use in HTML attributes #}
 {% set normalized_itemtype = itemtype|replace({'\\': ''}) %}
 
 <div class="card search-card">
     {% if not hide_controls %}
+        <div class="d-inline-flex">
         {% if data['display_type'] == constant('Search::GLOBAL_SEARCH') %}
             <div class="card-header d-flex justify-content-between search-header">
                 <h3>{{ itemtype|itemtype_name }}</h3>
@@ -59,6 +61,17 @@
         {% else %}
             {{ include('components/search/controls.html.twig') }}
         {% endif %}
+        
+        <div class="d-inline-flex search-controls py-1 px-2 my-n1 mx-n2">
+            <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary expand-all " title="{{ __('Expand', 'wazuh') }}" onclick="wazuhExpandAllTreeNodes(this, '{{ searchform_id }}');">
+                <i class="fa-solid fa-maximize"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-icon btn-ghost-secondary collapse-all" title="{{ __('Collapse', 'wazuh') }}" onclick="wazuhCollapseAllTreeNodes(this, '{{ searchform_id }}');">
+                <i class="fa-solid fa-minimize"></i>
+            </button>
+        </div>
+        </div>
+
     {% endif %}
 
     {% set massive_action_form_id = "massform" ~ normalized_itemtype ~ rand %}

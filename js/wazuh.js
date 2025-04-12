@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function wazuhExpandAllTreeNodes(buttonElement, tableId) {
-    console.log('--- ' + tableId);
     const table = document.getElementById(tableId);
     table.querySelectorAll('.tree-node').forEach(function (node) {
         node.style.display = '';
