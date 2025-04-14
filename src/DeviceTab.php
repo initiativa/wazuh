@@ -171,9 +171,8 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return false;
     }
 
-    protected static function arrayInsertAfter($array, $position, $insert_array) {
-        Logger::addDebug(__FUNCTION__ . " $position");
-        if (empty($insert_array) || $position===false) {
+    protected static function arrayInsertAfter($array, $position, $insert_array): array {
+        if (empty($insert_array) || $position === false) {
             return $array;
         }
         $first_part = array_slice($array, 0, $position + 1, true);

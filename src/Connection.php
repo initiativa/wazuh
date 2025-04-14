@@ -19,6 +19,7 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use Exception;
 use Migration;
 use Html;
 use GLPIKey;
@@ -154,7 +155,8 @@ class Connection extends \CommonDropdown implements Upgradeable {
     }
 
     #[\Override]
-    public function defineTabs($options = []) {
+    public function defineTabs($options = []): array
+    {
         $tabs = parent::defineTabs($options);
 
         $this->addStandardTab(Connection::class, $tabs, $options);
@@ -163,7 +165,8 @@ class Connection extends \CommonDropdown implements Upgradeable {
         return $tabs;
     }
 
-    private function decryptFields($fields) {
+    private function decryptFields($fields): void
+    {
         foreach($fields as $field) {
             $this->fields[$field] = $this->decryptPwd($this->fields[$field]);
         }
@@ -172,15 +175,15 @@ class Connection extends \CommonDropdown implements Upgradeable {
     private function decryptPwd($str): string | null {
         $key = new \GLPIKey();
         try {
-            // Wycisz ostrzeżenia podczas próby deszyfrowania
             $decrypted = @$key->decrypt($str);
-            if ($decrypted !== false && !empty($decrypted)) {
+            if (!empty($decrypted)) {
                 $decrypted_password = $decrypted;
             } else {
                 $decrypted_password = $str;
             }
         } catch (Exception $e) {
-            $decrypted_password = $api_password;
+            Logger::addError(__FUNCTION__ . " " . $e->getMessage());
+            $decrypted_password = $str;
         }
         
         return $decrypted_password;
@@ -192,7 +195,8 @@ class Connection extends \CommonDropdown implements Upgradeable {
     * @return boolean
     */
    #[\Override]
-   function showForm($ID, array $options = []) {
+   function showForm($ID, array $options = []): bool
+   {
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
@@ -250,7 +254,7 @@ class Connection extends \CommonDropdown implements Upgradeable {
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation}";
-            $DB->query($query) or die("Error creating $table table");
+            $DB->doQuery($query) or die("Error creating $table table");
 
             self::defaultsConfigData($table);
 
