@@ -134,7 +134,7 @@ class ComputerTab extends DeviceTab {
 
     
     
-    protected static function createItem($result, CommonDBTM $device) {
+    protected static function createItem($result, CommonDBTM $device): self | false {
         global $DB;
         $key = $result['_id'];
         $item = new self();
@@ -174,6 +174,7 @@ class ComputerTab extends DeviceTab {
             $newId = $item->add($item_data);
             if (!$newId) {
                 Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                return false;
             }
         } else {
             $fid = reset($founded)['id'];
@@ -185,54 +186,48 @@ class ComputerTab extends DeviceTab {
     }
     
     #[\Override]
-    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
+    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
+    {
         Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
-        if ($item instanceof Computer) {
-            Logger::addDebug($item->fields['name']);
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($item->getType(), $item->fields['id']);
-            if ($agent) {
-                $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
-                if ($config) {
-                    $start_time = microtime(true);
-                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    $agentId = $agent->fields['agent_id'];
-                    static::queryVulnerabilitiesByAgentIds([$agentId], $item);
-                    $latestScan = static::getLatestMonitoringTime([$agentId], $item);
-                    $execution_time = microtime(true) - $start_time;
-                    Logger::addDebug(__FUNCTION__ . " Latest agent: $agentId scan: $latestScan. Execution time: $execution_time");
-                    
-                    $itemtype  = self::class;
-                    $params = [
-                        'sort' => '2',
-                        'order' => 'DESC',
-                        'reset' => 'reset',
-                        'browse' => 1,
-                        'criteria' => [
-                            [
-                                'field' => 7,
-                                'searchtype' => 'equals',
-                                'value' => $item->getID()
-                            ]
-                        ],
-                    ];
-                    Search::manageParams($itemtype, $params);
-                    Search::show(ComputerTab::class);
-                }
-            } else {
-                $dropdown_options = [
-                    'name' => 'plugin_wazuh_agents_id',
-                    'value' => null,
-                    'entity' => $_SESSION['glpiactive_entity'],
-                    'rand' => mt_rand(),
-                    'width' => '30em'
-                ];
-                PluginWazuhAgent::dropdown($dropdown_options);
-            }
-            
-        }
+        self::getAgentVulnerabilities($item);
+        $item_type = self::class;
+        $params = [
+            'sort' => '2',
+            'order' => 'DESC',
+            'reset' => 'reset',
+            'browse' => 1,
+            'criteria' => [
+                [
+                    'field' => 7,
+                    'searchtype' => 'equals',
+                    'value' => $item->getID()
+                ]
+            ],
+        ];
+        Search::manageParams($item_type, $params);
+        Search::show(ComputerTab::class);
         return true;
     }
-    
+
+    public static function getAgentVulnerabilities(CommonGLPI $device): array | false {
+        if ($device instanceof Computer) {
+            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            if ($agent) {
+                $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
+                if ($connection) {
+                    static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password']);
+                    $agentId = $agent->fields['agent_id'];
+                    return static::queryVulnerabilitiesByAgentIds([$agentId], $device);
+                }
+            } else {
+                Logger::addError(sprintf("%s %s Can not find agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType()));
+            }
+        } else {
+            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+        }
+        return false;
+    }
+
     #[\Override]
     public function rawSearchOptions() {
         $tab = parent::rawSearchOptions();

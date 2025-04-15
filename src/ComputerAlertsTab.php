@@ -42,7 +42,6 @@ if (!defined('GLPI_ROOT')) {
  * @author w-tomasz
  */
 class ComputerAlertsTab extends DeviceAlertsTab {
-
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -121,97 +120,49 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
 
 
-    /**
-     * @deprecated since version 0.0.4
-     * @global type $DB
-     * @param type $result
-     * @param \Computer $computer
-     * @return \self
-     * @throws \RuntimeException
-     */
-//    private static function createItem($result, \Computer $computer) {
-//        global $DB;
-//        $key = $result['_id'];
-//        $item = new self();
-//        $founded = $item->find(['key' => $key]);
-//        
-//        if (count($founded) > 1) {
-//            throw new \RuntimeException("Founded ComputerAlertsTab collection exceeded limit 1.");
-//        }
-//
-//        $item_data = [
-//            'key' => $key,
-//            Computer::getForeignKeyField() => $computer->getID(),
-//            'name' => $result['_source']['vulnerability']['id'],
-//            'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
-//            'v_severity' => $result['_source']['vulnerability']['severity'],
-//            'v_detected' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
-//            'v_published' => self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
-//            'v_enum' => $result['_source']['vulnerability']['enumeration'],
-//            'v_category' => $result['_source']['vulnerability']['category'],
-//            'v_classification' => $result['_source']['vulnerability']['classification'],
-//            'v_reference' => $result['_source']['vulnerability']['reference'],
-//            'p_name' => $result['_source']['package']['name'],
-//            'p_version' => $result['_source']['package']['version'] ?? '',
-//            'p_type' => $result['_source']['package']['type'] ?? '',
-//            'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
-//            'p_installed' => self::convertIsoToMysqlDatetime(self::array_get($result['_source']['package']['installed'] ?? null, $result)),
-//        ];
-//
-//        if (!$founded) {
-//            $newId = $item->add($item_data);
-//        } else {
-//            $item->update($item_data);
-//        }
-//        
-//        return $item;
-//    }
-    
     #[\Override]
-    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
+    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
+    {
         Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
-        if ($item instanceof Computer) {
-            Logger::addDebug($item->fields['name']);
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($item->getType(), $item->fields['id']);
-            if ($agent) {
-                $config = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
-                if ($config) {
-                    static::initWazuhConnection($config->fields['indexer_url'], $config->fields['indexer_port'], $config->fields['indexer_user'], $config->fields['indexer_password']);
-                    static::queryAlertsByAgentIds([$agent->fields['agent_id']], $item);
-                    
-                    $itemtype  = self::class;
-                    $params = [
-                        'sort' => '2',
-                        'order' => 'DESC',
-                        'reset' => 'reset',
-                        'criteria' => [
-                            [
-                                'field' => 7,
-                                'searchtype' => 'equals',
-                                'value' => $item->getID()
-                            ]
-                        ],
-                    ];
-                    Search::manageParams($itemtype, $params);
-                    $_SESSION['glpisearch'][$itemtype]['sort'] = 1;
-                    $_SESSION['glpisearch'][$itemtype]['order'] = 'ASC';
-                    Search::show(ComputerAlertsTab::class);
-                }
-            } else {
-                $dropdown_options = [
-                    'name' => 'plugin_wazuh_agents_id',
-                    'value' => null,
-                    'entity' => $_SESSION['glpiactive_entity'],
-                    'rand' => mt_rand(),
-                    'width' => '30em'
-                ];
-                PluginWazuhAgent::dropdown($dropdown_options);
-            }
-            
-        }
+        self::getAgentAlerts($item);
+        $item_type = self::class;
+        $params = [
+            'sort' => '2',
+            'order' => 'DESC',
+            'reset' => 'reset',
+            'criteria' => [
+                [
+                    'field' => 7,
+                    'searchtype' => 'equals',
+                    'value' => $item->getID()
+                ]
+            ],
+        ];
+        Search::manageParams($item_type, $params);
+        Search::show(ComputerAlertsTab::class);
         return true;
     }
-    
+
+    public static function getAgentAlerts(CommonGLPI $device): array | false {
+        if ($device instanceof Computer) {
+            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            if ($agent) {
+                $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
+                if ($connection) {
+                    static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password']);
+                    $agentId = $agent->fields['agent_id'];
+                    return static::queryAlertsByAgentIds([$agentId], $device);
+                }
+            } else {
+                Logger::addError(sprintf("%s %s Can not find agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType()));
+            }
+        } else {
+            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+        }
+        return false;
+    }
+
+
     #[\Override]
     public function rawSearchOptions() {
         $tab = parent::rawSearchOptions();

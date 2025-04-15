@@ -80,31 +80,37 @@ class Logger {
 
     public static function addDebug($message, $details = [])
     {
+        $message = __NAMESPACE__ . ":: " . $message;
         self::add(self::$DEBUG, $message, $details);
     }
 
     public static function addInfo($message, $details = [])
     {
+        $message = __NAMESPACE__ . ":: " . $message;
         self::add(self::$INFO, $message, $details);
     }
 
     public static function addNotice($message, $details = [])
     {
+        $message = __NAMESPACE__ . ":: " . $message;
         self::add(self::$NOTICE, $message, $details);
     }
 
     public static function addWarning($message, $details = [])
     {
+        $message = __NAMESPACE__ . ":: " . $message;
         self::add(self::$WARNING, $message, $details);
     }
 
     public static function addError($message, $details = [])
     {
+        $message = __NAMESPACE__ . ":: " . $message;
         self::add(self::$ERROR, $message, $details);
     }
 
     public static function addCritical($message, $details = [])
     {
+        $message = __NAMESPACE__ . ":: " . $message;
         self::add(self::$CRITICAL, $message, $details);
     }
 }

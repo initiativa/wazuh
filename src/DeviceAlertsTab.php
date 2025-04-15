@@ -49,7 +49,7 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
     public $dohistory = true;
 
     #[\Override]
-    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
+    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
         if (!$withtemplate && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
             global $DB;
             $count = $this->countElements($item->getID());
@@ -58,6 +58,7 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
         return '';
     }
 
+    abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;

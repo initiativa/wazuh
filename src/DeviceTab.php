@@ -60,6 +60,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return '';
     }
 
+    abstract public static function getAgentVulnerabilities(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
@@ -181,7 +182,6 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return array_merge($first_part, $insert_array, $second_part);
     }
 
-    
     private static function getSeverityValue(string|null $severity): int | null {
         $levels = [
             'very low' => 1,
@@ -221,6 +221,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         ]);
 
         if (!$id) {
+            global $DB;
             Logger::addWarning(__FUNCTION__ . " " . $DB->error());
         }
 
