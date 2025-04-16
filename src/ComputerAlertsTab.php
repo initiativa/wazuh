@@ -435,7 +435,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-            $DB->query($query) or die("Error creating $table table");
+            $DB->doQuery($query) or die("Error creating $table table");
 
             $migration->updateDisplayPrefs(
                     [
@@ -443,6 +443,11 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                     ],
             );
         }
+
+        \CronTask::register(ComputerAlertsTab::class, 'FetchAlerts' , HOUR_TIMESTAMP, array(
+            'comment'   => '',
+            'mode'      => \CronTask::MODE_EXTERNAL
+        ));
 
         return true;
     }

@@ -65,13 +65,74 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
+    static function cronInfo($name) {
+        switch ($name) {
+            case 'fetchvulenrabilities' :
+                return array('description' => __('Fetch vulnerabilities information for linked with Wazuh\'s Agents, Computers and NetworkEquipments.'),
+                    'parameter'   => __('None'));
+        }
+        return [];
+    }
+
+    static function cronFetchVulnerabilities($task = null): int
+    {
+        global $DB;
+        $cron_status = 0;
+        Logger::addInfo("Executing cron - FetchVulnerabilities.");
+
+        $agents = (new PluginWazuhAgent())->find([
+            'itemtype' => 'Computer',
+        ]);
+        $device_ids = [];
+        foreach ($agents as $agent) {
+            $device_ids[] = $agent['item_id'];
+        }
+
+        if (!empty($device_ids)) {
+            if (count($device_ids) === 1) {
+                $device_ids = $device_ids[0];
+            }
+            $devices = (new Computer())->find([
+                'id' => $device_ids,
+            ]);
+            foreach ($devices as $device) {
+                ExtApi::getLatestVulnerabilities(Computer::getById($device['id']));
+            }
+        }
+
+        $agents = (new PluginWazuhAgent())->find([
+            'itemtype' => 'NetworkEquipment',
+        ]);
+
+        $device_ids = [];
+        foreach ($agents as $agent) {
+            $device_ids[] = $agent['item_id'];
+        }
+
+        if (!empty($device_ids)) {
+            if (count($device_ids) === 1) {
+                $device_ids = $device_ids[0];
+            }
+            $devices = (new NetworkEquipment())->find([
+                'id' => $device_ids,
+            ]);
+            foreach ($devices as $device) {
+                ExtApi::getLatestVulnerabilities(NetworkEquipment::getById($device['id']));
+            }
+        }
+
+        return $cron_status;
+    }
+
+
     /**
      * @param integer $ID
      * @param array $options
      * @return boolean
      */
     #[\Override]
-    function showForm($ID, array $options = []) {
+    function showForm($ID, array $options = []): bool
+    {
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
@@ -364,7 +425,8 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     }
     
     #[\Override]
-    public function rawSearchOptions() {
+    public function rawSearchOptions(): array
+    {
         $tab = parent::rawSearchOptions();
 
 //        $tab[] = [

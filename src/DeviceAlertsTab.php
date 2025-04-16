@@ -63,6 +63,65 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
+    static function cronInfo($name) {
+        switch ($name) {
+            case 'fetchalerts' :
+                return array('description' => __('Fetch alerts information for linked with Wazuh\'s Agents, Computers and NetworkEquipments.'),
+                    'parameter'   => __('None'));
+        }
+        return [];
+    }
+
+    static function cronFetchAlerts($task = null): int
+    {
+        global $DB;
+        $cron_status = 0;
+        Logger::addInfo("Executing cron - FetchAlerts.");
+
+        $agents = (new PluginWazuhAgent())->find([
+            'itemtype' => 'Computer',
+        ]);
+        $device_ids = [];
+        foreach ($agents as $agent) {
+            $device_ids[] = $agent['item_id'];
+        }
+
+        if (!empty($device_ids)) {
+            if (count($device_ids) === 1) {
+                $device_ids = $device_ids[0];
+            }
+            $devices = (new Computer())->find([
+                'id' => $device_ids,
+            ]);
+            foreach ($devices as $device) {
+                ExtApi::getLatestAlerts(Computer::getById($device['id']));
+            }
+        }
+
+        $agents = (new PluginWazuhAgent())->find([
+            'itemtype' => 'NetworkEquipment',
+        ]);
+
+        $device_ids = [];
+        foreach ($agents as $agent) {
+            $device_ids[] = $agent['item_id'];
+        }
+
+        if (!empty($device_ids)) {
+            if (count($device_ids) === 1) {
+                $device_ids = $device_ids[0];
+            }
+            $devices = (new NetworkEquipment())->find([
+                'id' => $device_ids,
+            ]);
+            foreach ($devices as $device) {
+                ExtApi::getLatestAlerts(NetworkEquipment::getById($device['id']));
+            }
+        }
+
+        return $cron_status;
+    }
+
     /**
      * @param integer $ID
      * @param array $options

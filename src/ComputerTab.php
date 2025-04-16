@@ -229,7 +229,8 @@ class ComputerTab extends DeviceTab {
     }
 
     #[\Override]
-    public function rawSearchOptions() {
+    public function rawSearchOptions(): array
+    {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
@@ -509,13 +510,14 @@ class ComputerTab extends DeviceTab {
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-            $DB->query($query) or die("Error creating $table table");
+            $DB->doQuery($query) or die("Error creating $table table");
 
             $migration->updateDisplayPrefs(
                     [
-                        self::class => [1, 10, 13, 11, 3, 6, 4, 8, 9, 7]
+                        self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
                     ],
             );
+
         }
 
         if (version_compare('0.0.4', $version, '<=')) {
@@ -524,6 +526,10 @@ class ComputerTab extends DeviceTab {
             $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
         }
 
+        \CronTask::register(ComputerTab::class, 'FetchVulnerabilities' , HOUR_TIMESTAMP, array(
+            'comment'   => '',
+            'mode'      => \CronTask::MODE_EXTERNAL
+        ));
 
         return true;
     }
