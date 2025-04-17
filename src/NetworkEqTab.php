@@ -19,6 +19,7 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use Computer;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use CommonDBTM;
@@ -42,8 +43,8 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class NetworkEqTab extends DeviceTab {
-
+class NetworkEqTab extends DeviceTab implements Ticketable {
+    use TicketableTrait;
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -328,7 +329,7 @@ class NetworkEqTab extends DeviceTab {
                     return false;
                 }
  
-                $ticket_id = self::createTicketWithDevice($input['entities_id'], $ids, $input);
+                $ticket_id = self::createTicket($ids, $input, $input['entities_id']);
                 if ($ticket_id) {
                     $ticketUrl = Ticket::getFormURLWithID($ticket_id);
                     $message = sprintf(
@@ -346,10 +347,10 @@ class NetworkEqTab extends DeviceTab {
 
     /**
      * Ticket creation
-     * 
+     *
      * @param int $entity_id ID encji
-     * @param int $device_id 
-     * @param int $network_id ID 
+     * @param int $device_id
+     * @param int $network_id ID
      * @param string $title
      * @return int|boolean ticket ID or false
      */
@@ -363,10 +364,10 @@ class NetworkEqTab extends DeviceTab {
         $urgency = $input['ticket_urgency'] ?? 3;
 
         $cve_id = reset($cves);
-        
+
         $cve = self::getById($cve_id);
         $device_id = $cve->fields[NetworkEquipment::getForeignKeyField()];
-        
+
         if (!$device_id) {
             return false;
         }
@@ -410,14 +411,14 @@ class NetworkEqTab extends DeviceTab {
         ];
 
         $ticket_id = $ticket->add($ticket_input);
-        
+
         if ($ticket_id) {
             //linking cve's to ticket
             foreach ($full_cves as $cve) {
                 $cve->fields[Ticket::getForeignKeyField()] = $ticket_id;
                 $cve->update($cve->fields);
             }
-            
+
 //            $additional_content = __('More details in Device Wazuh menu.', PluginConfig::APP_CODE);
 //            $followup = new ITILFollowup();
 //            $followup_input = [
@@ -427,8 +428,8 @@ class NetworkEqTab extends DeviceTab {
 //                'is_private' => 0,
 //            ];
 //            $followup->add($followup_input);
-           
-            
+
+
             if ($device_id) {
                 $ticket_item = new Item_Ticket();
                 $ticket_item_input = [
@@ -545,5 +546,35 @@ class NetworkEqTab extends DeviceTab {
 
         return true;
     }
+
+    static function getDeviceId(Ticketable&CommonDBTM $wazuhTab): int
+    {
+        return $wazuhTab->fields[NetworkEquipment::getForeignKeyField()] ?? 0;
+    }
+
+    static function newDeviceInstance(): Computer|NetworkEquipment
+    {
+        return new NetworkEquipment();
+    }
+
+    static function getWazuhTabHref(int $id): string
+    {
+        return "../plugins/wazuh/front/networkeqtab.form.php?id=$id";
+    }
+
+    static function getDeviceHref(int $id): string
+    {
+        return "networkequipment.form.php?id=$id";
+    }
+
+    static function getDefaultTicketTitle(): string {
+        return "Wazuh Network Equipment Vulnerable";
+    }
+
+    static function generateLinkName(NetworkEqAlertsTab|NetworkEqTab|ComputerAlertsTab|ComputerTab $item): string
+    {
+        return  $item->fields['name'] . "/" . $item->fields['p_name'];
+    }
+
 
 }

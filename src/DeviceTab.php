@@ -96,7 +96,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
                 'id' => $device_ids,
             ]);
             foreach ($devices as $device) {
-                ExtApi::getLatestVulnerabilities(Computer::getById($device['id']));
+                ExtApi::fetchLatestVulnerabilities(Computer::getById($device['id']));
             }
         }
 
@@ -117,7 +117,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
                 'id' => $device_ids,
             ]);
             foreach ($devices as $device) {
-                ExtApi::getLatestVulnerabilities(NetworkEquipment::getById($device['id']));
+                ExtApi::fetchLatestVulnerabilities(NetworkEquipment::getById($device['id']));
             }
         }
 
@@ -381,7 +381,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
                 'ticket_title',
                 [
                     'id' => 'ticket_title',
-                    'value' => 'Wazuh Vulnerable',
+                    'value' => static::getDefaultTicketTitle(),
                     'class' => 'form-control',
                     'required' => true,
                     'display' => false

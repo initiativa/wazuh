@@ -94,7 +94,7 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
                 'id' => $device_ids,
             ]);
             foreach ($devices as $device) {
-                ExtApi::getLatestAlerts(Computer::getById($device['id']));
+                ExtApi::fetchLatestAlerts(Computer::getById($device['id']));
             }
         }
 
@@ -115,7 +115,7 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
                 'id' => $device_ids,
             ]);
             foreach ($devices as $device) {
-                ExtApi::getLatestAlerts(NetworkEquipment::getById($device['id']));
+                ExtApi::fetchLatestAlerts(NetworkEquipment::getById($device['id']));
             }
         }
 
@@ -290,7 +290,7 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
                 'ticket_title',
                 [
                     'id' => 'ticket_title',
-                    'value' => 'Wazuh Vulnerable',
+                    'value' => static::getDefaultTicketTitle(),
                     'class' => 'form-control',
                     'required' => true,
                     'display' => false
