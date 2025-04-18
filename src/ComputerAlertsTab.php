@@ -20,6 +20,7 @@
 namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
+use DateTime;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use Migration;
@@ -65,6 +66,7 @@ class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
             'FROM' => $this->getTable(),
             'WHERE' => [
                 Computer::getForeignKeyField() => $computers_id,
+                static::getForeignKeyField() => ['<>', 0],
                 'is_deleted' => 0
                 ]
         ]);
@@ -77,49 +79,55 @@ class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
         return $count;
     }
 
-    #[\Override]
-    protected static function getUpsertStatement(): string {
-        $table = static::getTable();
-        $device_fkey = \Computer::getForeignKeyField();
-        $query = "INSERT INTO `$table` 
-          (`key`, `$device_fkey`, `name`, `a_ip`, `a_name`, `a_id`, `data`, `rule`, `input_type`, `date_mod`, `source_timestamp`, `syscheck`) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-              `$device_fkey` = VALUES(`$device_fkey`),
-              `name` = VALUES(`name`),
-              `a_ip` = VALUES(`a_ip`),
-              `a_name` = VALUES(`a_name`),
-              `a_id` = VALUES(`a_id`),
-              `data` = VALUES(`data`),
-              `rule` = VALUES(`rule`),
-              `input_type` = VALUES(`input_type`),
-              `date_mod` = VALUES(`date_mod`),
-              `source_timestamp` = VALUES(`source_timestamp`),
-              `syscheck` = VALUES(`syscheck`)
-          ";
-        Logger::addDebug($query, ['device_fkey' => $device_fkey]);
-        return $query;
-    }
-
-    #[\Override]
-    protected static function bindStatement($stmt, $result, \CommonDBTM $device): bool {
+    protected static function createItem($result, CommonDBTM $device): self | false {
         global $DB;
+        $key = $result['_id'];
+        $item = new self();
+        $founded = $item->find(['key' => $key]);
 
-        $d = [
-            $result['_id'],
-            $device->getID(),
-            $result['_id'],
-            $DB->escape($result['_source']['agent']['ip'] ?? ''),
-            $DB->escape($result['_source']['agent']['name'] ?? ''),
-            $DB->escape($result['_source']['agent']['id'] ?? ''),
-            json_encode($result['_source']['data'] ?? ''),
-            json_encode($result['_source']['rule'] ?? ''),
-            $DB->escape($result['_source']['input']['type'] ?? ''),
-            (new \DateTime())->format('Y-m-d H:i:s'),
-            self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
-            json_encode($result['_source']['syscheck'] ?? '')
-        ];
-        return $stmt->bind_param('sissssssssss', ...$d);
+        if (count($founded) > 1) {
+            throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
+        }
+
+        try {
+            $item_data = [
+                'key' => $key,
+                Computer::getForeignKeyField() => $device->getID(),
+                'name' => $DB->escape($result['_source']['decoder']['name']),
+                'a_ip' => $DB->escape($result['_source']['agent']['ip']),
+                'a_name' => $DB->escape($result['_source']['agent']['name']),
+                'a_id' => $DB->escape($result['_source']['agent']['id']),
+                'data' => json_encode($result['_source']['data'] ?? ''),
+                'rule' => json_encode($result['_source']['rule'] ?? ''),
+                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
+                'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
+                'date_mod' => (new DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
+                'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
+            ];
+        } catch (\Exception $e) {
+            Logger::addError($e->getMessage());
+            return false;
+        }
+
+        $parent_id = self::createParentItem($item_data, new self());
+        if ($parent_id) {
+            $item_data[static::getForeignKeyField()] = $parent_id;
+        }
+
+        if (!$founded) {
+            $newId = $item->add($item_data);
+            if (!$newId) {
+                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                return false;
+            }
+        } else {
+            $fid = reset($founded)['id'];
+            $item_data['id'] = $fid;
+            $item->update($item_data);
+        }
+
+        return $item;
     }
 
 
@@ -133,6 +141,7 @@ class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
             'sort' => '2',
             'order' => 'DESC',
             'reset' => 'reset',
+            'browse' => 1,
             'criteria' => [
                 [
                     'field' => 7,
@@ -308,14 +317,14 @@ class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
         $query = "CREATE TABLE IF NOT EXISTS `$table` (
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `key` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `key` varchar(255) COLLATE {$default_collation} NOT NULL DEFAULT (UUID()),
                      `$parent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$computer_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$itil_category_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
-                     `a_ip` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `a_name` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `a_id` varchar(255) COLLATE {$default_collation} NOT NULL,
+                     `a_ip` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `a_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `a_id` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `syscheck` JSON COLLATE {$default_collation} DEFAULT NULL,
                      `rule` JSON COLLATE {$default_collation} DEFAULT NULL,
                      `data` JSON COLLATE {$default_collation} DEFAULT NULL,
@@ -327,6 +336,12 @@ class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+                     
+                     `completename` TEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `level` int NOT NULL DEFAULT '0',
+                     `ancestors_cache` longtext DEFAULT NULL,
+                     `sons_cache` longtext DEFAULT NULL,
+                     
                      PRIMARY KEY (`id`),
                      KEY `$parent_fkey` (`$parent_fkey`),
                      KEY `$computer_fkey` (`$computer_fkey`),

@@ -19,9 +19,11 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use Computer;
 use DateTime;
 use DateTimeZone;
 use Exception;
+use NetworkEquipment;
 use Session;
 use CommonDBTM;
 use Html;
@@ -164,7 +166,7 @@ trait IndexerRequestsTrait {
         $clazz = static::class;
         $item = new $clazz;
         
-        if ($device instanceof \Computer) {
+        if ($device instanceof Computer) {
             $records = $item->find(
                     ['computers_id' => $device->getID()],
                     ['v_detected DESC'],
@@ -172,7 +174,7 @@ trait IndexerRequestsTrait {
             );
         }
 
-        if ($device instanceof \NetworkEquipment) {
+        if ($device instanceof NetworkEquipment) {
             $records = $item->find(
                     ['networkequipments_id' => $device->getID()],
                     ['v_detected DESC'],
@@ -406,7 +408,7 @@ trait IndexerRequestsTrait {
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
             Logger::addDebug("To early: " . $currentTime - $lastExecutionTime);
-            return ['success' => false, 'error' => 'To early.'];
+//            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
@@ -429,27 +431,9 @@ trait IndexerRequestsTrait {
 
             $result = self::executeQuery($query, $device, '/wazuh-alerts-*/_search');
             if ($result['success']) {
-                try {
-                    $DB->beginTransaction();
-                    $stmt_query = static::getUpsertStatement();
-                    $stmt = $DB->prepare($stmt_query);
-                    if (!$stmt) {
-                         $error = $DB->error;
-                        Logger::addError('Can not create statement !', ['query' => $stmt_query, 'error' => $error]);
-                        return false;
-                    }
-                    foreach ($result['data']['hits']['hits'] as $res) {
-                        if (static::bindStatement($stmt, $res, $device)) {
-                            $stmt->execute();
-                        }
-                    }
-                    $DB->commit();
-                } catch (Exception $e) {
-                    $DB->rollBack();
-                    Logger::addCritical($e->getMessage());
-                    return false;
+                foreach ($result['data']['hits']['hits'] as $res) {
+                    static::createItem($res, $device);
                 }
-
             } else {
                 return false;
             }
@@ -465,7 +449,7 @@ trait IndexerRequestsTrait {
         }
 
         try {
-            $dateTime = new \DateTime($isoDate);
+            $dateTime = new DateTime($isoDate, new DateTimeZone('UTC'));
 //            $dateTime->setTimezone(new DateTimeZone('UTC'));
             $year = (int) $dateTime->format('Y');
 

@@ -133,8 +133,6 @@ class ComputerTab extends DeviceTab implements Ticketable {
         return $stmt->bind_param('sisssssssssssssss', ...$d);
     }
 
-    
-    
     protected static function createItem($result, CommonDBTM $device): self | false {
         global $DB;
         $key = $result['_id'];

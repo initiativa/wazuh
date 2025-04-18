@@ -19,6 +19,8 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use CommonDBTM;
+use CommonTreeDropdown;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use Migration;
@@ -43,7 +45,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
+abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -60,8 +62,126 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
 
     abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
-    abstract static protected function getUpsertStatement(): string;
-    abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
+
+    protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+        $founded = $item->find([
+            'name' => $item_data['name'],
+            Entity::getForeignKeyField() => Session::getActiveEntity(),
+            static::getForeignKeyField() => 0
+        ]);
+
+        if ($founded) {
+            return reset($founded)['id'];
+        }
+
+        if ($item instanceof ComputerAlertsTab) {
+            $fkey = Computer::getForeignKeyField();
+        } else {
+            $fkey = NetworkEquipment::getForeignKeyField();
+        }
+
+        $id = $item->add([
+            'name' => $item_data['name'],
+            $fkey => $item_data[$fkey]
+        ]);
+
+        if (!$id) {
+            global $DB;
+            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+        }
+
+        return $id;
+
+    }
+
+    static function showBrowseView($itemtype, $params) {
+        $item_id = $params['criteria'][0]['value'];
+        $params['criteria'] = [
+            [
+                'field' => 7,
+                'searchtype' => 'equals',
+                'value' => $item_id
+            ],
+            [
+                'field' => 20,
+                'searchtype' => 'equals',
+                'value' => 0
+            ],
+        ];
+
+        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
+
+        $data = Search::getDatas($itemtype, $params);
+        $raw_data_ids = [];
+        $has_parent_ids = [];
+        $has_child_ids = [];
+
+        foreach ($data['data']['rows'] as $row) {
+            if (isset($row['raw']['id'])) {
+                $id = $row['raw']['id'];
+                $raw_data_ids[] = $id;
+            }
+        }
+
+        foreach ($raw_data_ids as $parent_id) {
+            $params['criteria'] = [
+                [
+                    'field' => 7,
+                    'searchtype' => 'equals',
+                    'value' => $item_id
+                ],
+                [
+                    'field' => 20,
+                    'searchtype' => 'equals',
+                    'value' => $parent_id
+                ],
+            ];
+            $data1 = Search::getDatas($itemtype, $params);
+            $len1 = count($data1['data']['rows']);
+            if ($len1 > 0) {
+                $has_child_ids[] = $parent_id;
+                foreach ($data1['data']['rows'] as $row) {
+                    if (isset($row['raw']['id'])) {
+                        $id = $row['raw']['id'];
+                        $has_parent_ids[] = $id;
+                    }
+                }
+            }
+            $pos = static::findArrayPositionById($data['data']['rows'], $parent_id);
+            if ($pos !== false) {
+                $data['data']['rows'] = static::arrayInsertAfter($data['data']['rows'], $pos, $data1['data']['rows']);
+            }
+        }
+        $data['has_child_ids'] = $has_child_ids;
+        $data['has_parent_ids'] = $has_parent_ids;
+
+        $treeSearch = new TreeSearchOutput();
+        unset($data['search']['criteria'][1]);
+        $treeSearch->displayData($data, $params);
+    }
+
+    protected static function findArrayPositionById(array $array, int $id): int|false {
+        foreach ($array as $i => $row) {
+            if (isset($row['raw']['id'])) {
+                if ($id == $row['raw']['id']) {
+                    return $i;
+                }
+            }
+        }
+
+        Logger::addDebug(__FUNCTION__ . " $id not found.");
+        return false;
+    }
+
+    protected static function arrayInsertAfter($array, $position, $insert_array): array {
+        if (empty($insert_array) || $position === false) {
+            return $array;
+        }
+        $first_part = array_slice($array, 0, $position + 1, true);
+        $second_part = array_slice($array, $position + 1, null, true);
+
+        return array_merge($first_part, $insert_array, $second_part);
+    }
 
     static function cronInfo($name) {
         switch ($name) {
@@ -193,6 +313,9 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
      */
     function formatJsonNodeToHtml($node, $level = 0) {
         $html = "";
+        if (is_null($node)) {
+            $node = '';
+        }
         $padding = str_repeat("&nbsp;&nbsp;", $level);
 
         if (is_array($node)) {
@@ -338,15 +461,6 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
-            'id' => 2,
-            'name' => __('Id', PluginConfig::APP_CODE),
-            'table' => static::getTable(),
-            'field' => 'id',
-            'datatype' => 'number',
-            'massiveaction' => false,
-        ];
-
-        $tab[] = [
             'id' => 3,
             'name' => __('Key', PluginConfig::APP_CODE),
             'table' => static::getTable(),
@@ -427,11 +541,20 @@ abstract class DeviceAlertsTab extends \CommonDBChild implements Upgradeable {
         ];
 
         $tab[] = [
-            'id' => 13,
+            'id' => 12,
             'table' => static::getTable(),
             'field' => 'date_creation',
             'name' => __('Fetched', PluginConfig::APP_CODE),
             'datatype' => 'datetime',
+            'massiveaction' => false,
+        ];
+
+        $tab[] = [
+            'id' => 20,
+            'table' => static::getTable(),
+            'field' => static::getForeignKeyField(),
+            'name' => __('ParentId', PluginConfig::APP_CODE),
+            'datatype' => 'number',
             'massiveaction' => false,
         ];
 
