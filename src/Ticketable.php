@@ -13,6 +13,11 @@ interface Ticketable
     static function newDeviceInstance(): Computer|NetworkEquipment;
 
     /**
+     * @return string Database device id, table, field name. For ex: 'networkequipments_id' or 'computers_id'
+     */
+    static function getDeviceForeignKeyField(): string;
+
+    /**
      * @return string href following to WazuhTab with id
      */
     static function getWazuhTabHref(int $id): string;

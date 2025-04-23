@@ -576,5 +576,8 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
         return  $item->fields['name'] . "/" . $item->fields['p_name'];
     }
 
-
+    static function getDeviceForeignKeyField(): string
+    {
+        return NetworkEquipment::getForeignKeyField();
+    }
 }

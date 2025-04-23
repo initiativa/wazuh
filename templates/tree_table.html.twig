@@ -84,18 +84,29 @@
         {% else %}
            {# Store has_child_ids as JS array for easy access in client-side code #}
            <script>
-              var has_child_ids = [
-                 {% for id in data['has_child_ids'] %}
-                    "{{ id }}"{% if not loop.last %},{% endif %}
-                 {% endfor %}
-              ];
+               const massive_action_form_id = '{{ massive_action_form_id }}';
+               let has_child_ids = [
+                   {% for id in data['has_child_ids'] %}
+                   "{{ id }}"{% if not loop.last %},{% endif %}
+                   {% endfor %}
+               ];
+               window["{{ searchform_id }}_selected"] = new Set();
+              try {
+                  child_map = JSON.parse('{{ data['child_map']|json_encode|e('js') }}');
+              } catch (e) {
+                  console.error("Błąd parsowania JSON", e);
+                  data_map = {};
+              }
            </script>
 
-           {# Loop through rows #}
+            {% set device_id = data['device_id'] %}
+            {% set data_itemtype = data['itemtype']|raw %}
+
+            {# Loop through rows #}
            {% for rowkey, row in data['data']['rows'] %}
               {% set row_id = row['id'] %}
               {% set has_children = row_id in data['has_child_ids'] %}
-              {% set has_parent = row_id in data['has_parent_ids'] %}
+            {% set has_parent = row_id in data['has_parent_ids'] %}
 
               {% if has_parent %}
                  {% set display_style = "display: none;" %}
@@ -106,7 +117,7 @@
               {% endif %}
 
               <tr class="tree-node {{ parent_class }}" 
-                  data-node-id="{{ row_id }}" 
+                  data-node-id="{{ row_id }}"
                   {% if has_parent %}data-is-child="true"{% endif %}
                   {% if has_children %}data-has-children="true"{% endif %}
                   style="{{ display_style }}">
@@ -124,7 +135,7 @@
                              <input class="form-check-input massive_action_checkbox" type="checkbox" data-glpicore-ma-tags="common"
                                 value="1" aria-label="{{ __("Select item") }}" {% if checked %}checked="checked"{% endif %}
                                 name="item[{{ row['TYPE'] ?? itemtype }}][{{ row_id }}]"
-                                onchange="wazuhTreeCheckChanged(this);"
+                                onchange="wazuhTreeCheckChanged(this, '{{ searchform_id }}');"
                                 form="{{ massive_action_form_id }}" />
                           {% endif %}
                        {% endif %}
@@ -140,7 +151,7 @@
                        <td class="tree-col">
                           <div class="d-flex align-items-center">
                              {% if has_children %}
-                                <i class="fas fa-caret-right tree-toggle me-2" data-node-id="{{ row_id }}" onclick="wazuhToggleTreeNode(this, '{{ searchform_id }}');"></i>
+                                 <i class="fas fa-caret-right tree-toggle me-2" data-node-id='{{ row_id }}' data-device-id='{{ device_id }}' data-child-count='{{ data.child_map[row_id] }}' data-page="0" data-itemtype="{{  data["itemtype"] }}" onclick="wazuhToggleTreeNode(this, '{{ searchform_id }}');"></i>
                              {% else %}
                                 <span class="tree-spacer me-2"></span>
                              {% endif %}

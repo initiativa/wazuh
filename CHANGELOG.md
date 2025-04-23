@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ToDo
-- tree alerts items length is wrong
+- tree mass selection items - TODO
 - onetomany or manytomany for wazych alert -> ticket
 - check wazuh version
 - assets tab, show trash problems. Not when search::show but then sort problems ????

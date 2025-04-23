@@ -31,11 +31,244 @@ function wazuhCollapseAllTreeNodes(buttonElement, tableId) {
     });
 }
 
-function wazuhToggleTreeNode(element, tableId) {
-    var nodeId = element.getAttribute('data-node-id');
-    var children = wazuhTreeFindChildren(nodeId);
-    var isExpanded = element.classList.contains('fa-caret-down');
+function wazuhGetPageMax(element) {
+    let page_max = Math.ceil(parseInt(element.getAttribute('data-child-count')) / 10);
+    return page_max;
+}
 
+function wazuhTreePrevPage(iconElement, searchform_id, rootElement) {
+    let page_no = parseInt(rootElement.getAttribute('data-page'));
+    if (page_no > 1) {
+        page_no --;
+    }
+    rootElement.setAttribute('data-page', page_no);
+    wazuhFetchPageableTreeData(rootElement, searchform_id);
+    console.log('Prev page clicked.');
+}
+
+function wazuhTreeNextPage(iconElement, searchform_id, rootElement) {
+    let page_no = parseInt(rootElement.getAttribute('data-page'));
+    const page_max = wazuhGetPageMax(rootElement);
+    if (page_no < page_max) {
+        page_no ++;
+    }
+    rootElement.setAttribute('data-page', page_no);
+    wazuhFetchPageableTreeData(rootElement, searchform_id);
+    console.log('Next page clicked.');
+}
+
+function wazuhSetPageLabel(row_id, page_no, page_max) {
+    const page_id = `page_label_${row_id}`;
+    $(`#${page_id}`).text(`Page: ${page_no} / ${page_max}`);
+}
+
+function wazuhCreatePageableRow(data, search_id, element) {
+    const has_children = false;
+    const has_parent = true;
+    const row_id = element.getAttribute('data-node-id');
+    const page_no = parseInt(element.getAttribute('data-page'));
+    const page_max = wazuhGetPageMax(element);
+
+    const tr = $('<tr>', {
+        class: `tree-node is-child`,
+        'data-node-id': row_id,
+        'data-is-child': has_parent || undefined,
+        'data-has-children': has_children || undefined,
+        style: ""
+    });
+
+    const massTd = $('<td>');
+    const td = $('<td colspan="3">');
+    const div = $('<div>', {class: 'd-flex align-items-center'});
+    const prevButton = $('<button>', {
+        class: 'btn btn-sm btn-icon btn-ghost-secondary',
+        type: 'button',
+    }).click(function () {wazuhTreePrevPage(this, search_id, element);});
+
+    const prevIcon = $('<i>', {
+        class: 'fas fa-caret-left tree-toggle me-2 mr-2'
+    });
+    prevButton.append(prevIcon);
+
+    const pageLabel = $('<span>', {
+        class: 'mx-3',
+        id: `page_label_${row_id}`,
+    }).text(`Page: ${page_no} / ${page_max}`);
+
+    const nextButton = $('<button>', {
+        class: 'btn btn-sm btn-icon btn-ghost-secondary',
+        type: 'button',
+    }).click(function () {wazuhTreeNextPage(this, search_id, element);});
+
+    const nextIcon = $('<i>', {
+        class: 'fas fa-caret-right tree-toggle me-2'
+    });
+    nextButton.append(nextIcon);
+
+    div.append(prevButton, pageLabel, nextButton);
+    td.append(div);
+    tr.append(massTd, td);
+    return tr;
+}
+
+function wazuhCreateTableRowsFromData(data, searchform_id, element) {
+    const parent_id = element.getAttribute('data-node-id') ?? 0;
+    const selected = window[searchform_id + '_selected'] ?? [];
+    const device_id = data['device_id'];
+    const data_itemtype = data['itemtype']; // Assuming this is already the single backslash version
+    const itemtype = data['itemtype'];
+
+    const showmassiveactions = true;
+    const rows = data['data']['rows'];
+    const cols = data['data']['cols'];
+    // const has_child_ids = data['has_child_ids'] || {};
+    // const has_parent_ids = data['has_parent_ids'] || {};
+    const child_map = data['child_map'] || {};
+
+    const fragment = $(document.createDocumentFragment());
+
+    for (const rowkey in rows) {
+        if (rows.hasOwnProperty(rowkey)) {
+            const row = rows[rowkey];
+            const row_id = row['id'];
+            const has_children = row_id in has_child_ids;
+            const has_parent = parent_id > 0;
+
+            let display_style = "";
+            let parent_class = "";
+            if (has_parent) {
+                display_style = "";
+                parent_class = "is-child";
+            }
+
+            const tr = $('<tr>', {
+                class: `tree-node ${parent_class}`,
+                'data-node-id': row_id,
+                'data-is-child': has_parent || undefined,
+                'data-has-children': has_children || undefined,
+                style: display_style
+            });
+
+            if (showmassiveactions) {
+                const td_massive_action = $('<td>');
+                const div_massive_action = $('<div>');
+
+                let show_checkbox = true;
+                if (itemtype === 'Entity' && !has_access_to_entity(row_id)) {
+                    // Do nothing
+                } else if (itemtype === 'User' && !can_view_all_entities() && !has_access_to_user_entities(row_id)) {
+                    // Do nothing
+                } else {
+                    const row_itemtype = row['TYPE'] || itemtype;
+                    // Assuming 'isMassiveActionAllowed' is a globally available JS function
+                    // if (window[row_itemtype + '::isMassiveActionAllowed'] && window[row_itemtype + '::isMassiveActionAllowed']([row_id])) {
+                        show_checkbox = true;
+                        const checked = selected.has(parseInt(row_id));
+                        const checkbox = $('<input>', {
+                            class: 'form-check-input massive_action_checkbox',
+                            type: 'checkbox',
+                            'data-glpicore-ma-tags': 'common',
+                            value: '1',
+                            name: `item[${row['TYPE'] || itemtype}][${row_id}]`,
+                            form: massive_action_form_id,
+                            prop: 'checked',
+                            checked: checked
+                        }).change(function() { wazuhTreeCheckChanged(this, searchform_id); });
+                        div_massive_action.append(checkbox);
+                    // }
+                }
+                td_massive_action.append(div_massive_action);
+                tr.append(td_massive_action);
+            }
+
+            for (let i = 0; i < cols.length; i++) {
+                const col = cols[i];
+                const colkey = col['itemtype'] + '_' + col['id'];
+                const td = $('<td>');
+
+                if (i === 0) {
+                    // First column
+                    const div_first_col = $('<div>', { class: 'd-flex align-items-center' });
+                    if (has_children) {
+                        const toggleIcon = $('<i>', {
+                            class: 'fas fa-caret-right tree-toggle me-2',
+                            'data-node-id': row_id,
+                            'data-device-id': device_id,
+                            'data-child-count': child_map[row_id],
+                            'data-page': '0',
+                            'data-itemtype': data_itemtype,
+                            onclick: function() { wazuhToggleTreeNode(this, searchform_id); }
+                        });
+                        div_first_col.append(toggleIcon);
+                    } else {
+                        const spacer = $('<span>', { class: 'tree-spacer me-2' });
+                        div_first_col.append(spacer);
+                    }
+                    div_first_col.append(row[colkey]['displayname']);
+                    td.append(div_first_col);
+                } else {
+                    if (col['meta'] !== undefined && col['meta']) {
+                        td.append(row[colkey]['displayname']);
+                    } else {
+                        td.append(row[colkey]['displayname']);
+                    }
+                }
+                tr.append(td);
+            }
+
+            fragment.append(tr);
+        }
+    }
+    fragment.append(wazuhCreatePageableRow(data, searchform_id, element));
+
+    return fragment;
+}
+
+function wazuhFetchPageableTreeData(element, formId) {
+    let page_no = parseInt(element.getAttribute('data-page'));
+    if (page_no === 0) {
+        page_no ++;
+        element.setAttribute('data-page', page_no);
+    }
+    let nodeId = element.getAttribute('data-node-id');
+    $.ajax({
+        url: CFG_GLPI.url_base + '/plugins/wazuh/ajax/fetch_tree_elements.php',
+        type: 'GET',
+        data: {
+            itemtype: encodeURIComponent(element.getAttribute('data-itemtype')),
+            parent_id: element.getAttribute('data-node-id'),
+            device_id: element.getAttribute('data-device-id'),
+            page_no: page_no,
+        },
+        dataType: 'json',
+        beforeSend: function() {
+            console.debug("Wazuh fetch pageable data: ", this.url);
+        },
+        success: function(response) {
+            let elements = wazuhCreateTableRowsFromData(response, formId, element);
+            let children = wazuhTreeFindChildren(nodeId);
+            $(children).remove();
+            element.parentNode.parentNode.parentNode.after(elements[0]);
+        },
+        error: function(xhr, status, error) {
+            console.error('AJAX error:', error);
+        }
+    });
+}
+
+function wazuhToggleTreeNode(element, tableId) {
+    let nodeId = element.getAttribute('data-node-id');
+    let page = parseInt(element.getAttribute('data-page'));
+    let itemtype2 = element.getAttribute('data-itemtype');
+    let children = wazuhTreeFindChildren(nodeId);
+    let isExpanded = element.classList.contains('fa-caret-down');
+
+    if (page === 0) {
+        $(children).remove();
+        wazuhFetchPageableTreeData(element, tableId);
+    }
+
+    console.log("Children size: ", children.length);
     // Toggle visibility of children
     children.forEach(function (child) {
         if (isExpanded) {
@@ -67,7 +300,9 @@ function wazuhToggleTreeNode(element, tableId) {
     wazuhTreeUpdateZebraStripes(tableId);
 }
 
-function wazuhTreeCheckChanged(element) {
+function wazuhTreeCheckChanged(element, searchform_id) {
+    console.debug('Check change: ', searchform_id);
+    let selected = window[searchform_id + '_selected'];
     const row = element.closest('tr');
     if (!row)
         return;
@@ -76,19 +311,31 @@ function wazuhTreeCheckChanged(element) {
     if (!rowId)
         return;
 
+    const isChecked = element.checked;
+    if (isChecked) {
+        selected.add(parseInt(rowId));
+    } else {
+        selected.delete(parseInt(rowId));
+    }
+
     if (row.dataset.hasChildren === 'true') {
-
         const children = wazuhTreeFindAllChildren(rowId);
-
-        const isChecked = element.checked;
         children.forEach(function (child) {
             const childCheckbox = child.querySelector('.massive_action_checkbox');
             if (childCheckbox) {
                 childCheckbox.checked = isChecked;
+                const subRow = childCheckbox.closest('tr');
+                const subRowId = subRow.dataset.nodeId;
+                if (isChecked) {
+                    selected.add(parseInt(subRowId));
+                } else {
+                    selected.delete(parseInt(subRowId));
+                }
             }
         });
     }
-
+    const data2 = JSON.stringify(Array.from(selected));
+    document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
 }
 
 function wazuhTreeFindAllChildren(nodeId) {

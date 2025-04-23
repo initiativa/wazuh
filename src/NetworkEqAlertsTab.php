@@ -45,7 +45,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class NetworkEqAlertsTab extends DeviceAlertsTab implements Ticketable {
+class NetworkEqAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
 
@@ -414,4 +414,8 @@ class NetworkEqAlertsTab extends DeviceAlertsTab implements Ticketable {
         return  $item->fields['name'] . "/" . $item->fields['a_name'];
     }
 
+    static function getDeviceForeignKeyField(): string
+    {
+        return NetworkEquipment::getForeignKeyField();
+    }
 }

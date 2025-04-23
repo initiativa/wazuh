@@ -44,7 +44,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
+class ComputerAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
 
@@ -421,4 +421,8 @@ class ComputerAlertsTab extends DeviceAlertsTab implements Ticketable {
         return  $item->fields['name'] . "/" . $item->fields['a_name'];
     }
 
+    static function getDeviceForeignKeyField(): string
+    {
+        return Computer::getForeignKeyField();
+    }
 }

@@ -25,6 +25,7 @@ use CommonDBTM;
 use Migration;
 use Computer;
 use NetworkEquipment;
+use QueryExpression;
 use Ticket;
 use MassiveAction;
 use DBConnection;
@@ -151,7 +152,8 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return true;
     }
 
-    static function showBrowseView($itemtype, $params) {
+    static function showBrowseView($itemtype, $params): void
+    {
         $item_id = $params['criteria'][0]['value'];
         $params['criteria'] = [
             [
@@ -167,58 +169,105 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         ];
 
         Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
-
         $data = Search::getDatas($itemtype, $params);
-        $raw_data_ids = [];
-        $has_parent_ids = [];
+
+        global $DB;
+        $criteria = [
+            'SELECT' => [static::getForeignKeyField() . ' as parent_id', new QueryExpression('COUNT(*) as total')],
+            'FROM' => static::getTable(),
+            'WHERE' => [
+                static::getDeviceForeignKeyField() => $item_id,
+                'is_deleted' => 0,
+                static::getForeignKeyField() => ['<>', 0],
+            ],
+            'GROUPBY' => static::getForeignKeyField()
+        ];
+
         $has_child_ids = [];
+        $child_map = [];
 
-        foreach ($data['data']['rows'] as $row) {
-            if (isset($row['raw']['id'])) {
-                $id = $row['raw']['id'];
-                $raw_data_ids[] = $id;
-            }
+        $iterator = $DB->request($criteria);
+        foreach ($iterator as $row) {
+            $has_child_ids[] = $row['parent_id'];
+            $child_map[$row['parent_id']] = $row['total'];
         }
 
-        foreach ($raw_data_ids as $parent_id) {
-            $params['criteria'] = [
-                [
-                    'field' => 7,
-                    'searchtype' => 'equals',
-                    'value' => $item_id
-                ],
-                [
-                    'field' => 20,
-                    'searchtype' => 'equals',
-                    'value' => $parent_id
-                ],
-            ];
-            $data1 = Search::getDatas($itemtype, $params);
-            $len1 = count($data1['data']['rows']);
-            if ($len1 > 0) {
-                $has_child_ids[] = $parent_id;
-                foreach ($data1['data']['rows'] as $row) {
-                    if (isset($row['raw']['id'])) {
-                        $id = $row['raw']['id'];
-                        $has_parent_ids[] = $id;
-                    }
-                }
-            }
-//            $data['data']['rows'] = array_merge_recursive($data['data']['rows'], $data1['data']['rows']);
-            $pos = static::findArrayPositionById($data['data']['rows'], $parent_id);
-            if ($pos !== false) {
-                $data['data']['rows'] = static::arrayInsertAfter($data['data']['rows'], $pos, $data1['data']['rows']);
-            }
-        }
+        $data['device_id'] = $item_id;
         $data['has_child_ids'] = $has_child_ids;
-        $data['has_parent_ids'] = $has_parent_ids;
-
+        $data['child_map'] = $child_map;
         $treeSearch = new TreeSearchOutput();
         unset($data['search']['criteria'][1]);
         $treeSearch->displayData($data, $params);
-//        Logger::addDebug(__FUNCTION__ . " " . json_encode($params));
-//        Logger::addDebug(__FUNCTION__ . " " . json_encode($data));
     }
+
+//    static function showBrowseView($itemtype, $params) {
+//        $item_id = $params['criteria'][0]['value'];
+//        $params['criteria'] = [
+//            [
+//                'field' => 7,
+//                'searchtype' => 'equals',
+//                'value' => $item_id
+//            ],
+//            [
+//                'field' => 20,
+//                'searchtype' => 'equals',
+//                'value' => 0
+//            ],
+//        ];
+//
+//        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
+//
+//        $data = Search::getDatas($itemtype, $params);
+//        $raw_data_ids = [];
+//        $has_parent_ids = [];
+//        $has_child_ids = [];
+//
+//        foreach ($data['data']['rows'] as $row) {
+//            if (isset($row['raw']['id'])) {
+//                $id = $row['raw']['id'];
+//                $raw_data_ids[] = $id;
+//            }
+//        }
+//
+//        foreach ($raw_data_ids as $parent_id) {
+//            $params['criteria'] = [
+//                [
+//                    'field' => 7,
+//                    'searchtype' => 'equals',
+//                    'value' => $item_id
+//                ],
+//                [
+//                    'field' => 20,
+//                    'searchtype' => 'equals',
+//                    'value' => $parent_id
+//                ],
+//            ];
+//            $data1 = Search::getDatas($itemtype, $params);
+//            $len1 = count($data1['data']['rows']);
+//            if ($len1 > 0) {
+//                $has_child_ids[] = $parent_id;
+//                foreach ($data1['data']['rows'] as $row) {
+//                    if (isset($row['raw']['id'])) {
+//                        $id = $row['raw']['id'];
+//                        $has_parent_ids[] = $id;
+//                    }
+//                }
+//            }
+////            $data['data']['rows'] = array_merge_recursive($data['data']['rows'], $data1['data']['rows']);
+//            $pos = static::findArrayPositionById($data['data']['rows'], $parent_id);
+//            if ($pos !== false) {
+//                $data['data']['rows'] = static::arrayInsertAfter($data['data']['rows'], $pos, $data1['data']['rows']);
+//            }
+//        }
+//        $data['has_child_ids'] = $has_child_ids;
+//        $data['has_parent_ids'] = $has_parent_ids;
+//
+//        $treeSearch = new TreeSearchOutput();
+//        unset($data['search']['criteria'][1]);
+//        $treeSearch->displayData($data, $params);
+////        Logger::addDebug(__FUNCTION__ . " " . json_encode($params));
+////        Logger::addDebug(__FUNCTION__ . " " . json_encode($data));
+//    }
 
     protected static function findArrayPositionById(array $array, int $id): int|false {
         foreach ($array as $i => $row) {
