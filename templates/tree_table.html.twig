@@ -84,8 +84,8 @@
         {% else %}
            {# Store has_child_ids as JS array for easy access in client-side code #}
            <script>
-               const massive_action_form_id = '{{ massive_action_form_id }}';
-               let has_child_ids = [
+               massive_action_form_id = '{{ massive_action_form_id }}';
+               has_child_ids = [
                    {% for id in data['has_child_ids'] %}
                    "{{ id }}"{% if not loop.last %},{% endif %}
                    {% endfor %}

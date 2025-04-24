@@ -62,12 +62,20 @@ function wazuhSetPageLabel(row_id, page_no, page_max) {
     $(`#${page_id}`).text(`Page: ${page_no} / ${page_max}`);
 }
 
+/**
+ * Last child row to manage children pages
+ * @param data
+ * @param search_id
+ * @param element
+ * @returns {*|jQuery|HTMLElement} tr row element
+ */
 function wazuhCreatePageableRow(data, search_id, element) {
     const has_children = false;
     const has_parent = true;
     const row_id = element.getAttribute('data-node-id');
     const page_no = parseInt(element.getAttribute('data-page'));
     const page_max = wazuhGetPageMax(element);
+    const col_size = data.data.cols.length;
 
     const tr = $('<tr>', {
         class: `tree-node is-child`,
@@ -78,8 +86,8 @@ function wazuhCreatePageableRow(data, search_id, element) {
     });
 
     const massTd = $('<td>');
-    const td = $('<td colspan="3">');
-    const div = $('<div>', {class: 'd-flex align-items-center'});
+    const td = $(`<td colspan="${col_size}">`);
+    const div = $('<div>', {class: 'd-flex justify-content-end align-items-baseline mr-4'});
     const prevButton = $('<button>', {
         class: 'btn btn-sm btn-icon btn-ghost-secondary',
         type: 'button',
@@ -121,7 +129,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
     const showmassiveactions = true;
     const rows = data['data']['rows'];
     const cols = data['data']['cols'];
-    // const has_child_ids = data['has_child_ids'] || {};
+    const has_child_ids = data['has_child_ids'] || {};
     // const has_parent_ids = data['has_parent_ids'] || {};
     const child_map = data['child_map'] || {};
 
@@ -268,7 +276,6 @@ function wazuhToggleTreeNode(element, tableId) {
         wazuhFetchPageableTreeData(element, tableId);
     }
 
-    console.log("Children size: ", children.length);
     // Toggle visibility of children
     children.forEach(function (child) {
         if (isExpanded) {
