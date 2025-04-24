@@ -145,6 +145,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
 
         $item_data = [
             'key' => $key,
+            'is_discontinue' => false,
             \NetworkEquipment::getForeignKeyField() => $device->getID(),
             'name' => $DB->escape($result['_source']['vulnerability']['id']),
             'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
@@ -485,7 +486,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
                      `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `p_installed` TIMESTAMP DEFAULT NULL,
-                     `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
+                     `is_discontinue` tinyint(1) NOT NULL DEFAULT false,
 
                      `level` int NOT NULL DEFAULT '0',
                      `ancestors_cache` longtext DEFAULT NULL,

@@ -328,7 +328,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                      `rule` JSON COLLATE {$default_collation} DEFAULT NULL,
                      `data` JSON COLLATE {$default_collation} DEFAULT NULL,
                      `input_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
+                     `is_discontinue` tinyint(1) NOT NULL DEFAULT false,
                      `source_timestamp` timestamp DEFAULT NULL,
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,

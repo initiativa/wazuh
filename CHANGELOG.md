@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ToDo
 - tree mass selection items - TODO
+- bug if decoder.name == 'syscheck_integrity_changed' and filename comming straight from root dir
 - onetomany or manytomany for wazych alert -> ticket
 - check wazuh version
 - assets tab, show trash problems. Not when search::show but then sort problems ????

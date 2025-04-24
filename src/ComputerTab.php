@@ -145,6 +145,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
 
         $item_data = [
             'key' => $key,
+            'is_discontinue' => false,
             Computer::getForeignKeyField() => $device->getID(),
             'name' => $DB->escape($result['_source']['vulnerability']['id']),
             'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
@@ -161,7 +162,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
             'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
             'p_installed' => static::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
             'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
-            \Entity::getForeignKeyField() => \Session::getActiveEntity(),
+            Entity::getForeignKeyField() => Session::getActiveEntity(),
         ];
         
         $parent_id = self::createParentItem($item_data, new self());
@@ -388,7 +389,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
                      `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `p_installed` TIMESTAMP DEFAULT NULL,
-                     `is_discontinue` tinyint(1) NOT NULL DEFAULT '0',
+                     `is_discontinue` tinyint(1) NOT NULL DEFAULT false,
                      
                      `level` int NOT NULL DEFAULT '0',
                      `ancestors_cache` longtext DEFAULT NULL,

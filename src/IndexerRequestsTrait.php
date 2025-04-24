@@ -330,6 +330,7 @@ trait IndexerRequestsTrait {
         $totalPages = ceil($total / $pageSize);
 
         Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+        static::discontinue_all($device->getID());
 
         for ($page = 0; $page < $totalPages; $page++) {
             $from = $page * $pageSize;

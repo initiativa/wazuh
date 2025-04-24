@@ -324,15 +324,30 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         }
         return $levels[strtolower($severity)] ?? 3;
     }
-    
+
+    protected static function discontinue_all(int $device_id)
+    {
+        global $DB;
+        $DB->update(
+            static::getTable(),
+            [
+                'is_discontinue' => 1
+            ],
+            [
+                static::getDeviceForeignKeyField() => $device_id,
+                'is_deleted' => 0
+            ]
+        );
+    }
+
     protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
         $founded = $item->find([
             'name' => $item_data['name'],
-            \Entity::getForeignKeyField() => \Session::getActiveEntity(),
+            'is_discontinue' => false,
+            Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => 0
         ]);
-        
-        
+
         if ($founded) {
             return reset($founded)['id'];
         }

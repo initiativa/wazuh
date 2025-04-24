@@ -80,6 +80,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
         $founded = $item->find([
             'name' => $item_data['name'],
+            'is_discontinue' => false,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => 0
         ]);
