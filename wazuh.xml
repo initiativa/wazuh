@@ -2,8 +2,8 @@
    <name>Wazuh</name>
    <key>wazuh</key>
    <!-- stable, beta, development, alpha, ... -->
-   <state>stable</state>
-   <logo>https://raw.githubusercontent.com/pluginsGLPI/wazuh/master/wazuh.png</logo>
+   <state>alpha</state>
+   <logo>https://github.com/initiativa/wazuh/docs/images/logo.png</logo>
    <description>
       <short>
          <de>Wazuh GLPI-Plugin.</de>
@@ -20,10 +20,10 @@
          <pl>Wtyczka GLPI dla Wazuh.</pl>
       </long>
    </description>
-   <homepage>https://github.com/pluginsGLPI/wazuh</homepage>
-   <download>https://github.com/pluginsGLPI/wazuh/releases</download>
-   <issues>https://github.com/pluginsGLPI/wazuh/issues</issues>
-   <readme>https://github.com/pluginsGLPI/wazuh/blob/master/README.md</readme>
+   <homepage>https://github.com/initiativa/wazuh/</homepage>
+   <download>https://github.com/initiativa/wazuh/releases</download>
+   <issues>https://github.com/initiativa/wazuh/issues</issues>
+   <readme>https://github.com/initiativa/wazuh/blob/master/README.md</readme>
    <authors>
       <author>Tomasz W.</author>
    </authors>
@@ -41,18 +41,19 @@
       <lang>pl_PL</lang>
    </langs>
    <license>GPL V3+</license>
-   <!--tags>
+   <tags>
       <en>
-         <tag>One tag</tag>
-         <tag>Another tag</tag>
+         <tag>Wazuh</tag>
+         <tag>Security</tag>
       </en>
       <fr>
-         <tag>Un tag</tag>
-         <tag>Un autre tag</tag>
+         <tag>Wazuh</tag>
+         <tag>Security</tag>
       </fr>
-   </tags-->
-   <!--screenshots>
-      <screenshot>https://github.com/pluginsGLPI/fields/raw/master/screenshot.png</screenshot>
-      <screenshot>https://github.com/pluginsGLPI/fields/raw/master/screenshot2.png</screenshot>
-   </screenshots-->
+   </tags>
+   <screenshots>
+      <screenshot>https://github.com/initiativa/wazuh/docs/images/screenshot1.png</screenshot>
+      <screenshot>https://github.com/initiativa/wazuh/docs/images/screenshot2.png</screenshot>
+      <screenshot>https://github.com/initiativa/wazuh/docs/images/screenshot3.png</screenshot>
+   </screenshots>
 </root>
