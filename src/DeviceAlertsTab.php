@@ -65,6 +65,19 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     abstract protected function countElements($device_id);
 
     protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+        if ($item_data['name'] === 'syscheck_integrity_changed') {
+            $syscheck = json_decode($item_data['syscheck'], true);
+            $directoryPath = dirname($syscheck['path']);
+            $directories = explode("/", $directoryPath);
+//            Logger::addDebug("******************** " . $directories[1] . " -- " . $directories[2]);
+        }
+
+        if ($item instanceof ComputerAlertsTab) {
+            $fkey = Computer::getForeignKeyField();
+        } else {
+            $fkey = NetworkEquipment::getForeignKeyField();
+        }
+
         $founded = $item->find([
             'name' => $item_data['name'],
             Entity::getForeignKeyField() => Session::getActiveEntity(),
@@ -72,13 +85,12 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         ]);
 
         if ($founded) {
-            return reset($founded)['id'];
-        }
-
-        if ($item instanceof ComputerAlertsTab) {
-            $fkey = Computer::getForeignKeyField();
-        } else {
-            $fkey = NetworkEquipment::getForeignKeyField();
+            $founded_item = reset($founded);
+            $founded_item_id = $founded_item['id'];
+            if (isset($directories)) {
+                return self::subParentItem($item, $item_data, $fkey, $directories, $founded_item_id);
+            }
+            return $founded_item_id;
         }
 
         $id = $item->add([
@@ -89,10 +101,37 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         if (!$id) {
             global $DB;
             Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            return false;
+        }
+
+        if (isset($directories)) {
+            return self::subParentItem($item, $item_data, $fkey, $directories, $id);
         }
 
         return $id;
+    }
 
+    private static function subParentItem($item, $item_data, $fkey, $directories, int $parent_id): int | false {
+            $dfounded = $item->find([
+                'name' => $directories[1],
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
+                static::getForeignKeyField() => $parent_id
+            ]);
+            if ($dfounded) {
+                return reset($dfounded)['id'];
+            }
+
+            $did = $item->add([
+                'name' => $directories[1],
+                $fkey => $item_data[$fkey],
+                static::getForeignKeyField() => $parent_id
+            ]);
+
+            if (!$did) {
+                global $DB;
+                Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            }
+            return $did;
     }
 
     static function showBrowseView($itemtype, $params): void
@@ -115,6 +154,24 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         $data = Search::getDatas($itemtype, $params);
 
         global $DB;
+
+        $parent_map = [];
+        $criteria = [
+            'SELECT' => ['id', static::getForeignKeyField() . ' as parent_id'],
+            'FROM' => static::getTable(),
+            'WHERE' => [
+                static::getDeviceForeignKeyField() => $item_id,
+                'is_deleted' => 0,
+                static::getForeignKeyField() => ['<>', 0],
+            ]
+        ];
+
+        $iterator = $DB->request($criteria);
+        foreach ($iterator as $row) {
+            $parent_map[$row['id']] = $row['parent_id'];
+        }
+        $data['parent_map'] = $parent_map;
+
         $criteria = [
             'SELECT' => [static::getForeignKeyField() . ' as parent_id', new QueryExpression('COUNT(*) as total')],
             'FROM' => static::getTable(),
@@ -440,7 +497,8 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     }
     
     #[\Override]
-    public function rawSearchOptions() {
+    public function rawSearchOptions(): array
+    {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [

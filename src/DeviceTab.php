@@ -172,6 +172,24 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $data = Search::getDatas($itemtype, $params);
 
         global $DB;
+
+        $parent_map = [];
+        $criteria = [
+            'SELECT' => ['id', static::getForeignKeyField() . ' as parent_id'],
+            'FROM' => static::getTable(),
+            'WHERE' => [
+                static::getDeviceForeignKeyField() => $item_id,
+                'is_deleted' => 0,
+                static::getForeignKeyField() => ['<>', 0],
+            ]
+        ];
+
+        $iterator = $DB->request($criteria);
+        foreach ($iterator as $row) {
+            $parent_map[$row['id']] = $row['parent_id'];
+        }
+        $data['parent_map'] = $parent_map;
+
         $criteria = [
             'SELECT' => [static::getForeignKeyField() . ' as parent_id', new QueryExpression('COUNT(*) as total')],
             'FROM' => static::getTable(),

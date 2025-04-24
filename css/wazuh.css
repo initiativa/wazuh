@@ -329,6 +329,17 @@ table.json-table th {
     width: 100%;
 }
 
+tr.is-child.level-1 td:first-child {
+    padding-left: 2em !important;
+}
+
+tr.is-child.level-2 td:first-child {
+    padding-left: 3em !important;
+}
+
+tr.is-child.level-3 td:first-child {
+    padding-left: 4em !important;
+}
 
 /* Responsive tables */
 @media screen and (max-width: 768px) {

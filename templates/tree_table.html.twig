@@ -93,6 +93,7 @@
                window["{{ searchform_id }}_selected"] = new Set();
               try {
                   child_map = JSON.parse('{{ data['child_map']|json_encode|e('js') }}');
+                  window['tree_parent_map'] = JSON.parse('{{ data['parent_map']|json_encode|e('js') }}');
               } catch (e) {
                   console.error("Błąd parsowania JSON", e);
                   data_map = {};

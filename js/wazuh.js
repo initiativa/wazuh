@@ -119,6 +119,15 @@ function wazuhCreatePageableRow(data, search_id, element) {
     return tr;
 }
 
+function calculateTreeLevel(row_id, current_level = 0) {
+    const parent_map = window['tree_parent_map'];
+    const parent_id = parent_map[row_id];
+    if (parent_id !== undefined) {
+        current_level++;
+        return calculateTreeLevel(parent_id, current_level);
+    }
+    return current_level;
+}
 function wazuhCreateTableRowsFromData(data, searchform_id, element) {
     const parent_id = element.getAttribute('data-node-id') ?? 0;
     const selected = window[searchform_id + '_selected'] ?? [];
@@ -129,7 +138,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
     const showmassiveactions = true;
     const rows = data['data']['rows'];
     const cols = data['data']['cols'];
-    const has_child_ids = data['has_child_ids'] || {};
+    const has_child_ids = data['has_child_ids'] || [];
     // const has_parent_ids = data['has_parent_ids'] || {};
     const child_map = data['child_map'] || {};
 
@@ -138,15 +147,17 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
     for (const rowkey in rows) {
         if (rows.hasOwnProperty(rowkey)) {
             const row = rows[rowkey];
-            const row_id = row['id'];
-            const has_children = row_id in has_child_ids;
+            const row_id = parseInt(row['id']);
+            const has_children = has_child_ids.includes(row_id);
             const has_parent = parent_id > 0;
+
+            let level = calculateTreeLevel(row_id, 0);
 
             let display_style = "";
             let parent_class = "";
             if (has_parent) {
                 display_style = "";
-                parent_class = "is-child";
+                parent_class = `is-child level-${level}`;
             }
 
             const tr = $('<tr>', {
@@ -205,8 +216,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
                             'data-child-count': child_map[row_id],
                             'data-page': '0',
                             'data-itemtype': data_itemtype,
-                            onclick: function() { wazuhToggleTreeNode(this, searchform_id); }
-                        });
+                        }).click(function() { wazuhToggleTreeNode(this, searchform_id); });
                         div_first_col.append(toggleIcon);
                     } else {
                         const spacer = $('<span>', { class: 'tree-spacer me-2' });
@@ -308,7 +318,6 @@ function wazuhToggleTreeNode(element, tableId) {
 }
 
 function wazuhTreeCheckChanged(element, searchform_id) {
-    console.debug('Check change: ', searchform_id);
     let selected = window[searchform_id + '_selected'];
     const row = element.closest('tr');
     if (!row)

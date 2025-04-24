@@ -53,8 +53,31 @@ Logger::addDebug(__FILE__ . " OFFSET: $start , PAGE_NO: $page_no");
 $params['start'] = $start;
 
 $data = Search::getDatas($itemtype, $params);
-//Logger::addDebug(__FILE__ . " : " . json_encode($data));
 
+global $DB;
+$criteria = [
+    'SELECT' => [$itemtype::getForeignKeyField() . ' as parent_id', new QueryExpression('COUNT(*) as total')],
+    'FROM' => $itemtype::getTable(),
+    'WHERE' => [
+        $itemtype::getDeviceForeignKeyField() => $device_id,
+        'is_deleted' => 0,
+        $itemtype::getForeignKeyField() => ['<>', 0],
+    ],
+    'GROUPBY' => $itemtype::getForeignKeyField()
+];
+
+$has_child_ids = [];
+$child_map = [];
+
+$iterator = $DB->request($criteria);
+foreach ($iterator as $row) {
+    $has_child_ids[] = $row['parent_id'];
+    $child_map[$row['parent_id']] = $row['total'];
+}
+
+$data['device_id'] = $device_id;
+$data['has_child_ids'] = $has_child_ids;
+$data['child_map'] = $child_map;
 
 // Send JSON response
 header('Content-Type: application/json');

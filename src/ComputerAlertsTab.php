@@ -176,7 +176,8 @@ class ComputerAlertsTab extends DeviceAlertsTab {
 
 
     #[\Override]
-    public function rawSearchOptions() {
+    public function rawSearchOptions(): array
+    {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
@@ -359,7 +360,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
 
             $migration->updateDisplayPrefs(
                     [
-                        self::class => [1, 10, 13, 11, 3, 6, 4, 8, 9, 7]
+                        self::class => [2, 10, 11, 3, 6, 4, 8, 9, 7]
                     ],
             );
         }
