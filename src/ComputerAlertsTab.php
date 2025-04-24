@@ -19,9 +19,10 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use CommonDBTM;
+use DateTime;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
-use CommonDBTM;
 use Migration;
 use Computer;
 use NetworkEquipment;
@@ -39,24 +40,24 @@ if (!defined('GLPI_ROOT')) {
 }
 
 /**
- * Wazuh computer vulenrable tab
+ * Wazuh alerts computer tab
  *
  * @author w-tomasz
  */
-class ComputerTab extends DeviceTab implements Ticketable {
+class ComputerAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
 
     public $dohistory = true;
     public static $itemtype = 'Computer';
     public static $items_id = 'computers_id';
-    
+
     #[\Override]
     static function getTypeName($nb = 0) {
-        return _n('Wazuh Vulnerable', 'Wazuh Vulnerabilities', $nb, PluginConfig::APP_CODE);
+        return _n('Wazuh Alert', 'Wazuh Alerts', $nb, PluginConfig::APP_CODE);
     }
-
-   protected function countElements($computers_id) {
+    
+    protected function countElements($computers_id) {
         global $DB;
 
         $count = 0;
@@ -78,96 +79,40 @@ class ComputerTab extends DeviceTab implements Ticketable {
         return $count;
     }
 
-    #[\Override]
-    protected static function getUpsertStatement(): string {
-        $table = static::getTable();
-        $computer_fkey = Computer::getForeignKeyField();
-        $query = "INSERT INTO `$table` 
-          (`key`, `$computer_fkey`, `name`, `v_description`, `v_severity`, `v_detected`, `v_published`, `v_enum`, `v_category`, `v_classification`, `v_reference`, `p_name`, `p_version`, `p_type`, `p_description`, `p_installed`, `date_mod`) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-              `$computer_fkey` = VALUES(`$computer_fkey`),
-              `name` = VALUES(`name`),
-              `v_description` = VALUES(`v_description`),
-              `v_severity` = VALUES(`v_severity`),
-              `v_detected` = VALUES(`v_detected`),
-              `v_published` = VALUES(`v_published`),
-              `v_enum` = VALUES(`v_enum`),
-              `v_category` = VALUES(`v_category`),
-              `v_classification` = VALUES(`v_classification`),
-              `v_reference` = VALUES(`v_reference`),
-              `p_name` = VALUES(`p_name`),
-              `p_version` = VALUES(`p_version`),
-              `p_type` = VALUES(`p_type`),
-              `p_description` = VALUES(`p_description`),
-              `p_installed` = VALUES(`p_installed`),
-              `date_mod` = VALUES(`date_mod`)
-          ";
-        Logger::addDebug($query, ['computer_fkey' => $computer_fkey]);
-        return $query;
-    }
-
-    #[\Override]
-    protected static function bindStatement($stmt, $result, \CommonDBTM $device): bool {
-        global $DB;
-
-        $d = [
-            $result['_id'],
-            $device->getID(),
-            $result['_source']['vulnerability']['id'],
-            $DB->escape($result['_source']['vulnerability']['description'] ?? ''),
-            $result['_source']['vulnerability']['severity'] ?? '',
-            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
-            self::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
-            $result['_source']['vulnerability']['enumeration'],
-            $result['_source']['vulnerability']['category'],
-            $result['_source']['vulnerability']['classification'],
-            $result['_source']['vulnerability']['reference'],
-            $result['_source']['package']['name'],
-            $result['_source']['package']['version'] ?? '',
-            $result['_source']['package']['type'] ?? '',
-            $DB->escape($result['_source']['package']['description'] ?? ''),
-            self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
-            (new \DateTime())->format('Y-m-d H:i:s')
-        ];
-        return $stmt->bind_param('sisssssssssssssss', ...$d);
-    }
-
     protected static function createItem($result, CommonDBTM $device): self | false {
         global $DB;
         $key = $result['_id'];
         $item = new self();
         $founded = $item->find(['key' => $key]);
-        
+
         if (count($founded) > 1) {
             throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
         }
 
-        $item_data = [
-            'key' => $key,
-            'is_discontinue' => false,
-            Computer::getForeignKeyField() => $device->getID(),
-            'name' => $DB->escape($result['_source']['vulnerability']['id']),
-            'v_description' => $DB->escape($result['_source']['vulnerability']['description']),
-            'v_severity' => $DB->escape($result['_source']['vulnerability']['severity'] ?? ''),
-            'v_detected' => static::convertIsoToMysqlDatetime($result['_source']['vulnerability']['detected_at']),
-            'v_published' => static::convertIsoToMysqlDatetime($result['_source']['vulnerability']['published_at']),
-            'v_enum' => $DB->escape($result['_source']['vulnerability']['enumeration'] ?? ''),
-            'v_category' => $DB->escape($result['_source']['vulnerability']['category'] ?? ''),
-            'v_classification' => $DB->escape($result['_source']['vulnerability']['classification'] ?? ''),
-            'v_reference' => $DB->escape($result['_source']['vulnerability']['reference'] ?? ''),
-            'p_name' => $DB->escape($result['_source']['package']['name'] ?? ''),
-            'p_version' => $DB->escape($result['_source']['package']['version'] ?? ''),
-            'p_type' => $DB->escape($result['_source']['package']['type'] ?? ''),
-            'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
-            'p_installed' => static::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
-            'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
-            Entity::getForeignKeyField() => Session::getActiveEntity(),
-        ];
-        
+        try {
+            $item_data = [
+                'key' => $key,
+                Computer::getForeignKeyField() => $device->getID(),
+                'name' => $DB->escape($result['_source']['decoder']['name']),
+                'a_ip' => $DB->escape($result['_source']['agent']['ip']),
+                'a_name' => $DB->escape($result['_source']['agent']['name']),
+                'a_id' => $DB->escape($result['_source']['agent']['id']),
+                'data' => json_encode($result['_source']['data'] ?? ''),
+                'rule' => json_encode($result['_source']['rule'] ?? ''),
+                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
+                'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
+                'date_mod' => (new DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
+                'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
+            ];
+        } catch (\Exception $e) {
+            Logger::addError($e->getMessage());
+            return false;
+        }
+
         $parent_id = self::createParentItem($item_data, new self());
         if ($parent_id) {
-            $item_data[self::getForeignKeyField()] = $parent_id;
+            $item_data[static::getForeignKeyField()] = $parent_id;
         }
 
         if (!$founded) {
@@ -181,15 +126,16 @@ class ComputerTab extends DeviceTab implements Ticketable {
             $item_data['id'] = $fid;
             $item->update($item_data);
         }
-        
+
         return $item;
     }
-    
+
+
     #[\Override]
-    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
+    static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
-        self::getAgentVulnerabilities($item);
+        self::getAgentAlerts($item);
         $item_type = self::class;
         $params = [
             'sort' => '2',
@@ -205,11 +151,11 @@ class ComputerTab extends DeviceTab implements Ticketable {
             ],
         ];
         Search::manageParams($item_type, $params);
-        Search::show(ComputerTab::class);
+        Search::show(ComputerAlertsTab::class);
         return true;
     }
 
-    public static function getAgentVulnerabilities(CommonGLPI $device): array | false {
+    public static function getAgentAlerts(CommonGLPI $device): array | false {
         if ($device instanceof Computer) {
             $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
             if ($agent) {
@@ -217,7 +163,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
                 if ($connection) {
                     static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password']);
                     $agentId = $agent->fields['agent_id'];
-                    return static::queryVulnerabilitiesByAgentIds([$agentId], $device);
+                    return static::queryAlertsByAgentIds([$agentId], $device);
                 }
             } else {
                 Logger::addError(sprintf("%s %s Can not find agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType()));
@@ -227,6 +173,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
         }
         return false;
     }
+
 
     #[\Override]
     public function rawSearchOptions(): array
@@ -254,12 +201,12 @@ class ComputerTab extends DeviceTab implements Ticketable {
     public function getSpecificMassiveActions($checkitem = null) {
         $actions = parent::getSpecificMassiveActions($checkitem);
 
-        $actions["GlpiPlugin\Wazuh\ComputerTab:create_ticket"] = __("Create ticket", PluginConfig::APP_CODE);
+        $actions["GlpiPlugin\Wazuh\ComputerAlertsTab:create_ticket"] = __("Create ticket", PluginConfig::APP_CODE);
 
         return $actions;
     }
 
-    public static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
+    static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
         global $DB;
 
         Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
@@ -273,8 +220,8 @@ class ComputerTab extends DeviceTab implements Ticketable {
                     return false;
                 }
 
-                if (empty($input['ticket_title'])) {
-                    Logger::addWarning("Missing ticket title.");
+                if (!isset($input['ticket_title']) || empty($input['ticket_title'])) {
+                    Logger::addWarning("Missing ticket title while ticket creating.");
                     return false;
                 }
  
@@ -289,9 +236,9 @@ class ComputerTab extends DeviceTab implements Ticketable {
                     Session::addMessageAfterRedirect($message, true, INFO);
                     Html::back();
                 }
-            default:
-                parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
+                return;
         }
+        parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
     }
 
     #[\Override]
@@ -363,6 +310,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
         $computer_fkey = Computer::getForeignKeyField();
         $ticket_fkey = \Ticket::getForeignKeyField();
         $parent_fkey = static::getForeignKeyField();
+        $itil_category_fkey = \ITILCategory::getForeignKeyField();
  
         if (!$DB->tableExists($table)) {
             $migration->displayMessage("Installing $table");
@@ -370,42 +318,38 @@ class ComputerTab extends DeviceTab implements Ticketable {
         $query = "CREATE TABLE IF NOT EXISTS `$table` (
                      `id` int {$default_key_sign} NOT NULL AUTO_INCREMENT,
                      `name` varchar(255) COLLATE {$default_collation} NOT NULL,
-                     `completename` TEXT COLLATE {$default_collation} DEFAULT NULL,
                      `key` varchar(255) COLLATE {$default_collation} NOT NULL DEFAULT (UUID()),
                      `$parent_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$computer_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `$ticket_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
-                     `v_category` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `v_classification` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `v_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
-                     `v_detected` timestamp DEFAULT NULL,
-                     `v_published` timestamp DEFAULT NULL,
-                     `v_enum` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `v_severity` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `v_reference` TEXT COLLATE {$default_collation} DEFAULT NULL,
-                     `v_score` int {$default_key_sign} NOT NULL DEFAULT '0',
-                     `p_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `p_version` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `p_description` TEXT COLLATE {$default_collation} DEFAULT NULL,
-                     `p_installed` TIMESTAMP DEFAULT NULL,
+                     `$itil_category_fkey` int {$default_key_sign} NOT NULL DEFAULT '0',
+                     `a_ip` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `a_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `a_id` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
+                     `syscheck` JSON COLLATE {$default_collation} DEFAULT NULL,
+                     `rule` JSON COLLATE {$default_collation} DEFAULT NULL,
+                     `data` JSON COLLATE {$default_collation} DEFAULT NULL,
+                     `input_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `is_discontinue` tinyint(1) NOT NULL DEFAULT false,
-                     
-                     `level` int NOT NULL DEFAULT '0',
-                     `ancestors_cache` longtext DEFAULT NULL,
-                     `sons_cache` longtext DEFAULT NULL,
-
+                     `source_timestamp` timestamp DEFAULT NULL,
                      `date_mod` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `date_creation` timestamp DEFAULT CURRENT_TIMESTAMP,
                      `entities_id` int {$default_key_sign} NOT NULL DEFAULT '0',
                      `is_recursive` tinyint(1) NOT NULL DEFAULT '0',
                      `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+                     
+                     `completename` TEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `level` int NOT NULL DEFAULT '0',
+                     `ancestors_cache` longtext DEFAULT NULL,
+                     `sons_cache` longtext DEFAULT NULL,
+                     
                      PRIMARY KEY (`id`),
                      KEY `$parent_fkey` (`$parent_fkey`),
                      KEY `$computer_fkey` (`$computer_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
+                     KEY `$itil_category_fkey` (`$itil_category_fkey`),
                      UNIQUE KEY `key` (`key`),
-                     KEY `v_detected` (`v_detected`),
+                     KEY `source_timestamp` (`source_timestamp`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
@@ -416,19 +360,12 @@ class ComputerTab extends DeviceTab implements Ticketable {
 
             $migration->updateDisplayPrefs(
                     [
-                        self::class => [1, 10, 11, 3, 6, 4, 8, 9, 7]
+                        self::class => [2, 10, 11, 3, 6, 4, 8, 9, 7]
                     ],
             );
-
         }
 
-        if (version_compare('0.0.4', $version, '<=')) {
-            $itil_category_fkey = \ITILCategory::getForeignKeyField();
-            $migration->addField($table, $itil_category_fkey, "fkey");
-            $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
-        }
-
-        \CronTask::register(ComputerTab::class, 'FetchVulnerabilities' , HOUR_TIMESTAMP, array(
+        \CronTask::register(ComputerAlertsTab::class, 'FetchAlerts' , HOUR_TIMESTAMP, array(
             'comment'   => '',
             'mode'      => \CronTask::MODE_EXTERNAL
         ));
@@ -455,8 +392,9 @@ class ComputerTab extends DeviceTab implements Ticketable {
         return true;
     }
 
-    static function getDeviceId(Ticketable&CommonDBTM $wazuhTab): int {
-        return $wazuhTab->fields[Computer::getForeignKeyField()] ?? 0;
+    static function getDeviceId(Ticketable&CommonDBTM $wazuhTab): int
+    {
+        return $wazuhTab->fields[Computer::getForeignKeyField()];
     }
 
     static function newDeviceInstance(): Computer|NetworkEquipment
@@ -466,7 +404,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
 
     static function getWazuhTabHref(int $id): string
     {
-        return "../plugins/wazuh/front/computertab.form.php?id=$id";
+        return "../plugins/wazuh/front/computeralertstab.form.php?id=$id";
     }
 
     static function getDeviceHref(int $id): string
@@ -474,13 +412,14 @@ class ComputerTab extends DeviceTab implements Ticketable {
         return "computer.form.php?id=$id";
     }
 
-    static function getDefaultTicketTitle(): string {
-        return "Wazuh Computer Vulnerable";
+    static function getDefaultTicketTitle(): string
+    {
+        return "Wazuh Computer Alert";
     }
 
     static function generateLinkName(NetworkEqAlertsTab|NetworkEqTab|ComputerAlertsTab|ComputerTab $item): string
     {
-        return  $item->fields['name'] . "/" . $item->fields['p_name'];
+        return  $item->fields['name'] . "/" . $item->fields['a_name'];
     }
 
     static function getDeviceForeignKeyField(): string

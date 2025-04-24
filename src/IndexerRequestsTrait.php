@@ -19,8 +19,11 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use Computer;
 use DateTime;
 use DateTimeZone;
+use Exception;
+use NetworkEquipment;
 use Session;
 use CommonDBTM;
 use Html;
@@ -84,12 +87,12 @@ trait IndexerRequestsTrait {
      * @param array $query Query in JSON/array format
      * @return array Server response
      */
-    private static function executeQuery($query, \CommonDBTM $device) {
+    private static function executeQuery($query, \CommonDBTM $device, $index = '/wazuh-states-vulnerabilities-*/_search') {
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
 
-        $endpoint = self::$indexerUrl . '/wazuh-states-vulnerabilities-*/_search';
+        $endpoint = self::$indexerUrl . $index;
         Logger::addDebug(__FUNCTION__ . " " . $endpoint . " Query: " . json_encode($query));
 
         $ch = curl_init($endpoint);
@@ -130,11 +133,40 @@ trait IndexerRequestsTrait {
         ];
     }
 
+    protected static function getLatestDeviceAlertDetectionDate(CommonDBTM $device): string {
+        $clazz = static::class;
+        $item = new $clazz;
+
+        if ($device instanceof \Computer) {
+            $records = $item->find(
+                    ['computers_id' => $device->getID()],
+                    ['source_timestamp DESC'],
+                    1
+            );
+        }
+
+        if ($device instanceof \NetworkEquipment) {
+            $records = $item->find(
+                    ['networkequipments_id' => $device->getID()],
+                    ['source_timestamp DESC'],
+                    1
+            );
+        }
+
+        $latestRecord = reset($records);
+        if (isset($latestRecord['source_timestamp'])) {
+            $dt = DateTime::createFromFormat('Y-m-d H:i:s', $latestRecord['source_timestamp'], new DateTimeZone('UTC'));
+            return $dt->format('Y-m-d\TH:i:s\Z');
+        } else {
+            return 'now-7d/d';
+        }
+    }
+
     protected static function getLatestDeviceVulnerabilityDetectionDate(CommonDBTM $device): string {
         $clazz = static::class;
         $item = new $clazz;
         
-        if ($device instanceof \Computer) {
+        if ($device instanceof Computer) {
             $records = $item->find(
                     ['computers_id' => $device->getID()],
                     ['v_detected DESC'],
@@ -142,7 +174,7 @@ trait IndexerRequestsTrait {
             );
         }
 
-        if ($device instanceof \NetworkEquipment) {
+        if ($device instanceof NetworkEquipment) {
             $records = $item->find(
                     ['networkequipments_id' => $device->getID()],
                     ['v_detected DESC'],
@@ -159,10 +191,10 @@ trait IndexerRequestsTrait {
         }
     }
     
-    public static function getTotalSize($query, CommonDBTM $device): int | bool {
+    public static function getTotalSize($query, CommonDBTM $device, $index = '/wazuh-states-vulnerabilities-*/_search'): int | bool {
         $query['size'] = 1;
         $query['from'] = 0;
-        $result = self::executeQuery($query, $device);
+        $result = self::executeQuery($query, $device, $index);
         if ($result['success']) {
             Logger::addDebug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
             return $result['data']['hits']['total']['value'];
@@ -216,6 +248,53 @@ trait IndexerRequestsTrait {
         return $query;
     }
 
+    
+     /**
+     * Prepare API query by agent ids
+     * @param type $agentIds
+     * @return string query
+     */
+    public static function getAlertsQueryByAgentIds(array $agentIds, CommonDBTM $computer): array {
+        $latestDtStr = static::getLatestDeviceAlertDetectionDate($computer);
+        $agentIdsStr = json_encode($agentIds);
+        Logger::addDebug("Alerts Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
+
+        $a = $agentIds;
+        if (count($agentIds) == 1) {
+            $a = $agentIds[0];
+        }
+
+        $query = [
+            "sort" => [
+                [
+                    "_id" => [
+                        "order" => "desc"
+                    ]
+                ]
+            ],
+            "query" => [
+                "bool" => [
+                    "must" => [
+                        [
+                            "term" => [
+                                "agent.id" => $a
+                            ]
+                        ],
+                        [
+                            "range" => [
+                                "timestamp" => [
+                                    'gte' => $latestDtStr,
+                                    'lte' => 'now'
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        return $query;
+    }
+
     /**
      * Retrieves vulnerabilities by agent ID
      * 
@@ -224,7 +303,7 @@ trait IndexerRequestsTrait {
      * @param int $offset Offset for pagination (default 0)
      * @return array Query result
      */
-    public static function queryVulnerabilitiesByAgentIds($agentIds, CommonDBTM $device, $pageSize = 500) {
+    public static function queryVulnerabilitiesByAgentIds($agentIds, CommonDBTM $device, $pageSize = 500): array | false {
         global $DB;
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
@@ -237,7 +316,7 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-//            return ['success' => false, 'error' => 'To early.'];
+            return ['success' => false, 'error' => 'To early.'];
         }
 
         $_SESSION[$session_key] = $currentTime;
@@ -251,6 +330,7 @@ trait IndexerRequestsTrait {
         $totalPages = ceil($total / $pageSize);
 
         Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+        static::discontinue_all($device->getID());
 
         for ($page = 0; $page < $totalPages; $page++) {
             $from = $page * $pageSize;
@@ -260,35 +340,109 @@ trait IndexerRequestsTrait {
 
             $result = self::executeQuery($query, $device);
             if ($result['success']) {
-                try {
-                    $DB->beginTransaction();
-                    $stmt_query = static::getUpsertStatement();
-                    $stmt = $DB->prepare($stmt_query);
-                    if (!$stmt) {
-                         $error = $DB->error;
-                        Logger::addError('Can not create statement !', ['query' => $stmt_query, 'error' => $error]);
-                        return false;
-                    }
-                    foreach ($result['data']['hits']['hits'] as $res) {
-                        if (static::bindStatement($stmt, $res, $device)) {
-                            $stmt->execute();
-                        }
-                    }
-                    $DB->commit();
-                } catch (Exception $e) {
-                    $DB->rollBack();
-                    Logger::addCritical($e->getMessage());
+                foreach ($result['data']['hits']['hits'] as $res) {
+                    static::createItem($res, $device);
                 }
-
-//                foreach ($result['data']['hits']['hits'] as $res) {
-//                    static::createItem($res, $device);
-//                }
             } else {
                 return false;
             }
             usleep(100000);
         }
+        return ['success' => true, 'data' => 'Fetch completed.'];
     }
+
+    public static function getLatestMonitoringTime(array $agentIds, \CommonDBTM $device): string | false {
+        $query = [
+            "size" => 1,
+            "from" => 0,
+            "sort" => [
+                [
+                    "timestamp" => [
+                        "order" => "desc"
+                    ]
+                ]
+            ],
+            "query" => [
+                "bool" => [
+                    "must" => [
+                        [
+                            "term" => [
+                                "id" => $agentIds[0]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+        
+        $result = self::executeQuery($query, $device, '/wazuh-monitoring-*/_search');
+        if ($result['success']) {
+            $source = $result['data']['hits']['hits'][0]['_source'] ?? false;
+            $isoDateTime = $source['timestamp'] ?? false;
+            if ($isoDateTime) {
+                Logger::addDebug(__FUNCTION__ . " Latest time fetched: $isoDateTime");
+                return self::convertIsoToMysqlDatetime($isoDateTime);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Retrieves alerts by agent ID
+     * 
+     * @param string|array $agentIds Agent ID or array of agent IDs
+     * @param int $pageSize Maximum number of results
+     * @param int $offset Offset for pagination (default 0)
+     * @return array Query result
+     */
+    public static function queryAlertsByAgentIds(array $agentIds, CommonDBTM $device, $pageSize = 500): array | false {
+        global $DB;
+        if (!self::$isInitialized) {
+            return ['success' => false, 'error' => 'Connection not initialized'];
+        }
+
+        $currentTime = time();
+        $session_key = PluginConfig::VQUERY_ALERT_TIME_SESSION_KEY . $agentIds[0];
+
+        $lastExecutionTime = isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : -1;
+
+        // 5 minutes = 300 seconds
+        if ($currentTime - $lastExecutionTime < 300) {
+            Logger::addDebug("To early: " . $currentTime - $lastExecutionTime);
+//            return ['success' => false, 'error' => 'To early.'];
+        }
+
+        $_SESSION[$session_key] = $currentTime;
+
+        $query = self::getAlertsQueryByAgentIds($agentIds, $device);
+        
+        $total = self::getTotalSize($query, $device, '/wazuh-alerts-*/_search');
+        if (!$total) {
+            return false;
+        }
+        $totalPages = ceil($total / $pageSize);
+
+        Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+
+        for ($page = 0; $page < $totalPages; $page++) {
+            $from = $page * $pageSize;
+
+            $query['size'] = $pageSize;
+            $query['from'] = $from;
+
+            $result = self::executeQuery($query, $device, '/wazuh-alerts-*/_search');
+            if ($result['success']) {
+                foreach ($result['data']['hits']['hits'] as $res) {
+                    static::createItem($res, $device);
+                }
+            } else {
+                return false;
+            }
+            usleep(100000);
+        }
+        return ['success' => true, 'error' => 'Fetch completed.'];
+    }
+
     
     protected static function convertIsoToMysqlDatetime($isoDate) {
         if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z' || $isoDate == null) {
@@ -296,7 +450,8 @@ trait IndexerRequestsTrait {
         }
 
         try {
-            $dateTime = new \DateTime($isoDate);
+            $dateTime = new DateTime($isoDate, new DateTimeZone('UTC'));
+//            $dateTime->setTimezone(new DateTimeZone('UTC'));
             $year = (int) $dateTime->format('Y');
 
             if ($year <= 1) {
@@ -309,13 +464,15 @@ trait IndexerRequestsTrait {
         }
     }
     
-    protected static function array_get($dataPath, $res) {
-        if (isset($dataPath)) {
-            return $dataPath;
-        } else {
-            Logger::addWarning('*** No key in ' . json_encode($res));
-            return null;
+    protected static function array_getvalue(array $res, array $path) {
+        $current = $res;
+        foreach ($path as $key) {
+            if (!isset($current[$key])) {
+                Logger::addWarning(__FUNCTION__ . " *** No key $key in path " . json_encode($path));
+                return null;
+            }
+            $current = $current[$key];
         }
-        
+        return $current;
     }
 }

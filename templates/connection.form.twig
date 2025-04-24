@@ -45,6 +45,11 @@
         __('Indexer API Password', 'wazuh'),
         {'rand': rand}
     ) }}
+    
+    {{ fields.dropdownField('\ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {
+        'rand': rand
+    }) }}
+    
 
 {% endblock %}
 

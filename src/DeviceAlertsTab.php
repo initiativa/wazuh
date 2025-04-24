@@ -19,9 +19,10 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use CommonDBTM;
+use CommonTreeDropdown;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
-use CommonDBTM;
 use Migration;
 use Computer;
 use NetworkEquipment;
@@ -35,7 +36,6 @@ use Search;
 use Session;
 use ITILFollowup;
 use Item_Ticket;
-use CommonTreeDropdown;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -46,13 +46,13 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
+abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable, Ticketable {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
 
     #[\Override]
-    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
+    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
         if (!$withtemplate && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
             global $DB;
             $count = $this->countElements($item->getID());
@@ -61,95 +61,78 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return '';
     }
 
-    abstract public static function getAgentVulnerabilities(CommonGLPI $device): array | false;
+    abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
-    abstract static protected function getUpsertStatement(): string;
-    abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
-    static function cronInfo($name) {
-        switch ($name) {
-            case 'fetchvulenrabilities' :
-                return array('description' => __('Fetch vulnerabilities information for linked with Wazuh\'s Agents, Computers and NetworkEquipments.'),
-                    'parameter'   => __('None'));
+    protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+        if ($item_data['name'] === 'syscheck_integrity_changed') {
+            $syscheck = json_decode($item_data['syscheck'], true);
+            $directoryPath = dirname($syscheck['path']);
+            $directories = explode("/", $directoryPath);
+//            Logger::addDebug("******************** " . $directories[1] . " -- " . $directories[2]);
         }
-        return [];
+
+        if ($item instanceof ComputerAlertsTab) {
+            $fkey = Computer::getForeignKeyField();
+        } else {
+            $fkey = NetworkEquipment::getForeignKeyField();
+        }
+
+        $founded = $item->find([
+            'name' => $item_data['name'],
+            'is_discontinue' => false,
+            Entity::getForeignKeyField() => Session::getActiveEntity(),
+            static::getForeignKeyField() => 0
+        ]);
+
+        if ($founded) {
+            $founded_item = reset($founded);
+            $founded_item_id = $founded_item['id'];
+            if (isset($directories)) {
+                return self::subParentItem($item, $item_data, $fkey, $directories, $founded_item_id);
+            }
+            return $founded_item_id;
+        }
+
+        $id = $item->add([
+            'name' => $item_data['name'],
+            $fkey => $item_data[$fkey]
+        ]);
+
+        if (!$id) {
+            global $DB;
+            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            return false;
+        }
+
+        if (isset($directories)) {
+            return self::subParentItem($item, $item_data, $fkey, $directories, $id);
+        }
+
+        return $id;
     }
 
-    static function cronFetchVulnerabilities($task = null): int
-    {
-        global $DB;
-        $cron_status = 0;
-        Logger::addInfo("Executing cron - FetchVulnerabilities.");
-
-        $agents = (new PluginWazuhAgent())->find([
-            'itemtype' => 'Computer',
-        ]);
-        $device_ids = [];
-        foreach ($agents as $agent) {
-            $device_ids[] = $agent['item_id'];
-        }
-
-        if (!empty($device_ids)) {
-            if (count($device_ids) === 1) {
-                $device_ids = $device_ids[0];
-            }
-            $devices = (new Computer())->find([
-                'id' => $device_ids,
+    private static function subParentItem($item, $item_data, $fkey, $directories, int $parent_id): int | false {
+            $dfounded = $item->find([
+                'name' => $directories[1],
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
+                static::getForeignKeyField() => $parent_id
             ]);
-            foreach ($devices as $device) {
-                ExtApi::fetchLatestVulnerabilities(Computer::getById($device['id']));
+            if ($dfounded) {
+                return reset($dfounded)['id'];
             }
-        }
 
-        $agents = (new PluginWazuhAgent())->find([
-            'itemtype' => 'NetworkEquipment',
-        ]);
-
-        $device_ids = [];
-        foreach ($agents as $agent) {
-            $device_ids[] = $agent['item_id'];
-        }
-
-        if (!empty($device_ids)) {
-            if (count($device_ids) === 1) {
-                $device_ids = $device_ids[0];
-            }
-            $devices = (new NetworkEquipment())->find([
-                'id' => $device_ids,
+            $did = $item->add([
+                'name' => $directories[1],
+                $fkey => $item_data[$fkey],
+                static::getForeignKeyField() => $parent_id
             ]);
-            foreach ($devices as $device) {
-                ExtApi::fetchLatestVulnerabilities(NetworkEquipment::getById($device['id']));
+
+            if (!$did) {
+                global $DB;
+                Logger::addWarning(__FUNCTION__ . " " . $DB->error());
             }
-        }
-
-        return $cron_status;
-    }
-
-
-    /**
-     * @param integer $ID
-     * @param array $options
-     * @return boolean
-     */
-    #[\Override]
-    function showForm($ID, array $options = []): bool
-    {
-        global $CFG_GLPI;
-
-        $this->initForm($ID, $options);
-        $this->showFormHeader($options);
-
-        $options['formfooter'] = true;
-        $options['formactions'] = [
-            Html::submit(__('Save'), ['name' => 'update', 'class' => 'btn btn-primary me-2']),
-            Html::link(__('Back to list'), 'front/vulnerability.php', ['class' => 'btn btn-outline-secondary'])
-        ];
-
-        TemplateRenderer::getInstance()->display('@wazuh/device_tab.html.twig', [
-            'item' => $this,
-            'params' => $options,
-        ]);
-        return true;
+            return $did;
     }
 
     static function showBrowseView($itemtype, $params): void
@@ -218,75 +201,6 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $treeSearch->displayData($data, $params);
     }
 
-//    static function showBrowseView($itemtype, $params) {
-//        $item_id = $params['criteria'][0]['value'];
-//        $params['criteria'] = [
-//            [
-//                'field' => 7,
-//                'searchtype' => 'equals',
-//                'value' => $item_id
-//            ],
-//            [
-//                'field' => 20,
-//                'searchtype' => 'equals',
-//                'value' => 0
-//            ],
-//        ];
-//
-//        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
-//
-//        $data = Search::getDatas($itemtype, $params);
-//        $raw_data_ids = [];
-//        $has_parent_ids = [];
-//        $has_child_ids = [];
-//
-//        foreach ($data['data']['rows'] as $row) {
-//            if (isset($row['raw']['id'])) {
-//                $id = $row['raw']['id'];
-//                $raw_data_ids[] = $id;
-//            }
-//        }
-//
-//        foreach ($raw_data_ids as $parent_id) {
-//            $params['criteria'] = [
-//                [
-//                    'field' => 7,
-//                    'searchtype' => 'equals',
-//                    'value' => $item_id
-//                ],
-//                [
-//                    'field' => 20,
-//                    'searchtype' => 'equals',
-//                    'value' => $parent_id
-//                ],
-//            ];
-//            $data1 = Search::getDatas($itemtype, $params);
-//            $len1 = count($data1['data']['rows']);
-//            if ($len1 > 0) {
-//                $has_child_ids[] = $parent_id;
-//                foreach ($data1['data']['rows'] as $row) {
-//                    if (isset($row['raw']['id'])) {
-//                        $id = $row['raw']['id'];
-//                        $has_parent_ids[] = $id;
-//                    }
-//                }
-//            }
-////            $data['data']['rows'] = array_merge_recursive($data['data']['rows'], $data1['data']['rows']);
-//            $pos = static::findArrayPositionById($data['data']['rows'], $parent_id);
-//            if ($pos !== false) {
-//                $data['data']['rows'] = static::arrayInsertAfter($data['data']['rows'], $pos, $data1['data']['rows']);
-//            }
-//        }
-//        $data['has_child_ids'] = $has_child_ids;
-//        $data['has_parent_ids'] = $has_parent_ids;
-//
-//        $treeSearch = new TreeSearchOutput();
-//        unset($data['search']['criteria'][1]);
-//        $treeSearch->displayData($data, $params);
-////        Logger::addDebug(__FUNCTION__ . " " . json_encode($params));
-////        Logger::addDebug(__FUNCTION__ . " " . json_encode($data));
-//    }
-
     protected static function findArrayPositionById(array $array, int $id): int|false {
         foreach ($array as $i => $row) {
             if (isset($row['raw']['id'])) {
@@ -295,7 +209,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
                 }
             }
         }
-        
+
         Logger::addDebug(__FUNCTION__ . " $id not found.");
         return false;
     }
@@ -310,7 +224,164 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return array_merge($first_part, $insert_array, $second_part);
     }
 
-    private static function getSeverityValue(string|null $severity): int | null {
+    static function cronInfo($name) {
+        switch ($name) {
+            case 'fetchalerts' :
+                return array('description' => __('Fetch alerts information for linked with Wazuh\'s Agents, Computers and NetworkEquipments.'),
+                    'parameter'   => __('None'));
+        }
+        return [];
+    }
+
+    static function cronFetchAlerts($task = null): int
+    {
+        global $DB;
+        $cron_status = 0;
+        Logger::addInfo("Executing cron - FetchAlerts.");
+
+        $agents = (new PluginWazuhAgent())->find([
+            'itemtype' => 'Computer',
+        ]);
+        $device_ids = [];
+        foreach ($agents as $agent) {
+            $device_ids[] = $agent['item_id'];
+        }
+
+        if (!empty($device_ids)) {
+            if (count($device_ids) === 1) {
+                $device_ids = $device_ids[0];
+            }
+            $devices = (new Computer())->find([
+                'id' => $device_ids,
+            ]);
+            foreach ($devices as $device) {
+                ExtApi::fetchLatestAlerts(Computer::getById($device['id']));
+            }
+        }
+
+        $agents = (new PluginWazuhAgent())->find([
+            'itemtype' => 'NetworkEquipment',
+        ]);
+
+        $device_ids = [];
+        foreach ($agents as $agent) {
+            $device_ids[] = $agent['item_id'];
+        }
+
+        if (!empty($device_ids)) {
+            if (count($device_ids) === 1) {
+                $device_ids = $device_ids[0];
+            }
+            $devices = (new NetworkEquipment())->find([
+                'id' => $device_ids,
+            ]);
+            foreach ($devices as $device) {
+                ExtApi::fetchLatestAlerts(NetworkEquipment::getById($device['id']));
+            }
+        }
+
+        return $cron_status;
+    }
+
+    /**
+     * @param integer $ID
+     * @param array $options
+     * @return boolean
+     */
+    #[\Override]
+    function showForm($ID, array $options = []) {
+        global $CFG_GLPI;
+
+        $this->initForm($ID, $options);
+        $this->showFormHeader($options);
+
+        $options['formfooter'] = true;
+        $options['formactions'] = [
+            Html::submit(__('Save'), ['name' => 'update', 'class' => 'btn btn-primary me-2']),
+            Html::link(__('Back to list'), 'front/vulnerability.php', ['class' => 'btn btn-outline-secondary'])
+        ];
+
+        $twig = TemplateRenderer::getInstance();
+        $twig->display('@wazuh/device_alerts_tab.html.twig', [
+            'item' => $this,
+            'params' => $options,
+            'syscheck_content' => $this->sanitizeOutput($this->formatJsonToHtml($this->fields['syscheck'])),
+            'data_content' => $this->sanitizeOutput($this->formatJsonToHtml($this->fields['data'])),
+            'rule_content' => $this->sanitizeOutput($this->formatJsonToHtml($this->fields['rule'])),
+        ]);
+        return true;
+    }
+
+    function sanitizeOutput($input) {
+        //after json_encode just javascript
+        return preg_replace('#</script#i', '<\/script', $input);
+    }
+
+    /**
+     * Format JSON data to HTML for display in GLPI
+     * 
+     * @param string|array $json JSON string or already decoded array
+     * @return string Formatted HTML
+     */
+    function formatJsonToHtml($json) {
+        // If string provided, decode it first
+        if (is_string($json)) {
+            $data = json_decode($json, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return "<div class='alert alert-warning'>Invalid JSON format</div>";
+            }
+        } else {
+            $data = $json;
+        }
+
+        // Start building HTML output
+        $html = "<div class='json-viewer'>";
+
+        // Use recursive function to build nested structure
+        $html .= $this->formatJsonNodeToHtml($data);
+
+        $html .= "</div>";
+
+        return $html;
+    }
+
+    /**
+     * Helper function to recursively format JSON nodes
+     * 
+     * @param mixed $node Current JSON node
+     * @param int $level Nesting level
+     * @return string HTML representation
+     */
+    function formatJsonNodeToHtml($node, $level = 0) {
+        $html = "";
+        if (is_null($node)) {
+            $node = '';
+        }
+        $padding = str_repeat("&nbsp;&nbsp;", $level);
+
+        if (is_array($node)) {
+            $html .= "<ul class='json-list'>";
+            foreach ($node as $key => $value) {
+                $html .= "<li>";
+                $html .= "<span class='json-key'>" . htmlspecialchars($key) . "</span>: ";
+
+                if (is_array($value)) {
+                    $html .= $this->formatJsonNodeToHtml($value, $level + 1);
+                } else {
+                    $html .= "<span class='json-value'>" . htmlspecialchars($value) . "</span>";
+                }
+
+                $html .= "</li>";
+            }
+            $html .= "</ul>";
+        } else {
+            $html .= "<span class='json-value'>" . htmlspecialchars($node) . "</span>";
+        }
+
+        return $html;
+    }
+
+    private static function getSeverityValue(string $severity): int | null {
         $levels = [
             'very low' => 1,
             'low' => 2,
@@ -319,97 +390,17 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             'very high' => 5,
             'critical' => 6
         ];
-        if ($severity === null) {
-            return 3;
-        }
+        
         return $levels[strtolower($severity)] ?? 3;
     }
-
-    protected static function discontinue_all(int $device_id)
-    {
-        global $DB;
-        $DB->update(
-            static::getTable(),
-            [
-                'is_discontinue' => 1
-            ],
-            [
-                static::getDeviceForeignKeyField() => $device_id,
-                'is_deleted' => 0
-            ]
-        );
-    }
-
-    protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
-        $founded = $item->find([
-            'name' => $item_data['name'],
-            'is_discontinue' => false,
-            Entity::getForeignKeyField() => Session::getActiveEntity(),
-            static::getForeignKeyField() => 0
-        ]);
-
-        if ($founded) {
-            return reset($founded)['id'];
-        }
-
-        if ($item instanceof ComputerTab) {
-            $fkey = \Computer::getForeignKeyField();
-        } else {
-            $fkey = \NetworkEquipment::getForeignKeyField();
-        }
-        
-        $id = $item->add([
-            'name' => $item_data['name'],
-            $fkey => $item_data[$fkey]
-        ]);
-
-        if (!$id) {
-            global $DB;
-            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
-        }
-
-        return $id;
-        
-    }
-
+    
     protected static function getAvgUrgencyLevel($iids): int | null {
         global $DB;
         $default = 3;
 
         $table = static::getTable();
         
-        $key = array_keys($iids)[0];
-        $ids = array_map('intval', array_values($iids[$key]));
-
-        Logger::addDebug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
-
-         $criteria = [
-            'SELECT' => ['v_severity'],
-            'FROM' => $table,
-             'WHERE' => [
-                 'id' => $ids,
-                 'is_deleted' => 0,
-                 ]
-        ];
-
-        $data = [];
-        $average = 0;
-        $iterator = $DB->request($criteria);
-        $size = count($iterator);
-        if ($size === 0) {
-            return $default;
-        }
-        foreach ($iterator as $record) {
-            $average += self::getSeverityValue($record['v_severity']);
-        }
-
-        $result = (int)($average / $size);
-        if ($result < 1 || $result > 6) {
-            Logger::addError("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
-            throw new \RuntimeException("Average urgency level outof expecting values.");
-        }
-        
-        return $result;
+        return $default;
 
     }
     
@@ -511,15 +502,6 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     {
         $tab = parent::rawSearchOptions();
 
-//        $tab[] = [
-//            'id' => 2,
-//            'name' => __('Id', PluginConfig::APP_CODE),
-//            'table' => static::getTable(),
-//            'field' => 'id',
-//            'datatype' => 'number',
-//            'massiveaction' => false,
-//        ];
-
         $tab[] = [
             'id' => 3,
             'name' => __('Key', PluginConfig::APP_CODE),
@@ -531,9 +513,9 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 
         $tab[] = [
             'id' => 4,
-            'name' => __('Severity', PluginConfig::APP_CODE),
+            'name' => __('Agent IP', PluginConfig::APP_CODE),
             'table' => static::getTable(),
-            'field' => 'v_severity',
+            'field' => 'a_ip',
             'datatype' => 'string',
             'massiveaction' => false,
         ];
@@ -541,18 +523,18 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $tab[] = [
             'id' => 5,
             'table' => static::getTable(),
-            'field' => 'v_description',
-            'name' => __('Description', PluginConfig::APP_CODE),
-            'datatype' => 'text',
+            'field' => 'a_name',
+            'name' => __('Agent name', PluginConfig::APP_CODE),
+            'datatype' => 'string',
             'massiveaction' => false
         ];
 
         $tab[] = [
             'id' => 6,
             'table' => static::getTable(),
-            'field' => 'v_reference',
-            'name' => __('Reference', PluginConfig::APP_CODE),
-            'datatype' => 'weblink',
+            'field' => 'a_id',
+            'name' => __('Agent id', PluginConfig::APP_CODE),
+            'datatype' => 'string',
             'massiveaction' => false
         ];
 
@@ -594,7 +576,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $tab[] = [
             'id' => 11,
             'table' => static::getTable(),
-            'field' => 'v_detected',
+            'field' => 'source_timestamp',
             'name' => __('Detected', PluginConfig::APP_CODE),
             'datatype' => 'datetime',
             'massiveaction' => false,
@@ -603,12 +585,12 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $tab[] = [
             'id' => 12,
             'table' => static::getTable(),
-            'field' => 'v_published',
-            'name' => __('Published', PluginConfig::APP_CODE),
+            'field' => 'date_creation',
+            'name' => __('Fetched', PluginConfig::APP_CODE),
             'datatype' => 'datetime',
             'massiveaction' => false,
         ];
-        
+
         $tab[] = [
             'id' => 20,
             'table' => static::getTable(),
@@ -617,15 +599,6 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             'datatype' => 'number',
             'massiveaction' => false,
         ];
-
-//        $tab[] = [
-//            'id' => 13,
-//            'table' => static::getTable(),
-//            'field' => 'date_creation',
-//            'name' => __('Fetched', PluginConfig::APP_CODE),
-//            'datatype' => 'datetime',
-//            'massiveaction' => false,
-//        ];
 
         return $tab;
     }

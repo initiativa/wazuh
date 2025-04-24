@@ -3,3 +3,4 @@
 .zed
 /vendor/
 /.phpactor.json
+/.idea/

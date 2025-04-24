@@ -18,28 +18,14 @@
  */
 
 namespace GlpiPlugin\Wazuh;
-// namespace GlpiPlugin\Wazuh;
 
+use Migration;
 /**
- * Description of Config
+ * Description of Upgradeable
  *
  * @author w-tomasz
  */
-
-class PluginConfig
-{
-    public const APP_NAME = "Wazuh";
-    public const APP_CODE = "wazuh";
-    public const VQUERY_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_time";
-    public const VQUERY_ALERT_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_alert_time";
-
-    public const PLUGIN_ROOT = GLPI_ROOT . "/plugins/" . self::APP_CODE;
-
-    public static function loadVersionNumber(): string
-    {
-        $xml = simplexml_load_file(static::PLUGIN_ROOT . "/wazuh.xml");
-        $versionNumber = (string) $xml->versions->version->num;
-
-        return $versionNumber;
-    }
+interface Upgradeable {
+    public static function install(Migration $migration, string $version): bool;
+    public static function uninstall(Migration $migration): bool;
 }

@@ -1,0 +1,77 @@
+{% extends 'generic_show_form.html.twig' %}
+
+{% block form_fields %}
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Name') }}</label>
+            <span class="form-control">{{ item.fields['name'] }}</span>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Key') }}</label>
+            <span class="form-control">{{ item.fields['key'] }}</span>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Agent IP') }}</label>
+            <span class="form-control">{{ item.fields['a_ip'] }}</span>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Agent Name') }}</label>
+            <span class="form-control">{{ item.fields['a_name'] }}</span>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Agent ID') }}</label>
+            <span class="form-control">{{ item.fields['a_id'] }}</span>
+        </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-md-4 mt-2">
+        <div class="form-group">
+            <label class="form-label">{{ __('Detected') }}</label>
+            <span class="form-control">
+                {% if item.fields['source_timestamp'] %}
+                    {{ item.fields['source_timestamp']|date('Y-m-d H:i:s') }}
+                {% else %}
+                    -
+                {% endif %}
+            </span>
+        </div>
+    </div>
+    <br/>
+
+    <div class="col-auto mt-2">
+        <div class="form-group text-start">
+            <label class="form-label">{{ __('Syscheck') }}</label>
+            {{ syscheck_content|raw }}
+        </div>
+    </div>
+
+    <div class="col-auto mt-2">
+        <div class="form-group text-start">
+            <label class="form-label">{{ __('Rule') }}</label>
+            {{ rule_content|raw }}
+        </div>
+    </div>
+
+    <div class="col-auto mt-2">
+        <div class="form-group text-start">
+            <label class="form-label">{{ __('Data') }}</label>
+            {{ data_content|raw }}
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block more_fields %}
+{% endblock %}

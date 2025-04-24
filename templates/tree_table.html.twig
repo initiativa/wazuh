@@ -1,0 +1,222 @@
+{# 
+ # Template for displaying tree structure of search results
+ # using has_child_ids and has_parent_ids
+ #}
+
+{% import 'components/alerts_macros.html.twig' as alerts %}
+{% set searchform_id = data['searchform_id']|default('search_' ~ rand) %}
+{% set massive_action_form_id = massive_action_form_id ?? "" %}
+
+<div class="table-responsive-lg">
+  <table class="search-results table card-table table-hover {{ data['search']['is_deleted'] ? "table-danger deleted-results" : "" }}"
+         id="{{ searchform_id }}">
+     <thead>
+        <tr {% if count == 0 %}style="display: none;"{% endif %}>
+           {% if showmassiveactions %}
+           <th style="width: 30px;">
+              <div>
+                 <input class="form-check-input massive_action_checkbox" type="checkbox" id="checkall_{{ rand }}"
+                       value="" aria-label="{{ __('Check all as') }}"
+                       onclick="checkAsCheckboxes(this, '{{ searchform_id }}', '.massive_action_checkbox');"
+                       form="{{ massive_action_form_id }}" />
+              </div>
+           </th>
+           {% endif %}
+
+           {% for col in data['data']['cols'] %}
+              {% set sorts = data['search']['sort'] %}
+              {% set so_no_sort = col['searchopt']['nosort'] ?? false %}
+              {% set meta = col['meta'] ?? false %}
+              {% set sort_order = 'nosort' %}
+              {% set sort_num = '' %}
+              {% set can_sort = not meta and not no_sort and not so_no_sort %}
+              {% if can_sort %}
+                 {% for sort_opt in sorts %}
+                    {% if sort_opt == col['id'] %}
+                       {% set sort_order = data['search']['order'][loop.index0]|default('ASC') %}
+                       {% set sort_num = loop.index %}
+                    {% endif %}
+                 {% endfor %}
+              {% endif %}
+
+              {% set col_name = col['name'] %}
+              {% if col['groupname'] is defined %}
+                 {% set groupname = (col['groupname']['name'] ?? col['groupname']) %}
+                 {% set col_name = __('%1$s - %2$s')|format(groupname, col['name']) %}
+              {% endif %}
+
+              {% if not itemtype == col['itemtype'] %}
+                 {% set col_name = __('%1$s - %2$s')|format(col['itemtype']|itemtype_name, col_name) %}
+              {% endif %}
+
+              <th data-searchopt-id="{{ col['id'] }}" {% if not can_sort %}data-nosort="true"{% endif %} data-sort-order="{{ sort_order }}"
+                 {% if sort_num is not empty %}data-sort-num="{{ sort_num - 1 }}"{% endif %}>
+                 {% set sort_icon = sort_order == 'ASC' ? 'fas fa-sort-up' : (sort_order == 'DESC' ? 'fas fa-sort-down' : '') %}
+                 {{ col_name }}
+                 {% if can_sort %}
+                    <span class="sort-indicator"><i class="{{ sort_icon }}"></i><span class="sort-num">{{ sorts|length > 1 ? sort_num : '' }}</span></span>
+                 {% endif %}
+              </th>
+           {% endfor %}
+
+           {% if union_search_type[itemtype] is defined %}
+              <th>
+                 {{ __('Item type') }}
+              </th>
+           {% endif %}
+        </tr>
+     </thead>
+     <tbody>
+        {% if count == 0 %}
+           {% if not search_was_executed %}
+              {# Nothing to display #}
+           {% else %}
+              <tr>
+                 <td colspan="{{ data['data']['cols']|length }}">
+                    {% if search_error %}
+                       {{ alerts.alert_danger(__('An error occured during the search'), __('Consider changing the search criteria or adjusting the displayed columns.')) }}
+                    {% else %}
+                       {{ alerts.alert_info(__('No results found')) }}
+                    {% endif %}
+                 </td>
+              </tr>
+           {% endif %}
+        {% else %}
+           {# Store has_child_ids as JS array for easy access in client-side code #}
+           <script>
+               massive_action_form_id = '{{ massive_action_form_id }}';
+               has_child_ids = [
+                   {% for id in data['has_child_ids'] %}
+                   "{{ id }}"{% if not loop.last %},{% endif %}
+                   {% endfor %}
+               ];
+               window["{{ searchform_id }}_selected"] = new Set();
+              try {
+                  child_map = JSON.parse('{{ data['child_map']|json_encode|e('js') }}');
+                  window['tree_parent_map'] = JSON.parse('{{ data['parent_map']|json_encode|e('js') }}');
+              } catch (e) {
+                  console.error("Błąd parsowania JSON", e);
+                  data_map = {};
+              }
+           </script>
+
+            {% set device_id = data['device_id'] %}
+            {% set data_itemtype = data['itemtype']|raw %}
+
+            {# Loop through rows #}
+           {% for rowkey, row in data['data']['rows'] %}
+              {% set row_id = row['id'] %}
+              {% set has_children = row_id in data['has_child_ids'] %}
+            {% set has_parent = row_id in data['has_parent_ids'] %}
+
+              {% if has_parent %}
+                 {% set display_style = "display: none;" %}
+                 {% set parent_class = "is-child" %}
+              {% else %}
+                 {% set display_style = "" %}
+                 {% set parent_class = "" %}
+              {% endif %}
+
+              <tr class="tree-node {{ parent_class }}" 
+                  data-node-id="{{ row_id }}"
+                  {% if has_parent %}data-is-child="true"{% endif %}
+                  {% if has_children %}data-has-children="true"{% endif %}
+                  style="{{ display_style }}">
+
+                 {% if showmassiveactions %}
+                 <td>
+                    <div>
+                       {% if itemtype == 'Entity' and not has_access_to_entity(row_id) %}
+                       {% elseif itemtype == 'User' and not can_view_all_entities() and not has_access_to_user_entities(row_id) %}
+                       {% elseif item is instanceof('CommonDBTM') and item.maybeRecursive() and not has_access_to_entity(row['entities_id'])  %}
+                       {% else %}
+                          {% set row_itemtype = row['TYPE'] ?? itemtype %}
+                          {% if call(row_itemtype ~ '::isMassiveActionAllowed', [row_id]) %}
+                             {% set checked = session('glpimassiveactionselected')[row_itemtype][row_id] ?? false %}
+                             <input class="form-check-input massive_action_checkbox" type="checkbox" data-glpicore-ma-tags="common"
+                                value="1" aria-label="{{ __("Select item") }}" {% if checked %}checked="checked"{% endif %}
+                                name="item[{{ row['TYPE'] ?? itemtype }}][{{ row_id }}]"
+                                onchange="wazuhTreeCheckChanged(this, '{{ searchform_id }}');"
+                                form="{{ massive_action_form_id }}" />
+                          {% endif %}
+                       {% endif %}
+                    </div>
+                 </td>
+                 {% endif %}
+
+                 {% for col in data['data']['cols'] %}
+                    {% set colkey = col['itemtype'] ~ '_' ~ col['id'] %}
+
+                    {% if loop.first %}
+                       {# First column contains indentation and expand/collapse icon #}
+                       <td class="tree-col">
+                          <div class="d-flex align-items-center">
+                             {% if has_children %}
+                                 <i class="fas fa-caret-right tree-toggle me-2" data-node-id='{{ row_id }}' data-device-id='{{ device_id }}' data-child-count='{{ data.child_map[row_id] }}' data-page="0" data-itemtype="{{  data["itemtype"] }}" onclick="wazuhToggleTreeNode(this, '{{ searchform_id }}');"></i>
+                             {% else %}
+                                <span class="tree-spacer me-2"></span>
+                             {% endif %}
+                             {{ row[colkey]['displayname']|raw }}
+                          </div>
+                       </td>
+                    {% else %}
+                       <td>
+                          {% if col['meta'] is defined and col['meta'] %}
+                             {{ row[colkey]['displayname']|raw }}
+                          {% else %}
+                             {{ row[colkey]['displayname']|raw }}
+                          {% endif %}
+                       </td>
+                    {% endif %}
+                 {% endfor %}
+
+                 {% if union_search_type[itemtype] is defined %}
+                    <td>
+                       {{ row['TYPE']|itemtype_name }}
+                    </td>
+                 {% endif %}
+              </tr>
+           {% endfor %}
+        {% endif %}
+     </tbody>
+  </table>
+</div>
+
+<script>
+$(document).ready(function() {
+    wazuhTreeUpdateZebraStripes('{{ searchform_id }}');
+});
+</script>
+
+<style>
+.tree-toggle {
+    cursor: pointer;
+    transition: transform 0.2s;
+    width: 14px;
+}
+
+.tree-spacer {
+    width: 14px;
+    display: inline-block;
+}
+
+.tree-col {
+    max-width: 500px;
+}
+
+.tree-node {
+    transition: background-color 0.2s;
+}
+
+.tree-node:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.even-row {
+    background-color: rgb(248, 248, 248);
+}
+
+.odd-row {
+    background-color: #ffffff;
+}
+</style>
+

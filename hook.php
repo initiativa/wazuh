@@ -37,8 +37,9 @@ require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
 use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\PluginConfig;
-use GlpiPlugin\Wazuh\ServerConnection;
 use GlpiPlugin\Wazuh\Connection;
+use GlpiPlugin\Wazuh\ComputerTab;
+use GlpiPlugin\Wazuh\NetworkEqTab;
 
 /**
  * Plugin install process
@@ -49,27 +50,35 @@ function plugin_wazuh_install() {
     Logger::addNotice(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
 
 
+    $version = getOldVersion();
+    Logger::addDebug(__FUNCTION__ . " Version: " . $version);
+    
     $migration = new \Migration(PLUGIN_WAZUH_VERSION);
     $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
 
-    \GlpiPlugin\Wazuh\ServerConnection::createTable();
-
-    \GlpiPlugin\Wazuh\Connection::install($migration);
+    \GlpiPlugin\Wazuh\Connection::install($migration, $version);
     \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
-    \GlpiPlugin\Wazuh\ComputerTab::install($migration);
-    \GlpiPlugin\Wazuh\NetworkEqTab::install($migration);
+    \GlpiPlugin\Wazuh\ComputerTab::install($migration, $version);
+    \GlpiPlugin\Wazuh\NetworkEqTab::install($migration, $version);
+    \GlpiPlugin\Wazuh\ComputerAlertsTab::install($migration, $version);
+    \GlpiPlugin\Wazuh\NetworkEqAlertsTab::install($migration, $version);
 
     \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
-//    \GlpiPlugin\Wazuh\Profile::createFirstAccess($_SESSION['glpiactiveprofile']['id']);
 
     $migration->executeMigration();
     return true;
 }
 
+/**
+ * Plugin upgrade process
+ * @param type $old_version
+ * @return bool
+ */
 function plugin_myplugin_upgrade($old_version) {
-    Logger::addNotice(__FUNCTION__ . " Upgrading.");
-    
+    Logger::addNotice(__FUNCTION__ . " ############# Upgrading from $old_version.");
+
+    return true;
 }
 
 /**
@@ -79,16 +88,17 @@ function plugin_myplugin_upgrade($old_version) {
  */
 function plugin_wazuh_uninstall() {
     Logger::addNotice(__FUNCTION__ . " Uninstalling.");
-    \GlpiPlugin\Wazuh\ServerConnection::dropTable();
     
     $migration = new Migration(PLUGIN_WAZUH_VERSION);
-    $migration->displayMessage("UnMigrating tables from " . PLUGIN_WAZUH_VERSION);
+    $migration->displayMessage("Uninstalling tables from " . PLUGIN_WAZUH_VERSION);
     
     \GlpiPlugin\Wazuh\PluginWazuhAgent::uninstall($migration);
     \GlpiPlugin\Wazuh\Connection::uninstall($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::uninstall($migration);
     \GlpiPlugin\Wazuh\ComputerTab::uninstall($migration);
     \GlpiPlugin\Wazuh\NetworkEqTab::uninstall($migration);
+    \GlpiPlugin\Wazuh\ComputerAlertsTab::uninstall($migration);
+    \GlpiPlugin\Wazuh\NetworkEqAlertsTab::uninstall($migration);
 
     return true;
 }
@@ -100,11 +110,20 @@ function plugin_wazuh_getDropdown()
 
     if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            'GlpiPlugin\Wazuh\ServerConnection' => ServerConnection::getTypeName(Session::getPluralNumber()),
-            'GlpiPlugin\Wazuh\Connection' => Connection::getTypeName(Session::getPluralNumber()),
+            Connection::class => Connection::getTypeName(Session::getPluralNumber()),
+            ComputerTab::class => "Computer " . ComputerTab::getTypeName(Session::getPluralNumber()),
+            NetworkEqTab::class => "Network Eq " . NetworkEqTab::getTypeName(Session::getPluralNumber()),
         ];
     }
 
     return [];
 }
 
+function getOldVersion(): string | false {
+    $plugin = new \Plugin();
+    
+    if ($plugin->getFromDBbyDir(PluginConfig::APP_CODE)) {
+        return $plugin->fields['version'];
+    }
+    return false;
+}

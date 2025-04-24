@@ -8,12 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### ToDo
-- consider how to group/collapse the same cve's !!!!! if not tree then dialog window
+- tree mass selection items - TODO
+- bug if decoder.name == 'syscheck_integrity_changed' and filename comming straight from root dir
 - onetomany or manytomany for wazych alert -> ticket
-- migrations: install is not upgrade
 - check wazuh version
 - assets tab, show trash problems. Not when search::show but then sort problems ????
-- upsert could be the wrong way because of loosing items history
+- #8 perhaps i need to get wazuh setup to aquire scanning time
+- consider some wazuhs tab access profiles
+- alerts deduplication
+- settings for plugin: refreshing time, request api fetch page size,
+
+## [0.0.6] 2025-04-07
+### Added
+- Wazuh Alerts
+- Tree table for vulnerabilities
+
+## [0.0.5] 2025-04-05
+### Added
+- Default ticket ITIL Category
+- Columns improvements
 
 ## [0.0.3] 2025-04-04
 

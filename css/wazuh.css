@@ -98,6 +98,249 @@
     border-bottom: 1px dotted #666;
 }
 
+.json-viewer {
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
+    font-size: 14px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 10px 0;
+    overflow: auto;
+    max-height: 400px;
+    line-height: 1.2;
+}
+
+.json-key {
+    color: #881391;
+    font-weight: bold;
+}
+
+.json-string {
+    color: #008000;
+}
+
+.json-number {
+    color: #0000ff;
+}
+
+.json-boolean {
+    color: #b22222;
+    font-weight: bold;
+}
+
+.json-null {
+    color: #808080;
+    font-style: italic;
+}
+
+.json-list {
+    margin: 0 0 0 20px;
+    padding: 0;
+    list-style-type: none;
+}
+
+.json-list li {
+    position: relative;
+    padding: 2px 0;
+}
+
+.json-list li:not(:last-child)::after {
+    content: ",";
+}
+
+.json-bracket-open,
+.json-bracket-close {
+    color: #555;
+    font-weight: bold;
+}
+
+.json-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.json-toggle::before {
+    content: "▼";
+    font-size: 10px;
+    color: #444;
+    margin-right: 4px;
+}
+
+.json-toggle.collapsed::before {
+    content: "►";
+}
+
+.json-collapsed {
+    display: none;
+}
+
+.json-value-empty {
+    color: #999;
+    font-style: italic;
+}
+
+table.json-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table.json-table th,
+table.json-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+table.json-table th {
+    background-color: #f2f2f2;
+}
+
+.json-list li:hover > .json-key,
+.json-list li:hover > .json-string,
+.json-list li:hover > .json-number,
+.json-list li:hover > .json-boolean,
+.json-list li:hover > .json-null {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced tree view for search results */
+.enhanced-tree-search ul {
+    list-style: none;
+    margin-left: 15px;
+    padding-left: 5px;
+}
+
+.enhanced-tree-search .tree-level-0 {
+    margin-left: 0;
+    padding-left: 0;
+}
+
+.enhanced-tree-search .tree-headers {
+    display: flex;
+    font-weight: bold;
+    background-color: #f5f5f5;
+    padding: 8px 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+.enhanced-tree-search .tree-header-item {
+    margin-right: 20px;
+    padding: 5px 10px;
+}
+
+.enhanced-tree-search .tree-toggle {
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.enhanced-tree-search .tree-toggle.expanded i {
+    transform: rotate(90deg);
+    transition: transform 0.2s;
+}
+
+.enhanced-tree-search .tree-item {
+    padding: 3px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.enhanced-tree-search .tree-item-content {
+    display: inline-block;
+    width: 100%;
+}
+
+.enhanced-tree-search .tree-column {
+    margin-right: 10px;
+    color: #666;
+    display: inline-block;
+    min-width: 120px;
+}
+
+.enhanced-tree-search .tree-column-1 {
+    min-width: 150px;
+    display: inline-block;
+}
+
+.enhanced-tree-search .tree-leaf-padding {
+    display: inline-block;
+    width: 15px;
+}
+
+.enhanced-tree-search .tree-item-actions {
+    margin-left: 15px;
+    float: right;
+}
+
+.enhanced-tree-search .pager {
+    margin-top: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.enhanced-tree-search .pager-prev,
+.enhanced-tree-search .pager-next {
+    padding: 5px 10px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    text-decoration: none;
+    color: #333;
+}
+
+.enhanced-tree-search .pager-prev.disabled,
+.enhanced-tree-search .pager-next.disabled {
+    color: #aaa;
+    cursor: default;
+    background: #f9f9f9;
+}
+
+/* Tree search styling */
+.enhanced-tree-search .tree-toggle {
+    cursor: pointer;
+}
+
+.enhanced-tree-search .tree-toggle i {
+    transition: transform 0.2s;
+}
+
+.enhanced-tree-search .tree-toggle i.fa-caret-down {
+    transform: rotate(90deg);
+}
+
+.enhanced-tree-search .tree-child {
+    display: none;
+}
+
+.toggle-node {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.tree-node {
+    transition: background-color 0.2s;
+}
+
+.tree-node:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+.children-container table {
+    width: 100%;
+}
+
+tr.is-child.level-1 td:first-child {
+    padding-left: 2em !important;
+}
+
+tr.is-child.level-2 td:first-child {
+    padding-left: 3em !important;
+}
+
+tr.is-child.level-3 td:first-child {
+    padding-left: 4em !important;
+}
+
 /* Responsive tables */
 @media screen and (max-width: 768px) {
     .wazuh-responsive-table {
