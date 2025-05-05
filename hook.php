@@ -33,7 +33,7 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
     define('PLUGIN_WAZUH_DIR', __DIR__);
 }
 
-require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
+//require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
 use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\PluginConfig;

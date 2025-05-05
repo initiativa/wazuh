@@ -31,12 +31,12 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
     define('PLUGIN_WAZUH_DIR', __DIR__);
 }
 
-//require_once (PLUGIN_WAZUH_DIR . "/src/PluginConfig.php");
+require_once (PLUGIN_WAZUH_DIR . "/src/PluginConfig.php");
 //require_once (PLUGIN_WAZUH_DIR .  "/src/Logger.php");
 //require_once (PLUGIN_WAZUH_DIR .  "/src/Menu.php");
 //require_once (PLUGIN_WAZUH_DIR .  "/hook.php");
 
-require_once (PLUGIN_WAZUH_DIR . "/vendor/autoload.php");
+//require_once (PLUGIN_WAZUH_DIR . "/vendor/autoload.php");
 
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\Logger;
