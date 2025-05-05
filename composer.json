@@ -11,10 +11,5 @@
             "php": "8.2.0"
         },
         "sort-packages": true
-    },
-    "autoload": {
-        "psr-4": {
-            "\\GlpiPlugin\\Wazuh\\": "src/"
-        }
     }
 }
