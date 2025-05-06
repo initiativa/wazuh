@@ -218,7 +218,8 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
                     static::queryVulnerabilitiesByAgentIds([$agentId], $device);
                 }
             } else {
-                Logger::addError(sprintf("%s %s Can not find agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType()));
+                $message = sprintf("%s %s Can not find active and not deleted agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType());
+                Logger::addError($message);
             }
         } else {
             Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));

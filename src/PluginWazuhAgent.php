@@ -103,13 +103,30 @@ class PluginWazuhAgent extends CommonDBTM {
    }
    
    public static function getByDeviceTypeAndId(string $itemtype, int $item_id): ?PluginWazuhAgent {
-        $agent = new self();
-        $criteria = [
-            'itemtype' => $itemtype,
-            'item_id' => $item_id
-        ];
-        $iterator = $agent->find($criteria);
+       $agent = new self();
+       global $DB;
 
+       $connection_fkey = Connection::getForeignKeyField();
+
+       $criteria = [
+           'FROM' => self::getTable(),
+           'JOIN' => [
+               Connection::getTable() => [
+                   'ON' => [
+                       self::getTable() => $connection_fkey,
+                       Connection::getTable() => 'id'
+                   ]
+               ]
+           ],
+           'WHERE' => [
+               Connection::getTable() . '.is_conn_active' => 1,
+               Connection::getTable() . '.is_deleted' => 0,
+               'itemtype' => $itemtype,
+               'item_id' => $item_id
+           ]
+       ];
+
+        $iterator = $DB->request($criteria);
 
         $count = count($iterator);
 
@@ -121,7 +138,7 @@ class PluginWazuhAgent extends CommonDBTM {
             throw new \RuntimeException("Please check Administration->WazuhAgen't to link only one device per Agent. Itemtype: $itemtype, id: $item_id.");
         }
 
-        $data = reset($iterator);
+        $data = $iterator->current();
 
         if (isset($data['id'])) {
             $agent->getFromDB($data['id']);
@@ -179,7 +196,7 @@ class PluginWazuhAgent extends CommonDBTM {
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation}";
-            $DB->query($query) or die("Error creating $table table");
+            $DB->doQuery($query) or die("Error creating $table table");
 
             $migration->updateDisplayPrefs(
                     [
@@ -272,32 +289,6 @@ class PluginWazuhAgent extends CommonDBTM {
             "massiveaction" => false,
         ];
 
-
-//        $tab[] = [
-//            "id" => 9,
-//            "name" => __("Device", PluginConfig::APP_CODE),
-//            "table" => self::getTable(),
-//            "field" => "item_id",
-//            "datatype" => "dropdown",
-//            "massiveaction" => false,
-//            "forcegroupby" => true,
-//            "additionalfields" => ['itemtype'],
-//            "joinparams" => [
-//                'beforejoin' => [
-//                    'table' => 'glpi_computers',
-//                    'joinparams' => [
-//                        'condition' => ["AND" => ["REFTABLE.itemtype" => "Computer"]]
-//                    ]
-//                ],
-//                'beforejoin2' => [
-//                    'table' => 'glpi_networkequipments',
-//                    'joinparams' => [
-//                        'condition' => ["AND" => ["REFTABLE.itemtype" => "NetworkEquipment"]]
-//                    ]
-//                ]
-//            ]
-//        ];
-        
         $tab[] = [
             "id" => 9,
             "name" => __("Device", PluginConfig::APP_CODE),
@@ -307,13 +298,26 @@ class PluginWazuhAgent extends CommonDBTM {
             "massiveaction" => false,
             "additionalfields" => ['itemtype'],
         ];
-        
+
         $tab[] = [
             'id' => 10,
             'table' => Connection::getTable(),
             'field' => 'name',
             'name' => __('Wazuh Server Name', PluginConfig::APP_CODE),
-            'datatype' => 'dropdown',
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Connection::getForeignKeyField()
+            ]
+        ];
+
+        $tab[] = [
+            'id' => 11,
+            'table' => Connection::getTable(),
+            'field' => 'is_conn_active',
+            'name' => __('Active Server', PluginConfig::APP_CODE),
+            'datatype' => 'bool',
             'massiveaction' => true,
             'joinparams' => [
                 'jointype' => 'standard',

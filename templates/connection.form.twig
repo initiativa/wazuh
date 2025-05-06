@@ -49,7 +49,11 @@
     {{ fields.dropdownField('\ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {
         'rand': rand
     }) }}
-    
+
+    {{ fields.checkboxField('is_conn_active', item.fields['is_conn_active'], __('Active', 'wazuh'), {
+        'rand': rand
+    }) }}
+
 
 {% endblock %}
 

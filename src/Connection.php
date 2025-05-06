@@ -150,7 +150,16 @@ class Connection extends \CommonDropdown implements Upgradeable {
             "massiveaction" => false,
         ];
 
-        
+        $tab[] = [
+            "id" => 8,
+            "name" => __("Active", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "is_conn_active",
+            "searchtype" => "eq",
+            "datatype" => "bool",
+            "massiveaction" => false,
+        ];
+
         return $tab;
     }
 
@@ -212,9 +221,10 @@ class Connection extends \CommonDropdown implements Upgradeable {
         );
         return true;
    }
-   
-      /**
-     * @param object $migration
+
+    /**
+     * @param Migration $migration
+     * @param string $version
      * @return boolean
      */
     static function install(Migration $migration, string $version): bool {
@@ -258,12 +268,6 @@ class Connection extends \CommonDropdown implements Upgradeable {
 
             self::defaultsConfigData($table);
 
-            $migration->updateDisplayPrefs(
-                    [
-                        'GlpiPlugin\Wazuh\Connection' => [3,4,5,6,7]
-                    ],
-            );
-            
         }
 
         if (version_compare('0.0.5', $version, '<=')) {
@@ -271,6 +275,17 @@ class Connection extends \CommonDropdown implements Upgradeable {
             $migration->addField($table, $itil_category_fkey, "fkey");
             $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
         }
+
+        if (version_compare('0.0.8', $version, '<=')) {
+            $migration->addField($table, 'is_conn_active', "tinyint(1) NOT NULL DEFAULT '1'");
+            $migration->addKey($table, 'is_conn_active', 'is_conn_active');
+        }
+
+        $migration->updateDisplayPrefs(
+            [
+                'GlpiPlugin\Wazuh\Connection' => [3,4,5,6,7,8]
+            ],
+        );
 
         return true;
     }
