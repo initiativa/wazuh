@@ -474,7 +474,7 @@ class PluginWazuhAgent extends CommonDBTM {
 
     
     static function syncAgents(): bool {
-        $ids = (new Connection())->find();
+        $ids = (new Connection())->find(['is_deleted' => 0]);
         foreach ($ids as $id) {
             Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
             $wazuhConfig = Connection::getById($id['id']);
