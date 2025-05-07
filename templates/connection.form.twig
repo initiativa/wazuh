@@ -2,9 +2,10 @@
 {% import 'components/form/fields_macros.html.twig' as fields %}
 {% import '@wazuh/wazuh_fields_macros.html.twig' as wazuh_fields %}
 
+
 {% block form_fields %}
     {% set rand = random() %}
-    
+
     {{ fields.textField('name', item.fields['name'], __('Connection Name', 'wazuh'), {
         'rand': rand
     }) }}
@@ -54,6 +55,15 @@
         'rand': rand
     }) }}
 
+    <div class="d-flex flex-row gap-2 justify-content-end">
+        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestApiConnection(this, '{{ csrf_token() }}', '{{ rand }}');">
+            <i class="fas fa-spinner fa-spin d-none"></i>
+            {{ button_text|default('API Test') }}
+        </button>
 
+        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestIndexerConnection(this, '{{ csrf_token() }}', '{{ rand }}');">
+            <i class="fas fa-spinner fa-spin d-none"></i>
+            {{ button_text|default('Indexer Test') }}
+        </button>
+    </div>
 {% endblock %}
-

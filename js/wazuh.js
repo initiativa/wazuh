@@ -551,46 +551,77 @@ function openAgentDetails(agentId) {
 /**
  * Test Wazuh API connection
  */
-function testWazuhConnection() {
-    const serverUrl = document.querySelector('input[name="server_url"]').value;
-    const apiPort = document.querySelector('input[name="api_port"]').value;
-    const apiUsername = document.querySelector('input[name="api_username"]').value;
-    const apiPassword = document.querySelector('input[name="api_password"]').value;
-    
-    // Show spinner
-    const testButton = document.getElementById('test-connection-button');
-    testButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + GLPI_LANG.plugin_wazuh_testing;
-    
-    // Send AJAX request to test connection
+function wazuhTestApiConnection(testButton, token, rand) {
+    const serverUrl = $('#server_url_' + rand).val();
+    const apiPort = $('#api_port_' + rand).val();
+    const apiUsername = $('#api_username_' + rand).val();
+    const apiPassword = $('#api_password' + rand).val();
+
+    let data = {
+        url: serverUrl,
+        port: apiPort,
+        username: apiUsername,
+        password: apiPassword,
+        suffix: '/security/user/authenticate'
+    };
+
+    wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_api_connection.php');
+}
+
+function wazuhTestIndexerConnection(testButton, token, rand) {
+    const indexerUrl = $('#indexer_url_' + rand).val();
+    const indexerPort = $('#indexer_port_' + rand).val();
+    const indexerUsername = $('#indexer_user_' + rand).val();
+    const indexerPassword = $('#indexer_password' + rand).val();
+
+    let data = {
+        url: indexerUrl,
+        port: indexerPort,
+        username: indexerUsername,
+        password: indexerPassword,
+        suffix: '/security/user/authenticate'
+    };
+
+    wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_indexer_connection.php');
+}
+
+function wazuhTestConnection(testButton, data, url) {
+
+    $(testButton).prop('disabled', true);
+    let spinner = $(testButton).find('i').first();
+    $(spinner).removeClass('d-none');
+
     $.ajax({
-        url: CFG_GLPI.root_doc + '/plugins/wazuh/ajax/test_connection.php',
-        type: 'POST',
-        data: {
-            server_url: serverUrl,
-            api_port: apiPort,
-            api_username: apiUsername,
-            api_password: apiPassword
-        },
+        url: CFG_GLPI.url_base + url,
+        method: 'POST',
+        dataType: 'json',
+        data: data,
+        timeout: 5000,
         success: function(response) {
-            const result = JSON.parse(response);
-            
-            if (result.success) {
-                // Show success message
-                alert(GLPI_LANG.plugin_wazuh_connection_success);
+            console.debug(response);
+            // let r = JSON.parse(response);
+            if (response.success === false) {
+                $(testButton).removeClass(['btn-secondary', 'btn-success']);
+                $(testButton).addClass('btn-danger');
+                showToast(`Connection to ${data.url}:${data.port} failed. ${response.error}`, 'error');
             } else {
-                // Show error message
-                alert(GLPI_LANG.plugin_wazuh_connection_error + ': ' + result.message);
+                $(testButton).removeClass(['btn-secondary', 'btn-danger']);
+                $(testButton).addClass('btn-success');
+                showToast(`Authentication to ${data.url}:${data.port} succeed.`);
             }
         },
-        error: function() {
-            // Show error message
-            alert(GLPI_LANG.plugin_wazuh_connection_error);
+        error: function(xhr) {
+            console.error('Login error:', xhr);
+            showToast(`Connection to ${data.url}:${data.port} failed. ${xhr.statusText}`, 'error');
+            $(testButton).removeClass(['btn-secondary', 'btn-success']);
+            $(testButton).addClass('btn-danger');
         },
         complete: function() {
-            // Restore button text
-            testButton.innerHTML = GLPI_LANG.plugin_wazuh_test_connection;
+            $(testButton).prop('disabled', false);
+            $(spinner).addClass('d-none');
         }
     });
+
 }
 
 /**
@@ -600,4 +631,32 @@ function testWazuhConnection() {
 function updateAgentGroups(agentId) {
     // Implementation for group management
     // To be expanded based on Wazuh API capabilities
+}
+
+function showToast(message, type = 'info') {
+    const classMap = {
+        'error': 'bg-danger text-white',
+        'warning': 'bg-warning text-dark',
+        'info': 'bg-info text-white',
+        'success': 'bg-success text-white'
+    };
+
+    const toast = $(`
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header ${classMap[type] || classMap.info}">
+                <strong class="me-auto">${type.toUpperCase()}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">${message}</div>
+        </div>
+    `);
+
+    const container = $('#messages_after_redirect');
+    if (!container.length) {
+        $('body').append('<div id="messages_after_redirect" class="toast-container bottom-right p-3"></div>');
+    }
+    $('#messages_after_redirect').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0], { delay: 10000 });
+    bsToast.show();
+    toast.on('hidden.bs.toast', () => toast.remove());
 }
