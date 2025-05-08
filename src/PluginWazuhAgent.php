@@ -109,6 +109,10 @@ class PluginWazuhAgent extends CommonDBTM {
        $connection_fkey = Connection::getForeignKeyField();
 
        $criteria = [
+           'SELECT' => [
+               static::getTable() . '.*',
+               Connection::getTable() . '.id AS CID'
+           ],
            'FROM' => self::getTable(),
            'JOIN' => [
                Connection::getTable() => [
@@ -127,6 +131,7 @@ class PluginWazuhAgent extends CommonDBTM {
        ];
 
         $iterator = $DB->request($criteria);
+        Logger::addDebug(__FUNCTION__ . " " . $iterator->getSql());
 
         $count = count($iterator);
 
