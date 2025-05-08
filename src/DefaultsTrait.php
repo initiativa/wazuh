@@ -32,15 +32,6 @@ trait DefaultsTrait {
         if (strlen(getenv('WPASS1')) > 2) {
             $DB->insert($table, [
                 'id' => 1,
-                'name' => 'Local Wazuh',
-                'server_url' => 'https://192.168.0.2',
-                'api_port' => '55000',
-                'api_username' => 'wazuh-wui',
-                'api_password' => (new GLPIKey())->encrypt(getenv('WPASS1')),
-                'sync_interval' => 86400
-            ]);
-            $DB->insert($table, [
-                'id' => 2,
                 'name' => 'VPN Wazuh',
                 'server_url' => 'https://10.70.0.111',
                 'api_port' => '55000',
@@ -52,6 +43,16 @@ trait DefaultsTrait {
                 'indexer_user' => 'admin_tomasz',
                 'indexer_password' => (new GLPIKey())->encrypt(getenv('IPASS2')),
             ]);
+            $DB->insert($table, [
+                'id' => 2,
+                'name' => 'Local Wazuh',
+                'server_url' => 'https://192.168.0.2',
+                'api_port' => '55000',
+                'api_username' => 'wazuh-wui',
+                'api_password' => (new GLPIKey())->encrypt(getenv('WPASS1')),
+                'sync_interval' => 86400
+            ]);
+
         }
     }
 }
