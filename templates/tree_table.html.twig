@@ -119,6 +119,7 @@
 
               <tr class="tree-node {{ parent_class }}" 
                   data-node-id="{{ row_id }}"
+                  data-level="0"
                   {% if has_parent %}data-is-child="true"{% endif %}
                   {% if has_children %}data-has-children="true"{% endif %}
                   style="{{ display_style }}">
