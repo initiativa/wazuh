@@ -43,7 +43,7 @@ function wazuhTreePrevPage(iconElement, searchform_id, rootElement) {
     }
     rootElement.setAttribute('data-page', page_no);
     wazuhFetchPageableTreeData(rootElement, searchform_id);
-    console.log('Prev page clicked.');
+    // console.log('Prev page clicked.');
 }
 
 function wazuhTreeNextPage(iconElement, searchform_id, rootElement) {
@@ -54,7 +54,7 @@ function wazuhTreeNextPage(iconElement, searchform_id, rootElement) {
     }
     rootElement.setAttribute('data-page', page_no);
     wazuhFetchPageableTreeData(rootElement, searchform_id);
-    console.log('Next page clicked.');
+    // console.log('Next page clicked.');
 }
 
 function wazuhSetPageLabel(row_id, page_no, page_max) {
@@ -66,7 +66,7 @@ function wazuhSetPageLabel(row_id, page_no, page_max) {
  * Last child row to manage children pages
  * @param data
  * @param search_id
- * @param element
+ * @param element expand/collapse icon of partent element
  * @returns {*|jQuery|HTMLElement} tr row element
  */
 function wazuhCreatePageableRow(data, search_id, element) {
@@ -76,10 +76,14 @@ function wazuhCreatePageableRow(data, search_id, element) {
     const page_no = parseInt(element.getAttribute('data-page'));
     const page_max = wazuhGetPageMax(element);
     const col_size = data.data.cols.length;
+    let level = parseInt(element.closest('tr').dataset.level);
+    level++;
 
     const tr = $('<tr>', {
         class: `tree-node is-child`,
+        name: `pageable_row[${row_id}]`,
         'data-node-id': row_id,
+        'data-level': level,
         'data-is-child': has_parent || undefined,
         'data-has-children': has_children || undefined,
         style: ""
@@ -163,6 +167,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
             const tr = $('<tr>', {
                 class: `tree-node ${parent_class}`,
                 'data-node-id': row_id,
+                'data-level': level,
                 'data-is-child': has_parent || undefined,
                 'data-has-children': has_children || undefined,
                 style: display_style
@@ -192,7 +197,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
                             form: massive_action_form_id,
                             prop: 'checked',
                             checked: checked
-                        }).change(function() { wazuhTreeCheckChanged(this, searchform_id); });
+                        }).change(function() { wazuhTreeCheckChanged(this, searchform_id, itemtype); });
                         div_massive_action.append(checkbox);
                     // }
                 }
@@ -281,49 +286,27 @@ function wazuhToggleTreeNode(element, tableId) {
     let children = wazuhTreeFindChildren(nodeId);
     let isExpanded = element.classList.contains('fa-caret-down');
 
-    if (page === 0) {
-        $(children).remove();
-        wazuhFetchPageableTreeData(element, tableId);
-    }
-
-    // Toggle visibility of children
-    children.forEach(function (child) {
-        if (isExpanded) {
-            // Collapse: hide this child and all its children
-            child.style.display = 'none';
-
-            // If this child was expanded, make sure to collapse its icon
-            if (child.dataset.hasChildren === 'true') {
-                var childToggler = child.querySelector('.tree-toggle');
-                if (childToggler && childToggler.classList.contains('fa-caret-down')) {
-                    childToggler.classList.remove('fa-caret-down');
-                    childToggler.classList.add('fa-caret-right');
-                }
-            }
-        } else {
-            // Expand: show only direct children
-            child.style.display = '';
-        }
-    });
-
     // Toggle icon
     if (isExpanded) {
         element.classList.remove('fa-caret-down');
         element.classList.add('fa-caret-right');
+        children = wazuhTreeFindChildren(nodeId);
+        $(children).remove();
     } else {
         element.classList.remove('fa-caret-right');
         element.classList.add('fa-caret-down');
+        wazuhFetchPageableTreeData(element, tableId);
     }
     wazuhTreeUpdateZebraStripes(tableId);
 }
 
-function wazuhTreeCheckChanged(element, searchform_id) {
+function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     let selected = window[searchform_id + '_selected'];
-    const row = element.closest('tr');
-    if (!row)
+    const rowTr = element.closest('tr');
+    if (!rowTr)
         return;
 
-    const rowId = row.dataset.nodeId;
+    const rowId = rowTr.dataset.nodeId;
     if (!rowId)
         return;
 
@@ -334,7 +317,7 @@ function wazuhTreeCheckChanged(element, searchform_id) {
         selected.delete(parseInt(rowId));
     }
 
-    if (row.dataset.hasChildren === 'true') {
+    if (rowTr.dataset.hasChildren === 'true') {
         const children = wazuhTreeFindAllChildren(rowId);
         children.forEach(function (child) {
             const childCheckbox = child.querySelector('.massive_action_checkbox');
@@ -352,6 +335,38 @@ function wazuhTreeCheckChanged(element, searchform_id) {
     }
     const data2 = JSON.stringify(Array.from(selected));
     document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
+    wazuhCreateHiddenTrSelection($(rowTr).closest('tbody'), searchform_id, itemtype)
+}
+
+function wazuhCreateHiddenTrSelection(tbodyElement, searchform_id, itemtype) {
+    let selected = window[searchform_id + '_selected'];
+    let outofscope = $(tbodyElement).find("outofscope");
+    outofscope.remove();
+    outofscope = $('<outofscope>', {
+        class: 'd-none',
+    });
+    $(tbodyElement).append(outofscope);
+    selected.forEach(function (id) {
+        let itemName = `item[${itemtype}][${id}]`;
+        let found = $(tbodyElement).find(`input[name="${itemName}"`);
+        if (found.length === 0) {
+            wazuhAddHiddenOutOfScopeSelection(outofscope, itemtype, id);
+        }
+    });
+}
+
+function wazuhAddHiddenOutOfScopeSelection(outofscopeElement, itemtype, row_id) {
+    const checkbox = $('<input>', {
+        class: 'form-check-input massive_action_checkbox',
+        type: 'checkbox',
+        'data-glpicore-ma-tags': 'common',
+        value: '1',
+        name: `item[${itemtype}][${row_id}]`,
+        form: massive_action_form_id,
+        prop: 'checked',
+        checked: true
+    });
+    outofscopeElement.append(checkbox);
 }
 
 function wazuhTreeFindAllChildren(nodeId) {
@@ -400,10 +415,13 @@ function wazuhTreeFindChildren(nodeId) {
 
     const children = [];
     let currentNode = parentRow.nextElementSibling;
+    let level = parseInt(parentRow.dataset.level);
 
     while (currentNode &&
             currentNode.classList.contains('tree-node') &&
-            currentNode.dataset.isChild === 'true') {
+            currentNode.dataset.isChild === 'true' &&
+            parseInt(currentNode.dataset.level) > level)
+    {
         children.push(currentNode);
         currentNode = currentNode.nextElementSibling;
     }
@@ -535,62 +553,81 @@ function initTooltips() {
 }
 
 /**
- * Open agent details in a modal
- * @param {string} agentId - Wazuh agent ID
- */
-function openAgentDetails(agentId) {
-    glpi_ajax_dialog({
-        title: GLPI_LANG.plugin_wazuh_agent_details,
-        url: CFG_GLPI.root_doc + '/plugins/wazuh/ajax/get_agent_details.php',
-        params: {
-            agent_id: agentId
-        }
-    });
-}
-
-/**
  * Test Wazuh API connection
  */
-function testWazuhConnection() {
-    const serverUrl = document.querySelector('input[name="server_url"]').value;
-    const apiPort = document.querySelector('input[name="api_port"]').value;
-    const apiUsername = document.querySelector('input[name="api_username"]').value;
-    const apiPassword = document.querySelector('input[name="api_password"]').value;
-    
-    // Show spinner
-    const testButton = document.getElementById('test-connection-button');
-    testButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + GLPI_LANG.plugin_wazuh_testing;
-    
-    // Send AJAX request to test connection
+function wazuhTestApiConnection(testButton, token, rand) {
+    const serverUrl = $('#server_url_' + rand).val();
+    const apiPort = $('#api_port_' + rand).val();
+    const apiUsername = $('#api_username_' + rand).val();
+    const apiPassword = $('#api_password' + rand).val();
+
+    let data = {
+        url: serverUrl,
+        port: apiPort,
+        username: apiUsername,
+        password: apiPassword,
+        csrf_token: token,
+        suffix: '/security/user/authenticate'
+    };
+
+    wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_api_connection.php');
+}
+
+function wazuhTestIndexerConnection(testButton, token, rand) {
+    const indexerUrl = $('#indexer_url_' + rand).val();
+    const indexerPort = $('#indexer_port_' + rand).val();
+    const indexerUsername = $('#indexer_user_' + rand).val();
+    const indexerPassword = $('#indexer_password' + rand).val();
+
+    let data = {
+        url: indexerUrl,
+        port: indexerPort,
+        username: indexerUsername,
+        password: indexerPassword,
+        csrf_token: token,
+        suffix: '/security/user/authenticate'
+    };
+
+    wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_indexer_connection.php');
+}
+
+function wazuhTestConnection(testButton, data, url) {
+
+    $(testButton).prop('disabled', true);
+    let spinner = $(testButton).find('i').first();
+    $(spinner).removeClass('d-none');
+
     $.ajax({
-        url: CFG_GLPI.root_doc + '/plugins/wazuh/ajax/test_connection.php',
-        type: 'POST',
-        data: {
-            server_url: serverUrl,
-            api_port: apiPort,
-            api_username: apiUsername,
-            api_password: apiPassword
-        },
+        url: CFG_GLPI.url_base + url,
+        method: 'POST',
+        dataType: 'json',
+        data: data,
+        timeout: 5000,
         success: function(response) {
-            const result = JSON.parse(response);
-            
-            if (result.success) {
-                // Show success message
-                alert(GLPI_LANG.plugin_wazuh_connection_success);
+            // console.debug(response);
+            // let r = JSON.parse(response);
+            if (response.success === false) {
+                $(testButton).removeClass(['btn-secondary', 'btn-success']);
+                $(testButton).addClass('btn-danger');
+                showToast(`Connection to ${data.url}:${data.port} failed. ${response.error}`, 'error');
             } else {
-                // Show error message
-                alert(GLPI_LANG.plugin_wazuh_connection_error + ': ' + result.message);
+                $(testButton).removeClass(['btn-secondary', 'btn-danger']);
+                $(testButton).addClass('btn-success');
+                showToast(`Authentication to ${data.url}:${data.port} succeed.`);
             }
         },
-        error: function() {
-            // Show error message
-            alert(GLPI_LANG.plugin_wazuh_connection_error);
+        error: function(xhr) {
+            console.error('Login error:', xhr);
+            showToast(`Connection to ${data.url}:${data.port} failed. ${xhr.statusText}`, 'error');
+            $(testButton).removeClass(['btn-secondary', 'btn-success']);
+            $(testButton).addClass('btn-danger');
         },
         complete: function() {
-            // Restore button text
-            testButton.innerHTML = GLPI_LANG.plugin_wazuh_test_connection;
+            $(testButton).prop('disabled', false);
+            $(spinner).addClass('d-none');
         }
     });
+
 }
 
 /**
@@ -600,4 +637,32 @@ function testWazuhConnection() {
 function updateAgentGroups(agentId) {
     // Implementation for group management
     // To be expanded based on Wazuh API capabilities
+}
+
+function showToast(message, type = 'info') {
+    const classMap = {
+        'error': 'bg-danger text-white',
+        'warning': 'bg-warning text-dark',
+        'info': 'bg-info text-white',
+        'success': 'bg-success text-white'
+    };
+
+    const toast = $(`
+        <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header ${classMap[type] || classMap.info}">
+                <strong class="me-auto">${type.toUpperCase()}</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body">${message}</div>
+        </div>
+    `);
+
+    const container = $('#messages_after_redirect');
+    if (!container.length) {
+        $('body').append('<div id="messages_after_redirect" class="toast-container bottom-right p-3"></div>');
+    }
+    $('#messages_after_redirect').append(toast);
+    const bsToast = new bootstrap.Toast(toast[0], { delay: 10000 });
+    bsToast.show();
+    toast.on('hidden.bs.toast', () => toast.remove());
 }

@@ -119,6 +119,7 @@
 
               <tr class="tree-node {{ parent_class }}" 
                   data-node-id="{{ row_id }}"
+                  data-level="0"
                   {% if has_parent %}data-is-child="true"{% endif %}
                   {% if has_children %}data-has-children="true"{% endif %}
                   style="{{ display_style }}">
@@ -136,7 +137,7 @@
                              <input class="form-check-input massive_action_checkbox" type="checkbox" data-glpicore-ma-tags="common"
                                 value="1" aria-label="{{ __("Select item") }}" {% if checked %}checked="checked"{% endif %}
                                 name="item[{{ row['TYPE'] ?? itemtype }}][{{ row_id }}]"
-                                onchange="wazuhTreeCheckChanged(this, '{{ searchform_id }}');"
+                                onchange="wazuhTreeCheckChanged(this, '{{ searchform_id }}', '{{ row['TYPE'] ?? itemtype }}');"
                                 form="{{ massive_action_form_id }}" />
                           {% endif %}
                        {% endif %}

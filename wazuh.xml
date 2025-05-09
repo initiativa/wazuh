@@ -29,7 +29,7 @@
    </authors>
    <versions>
       <version>
-         <num>0.0.7</num>
+         <num>0.0.8</num>
          <compatibility>~10.0</compatibility>
       </version>
    </versions>

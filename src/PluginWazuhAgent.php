@@ -103,13 +103,35 @@ class PluginWazuhAgent extends CommonDBTM {
    }
    
    public static function getByDeviceTypeAndId(string $itemtype, int $item_id): ?PluginWazuhAgent {
-        $agent = new self();
-        $criteria = [
-            'itemtype' => $itemtype,
-            'item_id' => $item_id
-        ];
-        $iterator = $agent->find($criteria);
+       $agent = new self();
+       global $DB;
 
+       $connection_fkey = Connection::getForeignKeyField();
+
+       $criteria = [
+           'SELECT' => [
+               static::getTable() . '.*',
+               Connection::getTable() . '.id AS CID'
+           ],
+           'FROM' => self::getTable(),
+           'JOIN' => [
+               Connection::getTable() => [
+                   'ON' => [
+                       self::getTable() => $connection_fkey,
+                       Connection::getTable() => 'id'
+                   ]
+               ]
+           ],
+           'WHERE' => [
+               Connection::getTable() . '.is_conn_active' => 1,
+               Connection::getTable() . '.is_deleted' => 0,
+               'itemtype' => $itemtype,
+               'item_id' => $item_id
+           ]
+       ];
+
+        $iterator = $DB->request($criteria);
+        Logger::addDebug(__FUNCTION__ . " " . $iterator->getSql());
 
         $count = count($iterator);
 
@@ -121,7 +143,7 @@ class PluginWazuhAgent extends CommonDBTM {
             throw new \RuntimeException("Please check Administration->WazuhAgen't to link only one device per Agent. Itemtype: $itemtype, id: $item_id.");
         }
 
-        $data = reset($iterator);
+        $data = $iterator->current();
 
         if (isset($data['id'])) {
             $agent->getFromDB($data['id']);
@@ -179,7 +201,7 @@ class PluginWazuhAgent extends CommonDBTM {
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation}";
-            $DB->query($query) or die("Error creating $table table");
+            $DB->doQuery($query) or die("Error creating $table table");
 
             $migration->updateDisplayPrefs(
                     [
@@ -272,32 +294,6 @@ class PluginWazuhAgent extends CommonDBTM {
             "massiveaction" => false,
         ];
 
-
-//        $tab[] = [
-//            "id" => 9,
-//            "name" => __("Device", PluginConfig::APP_CODE),
-//            "table" => self::getTable(),
-//            "field" => "item_id",
-//            "datatype" => "dropdown",
-//            "massiveaction" => false,
-//            "forcegroupby" => true,
-//            "additionalfields" => ['itemtype'],
-//            "joinparams" => [
-//                'beforejoin' => [
-//                    'table' => 'glpi_computers',
-//                    'joinparams' => [
-//                        'condition' => ["AND" => ["REFTABLE.itemtype" => "Computer"]]
-//                    ]
-//                ],
-//                'beforejoin2' => [
-//                    'table' => 'glpi_networkequipments',
-//                    'joinparams' => [
-//                        'condition' => ["AND" => ["REFTABLE.itemtype" => "NetworkEquipment"]]
-//                    ]
-//                ]
-//            ]
-//        ];
-        
         $tab[] = [
             "id" => 9,
             "name" => __("Device", PluginConfig::APP_CODE),
@@ -307,13 +303,26 @@ class PluginWazuhAgent extends CommonDBTM {
             "massiveaction" => false,
             "additionalfields" => ['itemtype'],
         ];
-        
+
         $tab[] = [
             'id' => 10,
             'table' => Connection::getTable(),
             'field' => 'name',
             'name' => __('Wazuh Server Name', PluginConfig::APP_CODE),
-            'datatype' => 'dropdown',
+            'datatype' => 'itemlink',
+            'massiveaction' => true,
+            'joinparams' => [
+                'jointype' => 'standard',
+                'foreignkey' => Connection::getForeignKeyField()
+            ]
+        ];
+
+        $tab[] = [
+            'id' => 11,
+            'table' => Connection::getTable(),
+            'field' => 'is_conn_active',
+            'name' => __('Active Server', PluginConfig::APP_CODE),
+            'datatype' => 'bool',
             'massiveaction' => true,
             'joinparams' => [
                 'jointype' => 'standard',
@@ -374,20 +383,25 @@ class PluginWazuhAgent extends CommonDBTM {
     */
    static function fetchAgentsFromWazuh(Connection $config) {
 
+       $config_name = $config->fields['name'];
         $wazuh_server = $config->fields['server_url'];
         $api_port = $config->fields['api_port'];
         $api_user = $config->fields['api_username'];
         $api_password = (new \GLPIKey())->decrypt($config->fields['api_password']);
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "$wazuh_server:$api_port/security/user/authenticate");
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
-        curl_setopt($ch, CURLOPT_USERPWD, "$api_user:$api_password");
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, "{}"); // Empty JSON body
+       $ch = curl_init();
+       curl_setopt_array($ch, [
+           CURLOPT_URL => "$wazuh_server:$api_port/security/user/authenticate",
+           CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
+           CURLOPT_USERPWD => "$api_user:$api_password",
+           CURLOPT_SSL_VERIFYPEER => false,
+           CURLOPT_SSL_VERIFYHOST => false,
+           CURLOPT_RETURNTRANSFER => true,
+           CURLOPT_POST => true,
+           CURLOPT_CONNECTTIMEOUT => 10,
+           CURLOPT_TIMEOUT => 10,
+           CURLOPT_POSTFIELDS => "{}"
+       ]);
 
         $response = curl_exec($ch);
         $curl_error = curl_error($ch);
@@ -399,7 +413,7 @@ class PluginWazuhAgent extends CommonDBTM {
         if ($curl_error) {
             Logger::addDebug("cURL Error: $curl_error");
             Session::addMessageAfterRedirect(
-                    __('Connection error to Wazuh API', 'wazuh') . ": " . $curl_error,
+                    __('Connection error to Wazuh API', 'wazuh') . ": $curl_error. Server name: $config_name",
                     true,
                     ERROR
             );
@@ -409,7 +423,7 @@ class PluginWazuhAgent extends CommonDBTM {
         if ($status_code != 200) {
             Logger::addDebug("Auth Response: $response");
             Session::addMessageAfterRedirect(
-                    __('Error authenticating to Wazuh API', 'wazuh') . ": " . $status_code,
+                    __('Error connectiong to Wazuh API', 'wazuh') . ": " . $status_code,
                     true,
                     ERROR
             );
@@ -474,15 +488,16 @@ class PluginWazuhAgent extends CommonDBTM {
 
     
     static function syncAgents(): bool {
-        $ids = (new Connection())->find();
+        $ids = (new Connection())->find(['is_deleted' => 0]);
+        $allOk = true;
         foreach ($ids as $id) {
             Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
             $wazuhConfig = Connection::getById($id['id']);
             if (!self::syncAgent($wazuhConfig)) {
-                return false;
+                $allOk = false;
             }
         }
-        return true;
+        return $allOk;
     }
     
     /**
@@ -507,18 +522,14 @@ class PluginWazuhAgent extends CommonDBTM {
         $failure_count = 0;
 
         foreach ($agents as $agent) {
-            // Debug: Sprawdzamy strukturę agenta
             Logger::addDebug("Processing agent: " . $agent['id'] . " - " . $agent['name']);
 
-            // Debug: Wypisz surową wartość lastKeepAlive przed konwersją
             if (isset($agent['lastKeepAlive'])) {
                 Logger::addDebug("Raw lastKeepAlive value: " . $agent['lastKeepAlive'] . ", strtotime result: " . strtotime($agent['lastKeepAlive']));
             }
 
-            // Przygotowanie danych agenta
             try {
-                // Ustaw bezpieczną wartość dla last_keepalive
-                $last_keepalive = $currentDate; // domyślnie bieżąca data
+                $last_keepalive = $currentDate;
 
                 if (isset($agent['lastKeepAlive'])) {
                     $timestamp = strtotime($agent['lastKeepAlive']);
@@ -549,7 +560,6 @@ class PluginWazuhAgent extends CommonDBTM {
                 continue;
             }
 
-            // Sprawdź, czy agent już istnieje
             $existing_agent = $DB->request([
                         'FROM' => $table,
                         'WHERE' => [
@@ -558,17 +568,13 @@ class PluginWazuhAgent extends CommonDBTM {
                     ]
                     ])->current();
 
-            // Za każdym razem tworzymy nowy obiekt aby uniknąć potencjalnych problemów
             $agent_obj = new self();
 
             if ($existing_agent) {
-                // Aktualizacja istniejącego agenta
                 $agent_data['id'] = $existing_agent['id'];
-//                $agent_data['computers_id'] = $computer_id > 0 ? $computer_id : $existing_agent['computers_id'];
 
                 Logger::addDebug("Updating agent ID: " . $existing_agent['id'] . " with data: " . json_encode($agent_data));
 
-                // Próba aktualizacji z obsługą błędów
                 if ($agent_obj->update($agent_data)) {
                     $success_count++;
                 } else {
@@ -576,13 +582,10 @@ class PluginWazuhAgent extends CommonDBTM {
                     $failure_count++;
                 }
             } else {
-                // Dodawanie nowego agenta
                 $agent_data['date_creation'] = $currentDate;
-//                $agent_data['computers_id'] = $computer_id;
 
                 Logger::addDebug("Adding new agent with data: " . json_encode($agent_data));
 
-                // Próba dodania z obsługą błędów
                 $new_id = $agent_obj->add($agent_data);
                 if ($new_id) {
                     $success_count++;

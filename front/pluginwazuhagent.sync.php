@@ -30,7 +30,7 @@ if (PluginWazuhAgent::syncAgents()) {
     );
 } else {
     Session::addMessageAfterRedirect(
-        __('Error synchronizing agents', 'wazuh'),
+        __('Not synchronizing all agents', 'wazuh'),
         true,
         ERROR
     );

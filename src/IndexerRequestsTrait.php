@@ -116,7 +116,7 @@ trait IndexerRequestsTrait {
         curl_close($ch);
 
         if ($error) {
-            Logger::addError(__FUNCTION__ . " HttpCode: " . $httpCode . " " . $error);
+            Logger::addError(__FUNCTION__ . " HttpCode: $httpCode. $endpoint. $error");
             Session::addMessageAfterRedirect($error, true, ERROR);
             echo Html::scriptBlock("$(function() { displayAjaxMessageAfterRedirect(); }); ");
             return [
