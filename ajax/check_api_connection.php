@@ -1,10 +1,16 @@
 <?php
 include('../../../inc/includes.php');
 
-use Glpi\Application\View\TemplateRenderer;
+use GlpiPlugin\Wazuh\Connection;
 use GlpiPlugin\Wazuh\Logger;
 
 Session::checkLoginUser();
+if (!isset($_POST['csrf_token']) || !Session::validateCSRF(['_glpi_csrf_token' => $_POST['csrf_token']])) {
+    header("HTTP/1.0 403 Forbidden");
+    die("Invalid CSRF token");
+}
+
+Session::checkRight(Connection::$rightname, READ);
 
 $wazuh_server = $_POST['url'];
 $api_port = $_POST['port'];

@@ -43,7 +43,7 @@ function wazuhTreePrevPage(iconElement, searchform_id, rootElement) {
     }
     rootElement.setAttribute('data-page', page_no);
     wazuhFetchPageableTreeData(rootElement, searchform_id);
-    console.log('Prev page clicked.');
+    // console.log('Prev page clicked.');
 }
 
 function wazuhTreeNextPage(iconElement, searchform_id, rootElement) {
@@ -54,7 +54,7 @@ function wazuhTreeNextPage(iconElement, searchform_id, rootElement) {
     }
     rootElement.setAttribute('data-page', page_no);
     wazuhFetchPageableTreeData(rootElement, searchform_id);
-    console.log('Next page clicked.');
+    // console.log('Next page clicked.');
 }
 
 function wazuhSetPageLabel(row_id, page_no, page_max) {
@@ -81,6 +81,7 @@ function wazuhCreatePageableRow(data, search_id, element) {
 
     const tr = $('<tr>', {
         class: `tree-node is-child`,
+        name: `pageable_row[${row_id}]`,
         'data-node-id': row_id,
         'data-level': level,
         'data-is-child': has_parent || undefined,
@@ -196,7 +197,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
                             form: massive_action_form_id,
                             prop: 'checked',
                             checked: checked
-                        }).change(function() { wazuhTreeCheckChanged(this, searchform_id); });
+                        }).change(function() { wazuhTreeCheckChanged(this, searchform_id, itemtype); });
                         div_massive_action.append(checkbox);
                     // }
                 }
@@ -299,13 +300,13 @@ function wazuhToggleTreeNode(element, tableId) {
     wazuhTreeUpdateZebraStripes(tableId);
 }
 
-function wazuhTreeCheckChanged(element, searchform_id) {
+function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     let selected = window[searchform_id + '_selected'];
-    const row = element.closest('tr');
-    if (!row)
+    const rowTr = element.closest('tr');
+    if (!rowTr)
         return;
 
-    const rowId = row.dataset.nodeId;
+    const rowId = rowTr.dataset.nodeId;
     if (!rowId)
         return;
 
@@ -316,7 +317,7 @@ function wazuhTreeCheckChanged(element, searchform_id) {
         selected.delete(parseInt(rowId));
     }
 
-    if (row.dataset.hasChildren === 'true') {
+    if (rowTr.dataset.hasChildren === 'true') {
         const children = wazuhTreeFindAllChildren(rowId);
         children.forEach(function (child) {
             const childCheckbox = child.querySelector('.massive_action_checkbox');
@@ -334,6 +335,38 @@ function wazuhTreeCheckChanged(element, searchform_id) {
     }
     const data2 = JSON.stringify(Array.from(selected));
     document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
+    wazuhCreateHiddenTrSelection($(rowTr).closest('tbody'), searchform_id, itemtype)
+}
+
+function wazuhCreateHiddenTrSelection(tbodyElement, searchform_id, itemtype) {
+    let selected = window[searchform_id + '_selected'];
+    let outofscope = $(tbodyElement).find("outofscope");
+    outofscope.remove();
+    outofscope = $('<outofscope>', {
+        class: 'd-none',
+    });
+    $(tbodyElement).append(outofscope);
+    selected.forEach(function (id) {
+        let itemName = `item[${itemtype}][${id}]`;
+        let found = $(tbodyElement).find(`input[name="${itemName}"`);
+        if (found.length === 0) {
+            wazuhAddHiddenOutOfScopeSelection(outofscope, itemtype, id);
+        }
+    });
+}
+
+function wazuhAddHiddenOutOfScopeSelection(outofscopeElement, itemtype, row_id) {
+    const checkbox = $('<input>', {
+        class: 'form-check-input massive_action_checkbox',
+        type: 'checkbox',
+        'data-glpicore-ma-tags': 'common',
+        value: '1',
+        name: `item[${itemtype}][${row_id}]`,
+        form: massive_action_form_id,
+        prop: 'checked',
+        checked: true
+    });
+    outofscopeElement.append(checkbox);
 }
 
 function wazuhTreeFindAllChildren(nodeId) {
@@ -533,6 +566,7 @@ function wazuhTestApiConnection(testButton, token, rand) {
         port: apiPort,
         username: apiUsername,
         password: apiPassword,
+        csrf_token: token,
         suffix: '/security/user/authenticate'
     };
 
@@ -550,6 +584,7 @@ function wazuhTestIndexerConnection(testButton, token, rand) {
         port: indexerPort,
         username: indexerUsername,
         password: indexerPassword,
+        csrf_token: token,
         suffix: '/security/user/authenticate'
     };
 
@@ -569,7 +604,7 @@ function wazuhTestConnection(testButton, data, url) {
         data: data,
         timeout: 5000,
         success: function(response) {
-            console.debug(response);
+            // console.debug(response);
             // let r = JSON.parse(response);
             if (response.success === false) {
                 $(testButton).removeClass(['btn-secondary', 'btn-success']);
