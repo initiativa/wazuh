@@ -674,7 +674,7 @@ class TreeSearchOutput extends \CommonDBTM {
     }
     
     
-        /**
+    /**
      * Clean search options depending on the user active profile
      *
      * @param class-string<\CommonDBTM>  $itemtype     Item type to manage
