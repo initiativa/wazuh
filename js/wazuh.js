@@ -186,19 +186,21 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
                     const row_itemtype = row['TYPE'] || itemtype;
                     // Assuming 'isMassiveActionAllowed' is a globally available JS function
                     // if (window[row_itemtype + '::isMassiveActionAllowed'] && window[row_itemtype + '::isMassiveActionAllowed']([row_id])) {
-                        show_checkbox = true;
-                        const checked = selected.has(parseInt(row_id));
-                        const checkbox = $('<input>', {
-                            class: 'form-check-input massive_action_checkbox',
-                            type: 'checkbox',
-                            'data-glpicore-ma-tags': 'common',
-                            value: '1',
-                            name: `item[${row['TYPE'] || itemtype}][${row_id}]`,
-                            form: massive_action_form_id,
-                            prop: 'checked',
-                            checked: checked
-                        }).change(function() { wazuhTreeCheckChanged(this, searchform_id, itemtype); });
-                        div_massive_action.append(checkbox);
+                    show_checkbox = true;
+                    const checked = selected.has(parseInt(row_id));
+                    const checkbox = $('<input>', {
+                        class: 'form-check-input massive_action_checkbox',
+                        type: 'checkbox',
+                        'data-glpicore-ma-tags': 'common',
+                        value: '1',
+                        name: `item[${row['TYPE'] || itemtype}][${row_id}]`,
+                        form: massive_action_form_id,
+                        prop: 'checked',
+                        checked: checked
+                    }).change(function () {
+                        wazuhTreeCheckChanged(this, searchform_id, row_itemtype);
+                    });
+                    div_massive_action.append(checkbox);
                     // }
                 }
                 td_massive_action.append(div_massive_action);
@@ -335,6 +337,7 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     }
     const data2 = JSON.stringify(Array.from(selected));
     document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
+    // console.log(itemtype);
     wazuhCreateHiddenTrSelection($(rowTr).closest('tbody'), searchform_id, itemtype)
 }
 
@@ -350,6 +353,7 @@ function wazuhCreateHiddenTrSelection(tbodyElement, searchform_id, itemtype) {
         let itemName = `item[${itemtype}][${id}]`;
         let found = $(tbodyElement).find(`input[name="${itemName}"`);
         if (found.length === 0) {
+            // console.debug("Not found: ", itemName, itemtype);
             wazuhAddHiddenOutOfScopeSelection(outofscope, itemtype, id);
         }
     });
