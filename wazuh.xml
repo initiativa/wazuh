@@ -25,13 +25,13 @@
    <issues>https://github.com/initiativa/wazuh/issues</issues>
    <readme>https://github.com/initiativa/wazuh/blob/master/README.md</readme>
    <authors>
-      <author>Tomasz W. / initiativa srl</author>
+      <author>Tomasz W. / Initiativa srl</author>
    </authors>
    <versions>
       <version>
-         <num>0.0.9</num>
+         <num>0.0.10</num>
          <compatibility>~10.0</compatibility>
-         <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.9/wazuh-0.0.9.tar.gz</download_url>
+         <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.10/wazuh-0.0.10.tar.gz</download_url>
       </version>
    </versions>
    <langs>
