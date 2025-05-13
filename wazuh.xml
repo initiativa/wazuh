@@ -2,7 +2,7 @@
    <name>Wazuh</name>
    <key>wazuh</key>
    <!-- stable, beta, development, alpha, ... -->
-   <state>alpha</state>
+   <state>beta</state>
    <logo>https://github.com/initiativa/wazuh/docs/images/logo.png</logo>
    <description>
       <short>
@@ -25,12 +25,13 @@
    <issues>https://github.com/initiativa/wazuh/issues</issues>
    <readme>https://github.com/initiativa/wazuh/blob/master/README.md</readme>
    <authors>
-      <author>Tomasz W.</author>
+      <author>Tomasz W. / initiativa srl</author>
    </authors>
    <versions>
       <version>
          <num>0.0.9</num>
          <compatibility>~10.0</compatibility>
+         <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.9/wazuh-0.0.9.tar.gz</download_url>
       </version>
    </versions>
    <langs>
