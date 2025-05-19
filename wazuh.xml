@@ -3,7 +3,7 @@
    <key>wazuh</key>
    <!-- stable, beta, development, alpha, ... -->
    <state>beta</state>
-   <logo>https://github.com/initiativa/wazuh/docs/images/logo.png</logo>
+   <logo>https://raw.githubusercontent.com/initiativa/wazuh/master/docs/images/logo.png</logo>
    <description>
       <short>
          <de>Wazuh GLPI-Plugin.</de>
@@ -14,7 +14,7 @@
       </short>
       <long>
          <de>Wazuh-Integrations-GLPI-Plugin.</de>
-         <en>Wazuh integration GLPI plugin.</en>
+         <en>Wazuh integration: this plugin allow to retrieve vulnerabilities and alerts froma a Wazuh server, letting them available in GLPI in a dedicated tab of the asset. It's also possible to open a ticket directly from the Vulnerability/Alert.</en>
          <fr>Wazuh integration GLPI plugin.</fr>
          <it>Plug-in GLPI di integrazione Wazuh.</it>
          <pl>Wtyczka GLPI dla Wazuh.</pl>
