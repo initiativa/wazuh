@@ -119,7 +119,7 @@ function plugin_version_wazuh() {
         'name' => PluginConfig::APP_NAME,
         'version' => PluginConfig::loadVersionNumber(),
         'author' => '<a href="http://www.initiativa.it">Initiativa</a>',
-        'license' => 'https://github.com/initiativa/Wazuh?tab=GPL-3.0-1-ov-file',
+        'license' => 'GPL v3+',
         'homepage' => 'https://github.com/initiativa/Wazuh',
         'requirements' => [
             'glpi' => [
