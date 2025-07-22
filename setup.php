@@ -48,7 +48,7 @@ define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 // Minimal GLPI version, inclusive
 define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "10.0.11");
 // Maximum GLPI version, exclusive
-define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "10.0.99");
+define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "11.0.1");
 
 /**
  * Init hooks of the plugin.

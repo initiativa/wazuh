@@ -325,9 +325,9 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                      `a_ip` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `a_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `a_id` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
-                     `syscheck` JSON COLLATE {$default_collation} DEFAULT NULL,
-                     `rule` JSON COLLATE {$default_collation} DEFAULT NULL,
-                     `data` JSON COLLATE {$default_collation} DEFAULT NULL,
+                     `syscheck` LONGTEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `rule` LONGTEXT COLLATE {$default_collation} DEFAULT NULL,
+                     `data` LONGTEXT COLLATE {$default_collation} DEFAULT NULL,
                      `input_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `is_discontinue` tinyint(1) NOT NULL DEFAULT false,
                      `source_timestamp` timestamp DEFAULT NULL,
@@ -355,7 +355,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                      KEY `is_recursive` (`is_recursive`),
                      KEY `is_deleted` (`is_deleted`)
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC";
-            $DB->query($query) or die("Error creating $table table");
+            $DB->doQuery($query) or die("Error creating $table table");
 
         }
 

@@ -434,7 +434,7 @@ trait TableGeneratorTrait
     {
         global $DB;
         $query = self::getTableCreationQuery();
-        return $DB->query($query);
+        return $DB->doQuery($query);
     }
 
     /**

@@ -203,7 +203,7 @@ class WazuhAgentAssetsRelation extends CommonDBRelation {
                   KEY `pluginwazuhagent_id` (`pluginwazuhagent_id`),
                   KEY `item` (`itemtype`,`items_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=$default_charset COLLATE=$default_collation";
-            $DB->query($query) or die("Error creating relation $table");
+            $DB->doQuery($query) or die("Error creating relation $table");
         }
 
         return true;
