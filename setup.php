@@ -71,7 +71,7 @@ function plugin_init_wazuh() {
             $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/connection.php';
 //            Logger::addNotice(__FUNCTION__ . " plugin configuration registered.");
 
-            $PLUGIN_HOOKS[Hooks::USE_MASSIVE_ACTION][PluginConfig::APP_CODE] = true;
+            $PLUGIN_HOOKS['use_massive_action'][PluginConfig::APP_CODE] = true;
         }
 
         if (Session::getLoginUserID()) {
