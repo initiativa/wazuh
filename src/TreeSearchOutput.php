@@ -19,17 +19,18 @@
 
 namespace GlpiPlugin\Wazuh;
 
-use Search;
-use Html;
-use CommonTreeDropdown;
-use Glpi\Toolbox\URL;
 use Change;
 use CommonDBTM;
-use Glpi\Socket;
-use Problem;
-use Ticket;
-use Glpi\Search\CriteriaFilter;
 use Glpi\Application\View\TemplateRenderer;
+use Glpi\Dashboard\Grid;
+use Glpi\Socket;
+use Glpi\Toolbox\URL;
+use Plugin;
+use Problem;
+use SavedSearch;
+use Session;
+use Ticket;
+use Toolbox;
 
 
 class TreeSearchOutput extends \CommonDBTM {
@@ -83,7 +84,7 @@ class TreeSearchOutput extends \CommonDBTM {
         }
 
         // Construct parameters
-        $globallinkto  = \Toolbox::append_params([
+        $globallinkto  = Toolbox::append_params([
             'criteria'     => $search['criteria'],
             'metacriteria' => $search['metacriteria'],
         ], '&');
@@ -101,9 +102,9 @@ class TreeSearchOutput extends \CommonDBTM {
 
         // For plugin add new parameter if available
         if ($plug = isPluginItemType($data['itemtype'])) {
-            $out = \Plugin::doOneHook($plug['plugin'], 'addParamFordynamicReport', $data['itemtype']);
+            $out = Plugin::doOneHook($plug['plugin'], 'addParamFordynamicReport', $data['itemtype']);
             if (is_array($out) && count($out)) {
-                $parameters .= \Toolbox::append_params($out, '&');
+                $parameters .= Toolbox::append_params($out, '&');
             }
         }
 
@@ -111,7 +112,7 @@ class TreeSearchOutput extends \CommonDBTM {
         $prehref = $search['target'] . (strpos($search['target'], "?") !== false ? "&" : "?");
         $href    = $prehref . $parameters;
 
-        \Session::initNavigateListItems($data['itemtype'], '', $href);
+        Session::initNavigateListItems($data['itemtype'], '', $href);
 
         // search if any saved search is active
         $soptions = self::getOptionsForItemtype($itemtype);
