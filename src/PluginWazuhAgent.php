@@ -211,18 +211,34 @@ class PluginWazuhAgent extends CommonDBTM {
             );
         }
 
-       if (version_compare('0.0.14',
+       if (version_compare('0.0.15',
            $version, '<=')) {
 
-           if ($migration->indexExists($table, 'connection_aggent_id')) {
+           if (self::indexExists($table, 'connection_aggent_id')) {
                $migration->dropKey($table, 'connection_aggent_id');
            }
-           if (!$migration->indexExists($table, 'connection_aggent_entity_id')) {
+           if (!self::indexExists($table, 'connection_aggent_entity_id')) {
                $migration->addKey($table, ['agent_id', $connection_fkey, Entity::getForeignKeyField()], 'connection_aggent_entity_id', 'UNIQUE');
            }
        }
 
        return true;
+    }
+
+    static function indexExists($table, $index_name) {
+        global $DB;
+
+        $iterator = $DB->request([
+            'SELECT' => ['Key_name'],
+            'FROM' => 'INFORMATION_SCHEMA.STATISTICS',
+            'WHERE' => [
+                'table_schema' => $DB->dbdefault,
+                'table_name' => $table,
+                'index_name' => $index_name
+            ]
+        ]);
+
+        return count($iterator) > 0;
     }
 
     /**
