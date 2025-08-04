@@ -229,7 +229,6 @@ class PluginWazuhAgent extends CommonDBTM {
         global $DB;
 
         $iterator = $DB->request([
-            'SELECT' => ['Key_name'],
             'FROM' => 'INFORMATION_SCHEMA.STATISTICS',
             'WHERE' => [
                 'table_schema' => $DB->dbdefault,
