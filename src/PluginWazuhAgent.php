@@ -20,6 +20,8 @@
 namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
+use Entity;
+use Exception;
 use Migration;
 use Session;
 use Html;
@@ -157,14 +159,13 @@ class PluginWazuhAgent extends CommonDBTM {
     * @param object $migration
     * @return boolean
     */
-   static function install(Migration $migration) {
+   static function install(Migration $migration, string $version) {
         global $DB;
 
         $table = self::getTable();
         $default_charset = DBConnection::getDefaultCharset();
         $default_collation = DBConnection::getDefaultCollation();
         $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
-        $table = self::getTable();
         $connection_fkey = Connection::getForeignKeyField();
 
         if (!$DB->tableExists($table)) {
@@ -195,7 +196,7 @@ class PluginWazuhAgent extends CommonDBTM {
                      KEY `item_id` (`item_id`),
                      KEY `entities_id` (`entities_id`),
                      KEY `$connection_fkey` (`$connection_fkey`),
-                     UNIQUE KEY `connection_aggent_id` (`agent_id`, `$connection_fkey`),
+                     UNIQUE KEY `connection_aggent_id` (`agent_id`, `$connection_fkey`, `entities_id`),
                      KEY `date_mod` (`date_mod`),
                      KEY `date_creation` (`date_creation`),
                      KEY `is_recursive` (`is_recursive`),
@@ -205,12 +206,23 @@ class PluginWazuhAgent extends CommonDBTM {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\PluginWazuhAgent' => [3, 4, 5, 6, 7,8]
+                        'GlpiPlugin\Wazuh\PluginWazuhAgent' => [3, 4, 5, 6, 7, 8, 12]
                     ],
             );
         }
 
-        return true;
+       if (version_compare('0.0.14',
+           $version, '<=')) {
+
+           if ($migration->indexExists($table, 'connection_aggent_id')) {
+               $migration->dropKey($table, 'connection_aggent_id');
+           }
+           if (!$migration->indexExists($table, 'connection_aggent_entity_id')) {
+               $migration->addKey($table, ['agent_id', $connection_fkey, Entity::getForeignKeyField()], 'connection_aggent_entity_id', 'UNIQUE');
+           }
+       }
+
+       return true;
     }
 
     /**
@@ -329,6 +341,17 @@ class PluginWazuhAgent extends CommonDBTM {
                 'foreignkey' => Connection::getForeignKeyField()
             ]
         ];
+
+        $tab[] = [
+            "id" => 12,
+            "name" => __("Agent Status", PluginConfig::APP_CODE),
+            "table" => self::getTable(),
+            "field" => "status",
+            "searchtype" => "contains",
+            "datatype" => "text",
+            "massiveaction" => false,
+        ];
+
 
         return $tab;
     }
@@ -540,6 +563,7 @@ class PluginWazuhAgent extends CommonDBTM {
                     }
                 }
 
+                $active_entity = $_SESSION['glpiactive_entity'];
                 $agent_data = [
                     'agent_id' => $agent['id'],
                     'name' => $agent['name'],
@@ -551,6 +575,7 @@ class PluginWazuhAgent extends CommonDBTM {
                     'os_version' => $agent['os']['version'] ?? '',
                     'groups' => isset($agent['group']) ? json_encode($agent['group']) : '',
                     'date_mod' => $currentDate,
+                    Entity::getForeignKeyField() => $active_entity,
                     Connection::getForeignKeyField() => $wazuhConfig->fields['id']
                 ];
             } catch (Exception $e) {
@@ -561,12 +586,13 @@ class PluginWazuhAgent extends CommonDBTM {
             }
 
             $existing_agent = $DB->request([
-                        'FROM' => $table,
-                        'WHERE' => [
-                            'agent_id' => $agent['id'],
-                            Connection::getForeignKeyField() => $wazuhConfig->fields['id']
-                    ]
-                    ])->current();
+                'FROM' => $table,
+                'WHERE' => [
+                    'agent_id' => $agent['id'],
+                    Connection::getForeignKeyField() => $wazuhConfig->fields['id'],
+                    Entity::getForeignKeyField() => $active_entity,
+                ]
+            ])->current();
 
             $agent_obj = new self();
 
@@ -616,9 +642,11 @@ class PluginWazuhAgent extends CommonDBTM {
         $elements[''] = Dropdown::EMPTY_VALUE;
 
         $computer = new Computer();
+
+        $entities = getSonsOf(Entity::getTable(), $_SESSION['glpiactive_entity']);
         $computers = $computer->find([
             'is_deleted' => 0,
-            'entities_id' => $_SESSION['glpiactive_entity']
+            'entities_id' => $entities,
         ]);
 
         foreach ($computers as $comp) {
@@ -628,7 +656,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $network = new NetworkEquipment();
         $networks = $network->find([
             'is_deleted' => 0,
-            'entities_id' => $_SESSION['glpiactive_entity']
+            'entities_id' => $entities,
         ]);
 
         foreach ($networks as $net) {

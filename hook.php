@@ -57,7 +57,7 @@ function plugin_wazuh_install() {
     $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
 
     \GlpiPlugin\Wazuh\Connection::install($migration, $version);
-    \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration);
+    \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration, $version);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
     \GlpiPlugin\Wazuh\ComputerTab::install($migration, $version);
     \GlpiPlugin\Wazuh\NetworkEqTab::install($migration, $version);
