@@ -29,9 +29,9 @@
    </authors>
    <versions>
       <version>
-         <num>0.0.15</num>
+         <num>0.0.16</num>
          <compatibility>~10.0</compatibility>
-         <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.15/wazuh-0.0.15.tar.gz</download_url>
+         <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.16/wazuh-0.0.16.tar.gz</download_url>
       </version>
    </versions>
    <langs>

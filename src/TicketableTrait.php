@@ -51,7 +51,7 @@ trait TicketableTrait {
             foreach ($item_ids as $item_id) {
                 $item = static::getById($item_id);
                 array_push($full_items, $item);
-                $item_href = static::getDeviceHref($item_id);
+                $item_href = static::getWazuhTabHref($item_id);
                 $name = static::generateLinkName($item);
                 $content .= sprintf(
                     " <a href='$item_href'>$name</a> "
