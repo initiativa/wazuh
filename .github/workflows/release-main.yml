@@ -12,10 +12,13 @@ jobs:
     steps:
       - name: Checkout kodu
         uses: actions/checkout@v4
-      
+
+      - name: apt update
+        run: sudo apt-get update && sudo apt-get upgrade -y
+
       - name: XML instalation
         run: sudo apt-get install -y libxml2-utils gettext
-      
+
       - name: Locale compilation .po do .mo
         run: |
           if [ -d "locales" ]; then
