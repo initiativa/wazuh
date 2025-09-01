@@ -257,7 +257,7 @@ function wazuhFetchPageableTreeData(element, formId) {
     }
     let nodeId = element.getAttribute('data-node-id');
     $.ajax({
-        url: CFG_GLPI.url_base + '/plugins/wazuh/ajax/fetch_tree_elements.php',
+        url: '/plugins/wazuh/ajax/fetch_tree_elements.php',
         type: 'GET',
         data: {
             itemtype: encodeURIComponent(element.getAttribute('data-itemtype')),
@@ -602,7 +602,7 @@ function wazuhTestConnection(testButton, data, url) {
     $(spinner).removeClass('d-none');
 
     $.ajax({
-        url: CFG_GLPI.url_base + url,
+        url: url,
         method: 'POST',
         dataType: 'json',
         data: data,
