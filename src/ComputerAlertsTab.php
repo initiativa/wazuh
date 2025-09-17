@@ -93,13 +93,13 @@ class ComputerAlertsTab extends DeviceAlertsTab {
             $item_data = [
                 'key' => $key,
                 Computer::getForeignKeyField() => $device->getID(),
-                'name' => $DB->escape($result['_source']['decoder']['name']),
-                'a_ip' => $DB->escape($result['_source']['agent']['ip']),
-                'a_name' => $DB->escape($result['_source']['agent']['name']),
-                'a_id' => $DB->escape($result['_source']['agent']['id']),
-                'data' => json_encode($result['_source']['data'] ?? ''),
-                'rule' => json_encode($result['_source']['rule'] ?? ''),
-                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
+                'name' => $DB->escape($result['_source']['decoder']['name'] ?? ''),
+                'a_ip' => $DB->escape($result['_source']['agent']['ip'] ?? ''),
+                'a_name' => $DB->escape($result['_source']['agent']['name'] ?? ''),
+                'a_id' => $DB->escape($result['_source']['agent']['id'] ?? ''),
+                'data' => $DB->escape(json_encode($result['_source']['data'] ?? '')),
+                'rule' => $DB->escape(json_encode($result['_source']['rule'] ?? '')),
+                'syscheck' => $DB->escape(json_encode($result['_source']['syscheck'] ?? '')),
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
                 'date_mod' => (new DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
@@ -119,6 +119,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
             $newId = $item->add($item_data);
             if (!$newId) {
                 Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                Logger::addDebug(json_encode($item_data, JSON_PRETTY_PRINT));
                 return false;
             }
         } else {

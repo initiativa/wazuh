@@ -65,8 +65,10 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     abstract protected function countElements($device_id);
 
     protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+//        Logger::addDebug(__FUNCTION__ . json_encode($item_data, JSON_PRETTY_PRINT));
+
         if ($item_data['name'] === 'syscheck_integrity_changed') {
-            $syscheck = json_decode($item_data['syscheck'], true);
+            $syscheck = json_decode(stripslashes($item_data['syscheck']), true);
             $directoryPath = dirname($syscheck['path']);
             $directories = explode("/", $directoryPath);
 //            Logger::addDebug("******************** " . $directories[1] . " -- " . $directories[2]);
