@@ -488,7 +488,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
                      `v_enum` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_severity` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_reference` TEXT COLLATE {$default_collation} DEFAULT NULL,
-                     `v_score` decimal(6,2) {$default_key_sign} NOT NULL DEFAULT '0',
+                     `v_score` decimal(6,2) NOT NULL DEFAULT '0',
                      `p_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_version` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
@@ -533,6 +533,9 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
             $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
         }
 
+        if (version_compare('0.0.20', $version, '<=')) {
+            $migration->changeField($table, 'v_score', 'v_score',  "decimal(6,2) NOT NULL DEFAULT '0'");
+        }
 
         return true;
     }

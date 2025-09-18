@@ -155,17 +155,10 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     static function showBrowseView($itemtype, $params): void
     {
         $item_id = $params['criteria'][0]['value'];
-        $params['criteria'] = [
-            [
-                'field' => 7,
-                'searchtype' => 'equals',
-                'value' => $item_id
-            ],
-            [
-                'field' => 20,
-                'searchtype' => 'equals',
-                'value' => 0
-            ],
+        $params['criteria'][] = [
+            'field' => 20,
+            'searchtype' => 'equals',
+            'value' => 0
         ];
 
         Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
@@ -180,6 +173,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             'WHERE' => [
                 static::getDeviceForeignKeyField() => $item_id,
                 'is_deleted' => 0,
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
                 static::getForeignKeyField() => ['<>', 0],
             ]
         ];
@@ -196,6 +190,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             'WHERE' => [
                 static::getDeviceForeignKeyField() => $item_id,
                 'is_deleted' => 0,
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
                 static::getForeignKeyField() => ['<>', 0],
             ],
             'GROUPBY' => static::getForeignKeyField()
