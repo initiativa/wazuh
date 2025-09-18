@@ -57,23 +57,29 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
     }
 
     protected function countElements($device_id) {
-        global $DB;
-
-        $count = 0;
-        $iterator = $DB->request([
-            'COUNT' => 'count',
-            'FROM' => $this->getTable(),
-            'WHERE' => [
-                NetworkEquipment::getForeignKeyField() => $device_id,
-                static::getForeignKeyField() => ['<>', 0],
-                'is_deleted' => 0
-                ]
+        $count = countElementsInTableForMyEntities($this->getTable(), [
+            NetworkEquipment::getForeignKeyField() => $device_id,
+            static::getForeignKeyField() => ['<>', 0],
+            'is_deleted' => 0
         ]);
 
-        if (count($iterator)) {
-            $data = $iterator->current();
-            $count = $data['count'];
-        }
+//        global $DB;
+//
+//        $count = 0;
+//        $iterator = $DB->request([
+//            'COUNT' => 'count',
+//            'FROM' => $this->getTable(),
+//            'WHERE' => [
+//                NetworkEquipment::getForeignKeyField() => $device_id,
+//                static::getForeignKeyField() => ['<>', 0],
+//                'is_deleted' => 0
+//                ]
+//        ]);
+//
+//        if (count($iterator)) {
+//            $data = $iterator->current();
+//            $count = $data['count'];
+//        }
 
         return $count;
     }
