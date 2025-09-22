@@ -57,23 +57,29 @@ class ComputerTab extends DeviceTab implements Ticketable {
     }
 
    protected function countElements($computers_id) {
-        global $DB;
+       $count = countElementsInTableForMyEntities($this->getTable(), [
+           Computer::getForeignKeyField() => $computers_id,
+           static::getForeignKeyField() => ['<>', 0],
+           'is_deleted' => 0
+       ]);
 
-        $count = 0;
-        $iterator = $DB->request([
-            'COUNT' => 'count',
-            'FROM' => $this->getTable(),
-            'WHERE' => [
-                Computer::getForeignKeyField() => $computers_id,
-                static::getForeignKeyField() => ['<>', 0],
-                'is_deleted' => 0
-                ]
-        ]);
-
-        if (count($iterator)) {
-            $data = $iterator->current();
-            $count = $data['count'];
-        }
+//       global $DB;
+//
+//        $count = 0;
+//        $iterator = $DB->request([
+//            'COUNT' => 'count',
+//            'FROM' => $this->getTable(),
+//            'WHERE' => [
+//                Computer::getForeignKeyField() => $computers_id,
+//                static::getForeignKeyField() => ['<>', 0],
+//                'is_deleted' => 0
+//                ]
+//        ]);
+//
+//        if (count($iterator)) {
+//            $data = $iterator->current();
+//            $count = $data['count'];
+//        }
 
         return $count;
     }
@@ -195,14 +201,13 @@ class ComputerTab extends DeviceTab implements Ticketable {
         $params = [
             'sort' => '2',
             'order' => 'DESC',
-            'reset' => 'reset',
             'browse' => 1,
             'criteria' => [
                 [
                     'field' => 7,
                     'searchtype' => 'equals',
                     'value' => $item->getID()
-                ]
+                ],
             ],
         ];
         Search::manageParams($item_type, $params);
@@ -385,7 +390,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
                      `v_enum` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_severity` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `v_reference` TEXT COLLATE {$default_collation} DEFAULT NULL,
-                     `v_score` decimal(6,2) {$default_key_sign} NOT NULL DEFAULT '0',
+                     `v_score` decimal(6,2) NOT NULL DEFAULT '0',
                      `p_name` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_version` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
                      `p_type` varchar(255) COLLATE {$default_collation} DEFAULT NULL,
@@ -428,6 +433,10 @@ class ComputerTab extends DeviceTab implements Ticketable {
             $itil_category_fkey = \ITILCategory::getForeignKeyField();
             $migration->addField($table, $itil_category_fkey, "fkey");
             $migration->addKey($table, $itil_category_fkey, $itil_category_fkey);
+        }
+
+        if (version_compare('0.0.20', $version, '<=')) {
+            $migration->changeField($table, 'v_score', 'v_score',  "decimal(6,2) NOT NULL DEFAULT '0'");
         }
 
         \CronTask::register(ComputerTab::class, 'FetchVulnerabilities' , HOUR_TIMESTAMP, array(
