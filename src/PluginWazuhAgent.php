@@ -77,6 +77,13 @@ class PluginWazuhAgent extends CommonDBTM {
         $menu['tools']['icon'] = self::getIcon();
 
         }
+
+        $sync_agents = "<i class='fas fa-shield-alt m-1' title='sync_btn' data-bs-toggle='tooltip'></i>" . _n(' Sync Agent', 'Sync Agents', 2, PluginConfig::APP_CODE);
+        $link_agents = "<i class='fas fa-link m-1' title='link_btn'></i>" . _n(' Link Agent', 'Link Agents', 2, PluginConfig::APP_CODE);
+
+        $menu['links'][$sync_agents] = 'plugins/wazuh/front/pluginwazuhagent.sync.php';
+        $menu['links'][$link_agents] = 'plugins/wazuh/front/pluginwazuhagent.link.php';
+
         if (count($menu)) {
             return $menu;
         }
@@ -524,7 +531,49 @@ class PluginWazuhAgent extends CommonDBTM {
         }
     }
 
-    
+
+    static function linkAgents(): bool {
+       global $DB;
+
+        $iterator = $DB->request([
+            'FROM' => self::getTable(),
+            'WHERE' => [
+                Entity::getForeignKeyField() => Session::getActiveEntity(),
+            ]
+        ]);
+
+        if ($iterator) {
+            $agents = iterator_to_array($iterator);
+            foreach ($agents as $agent) {
+                if (isset($agent['name'])) {
+                    $aname = $agent['name'];
+                    $idevices = $DB->request(['FROM' => NetworkEquipment::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => Session::getActiveEntity(), 'is_deleted' => false]]);
+                    if ($idevices) {
+                        $devices = iterator_to_array($idevices);
+                        foreach ($devices as $device) { //only last set will be persisted
+                            $agent['itemtype'] = NetworkEquipment::class;
+                            $agent['item_id'] = $device['id'];
+                        }
+                        $DB->update(self::getTable(), $agent, ['id' => $agent['id']]);
+                    }
+
+                    $icomputers = $DB->request(['FROM' => Computer::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => Session::getActiveEntity(), 'is_deleted' => false]]);
+                    if ($icomputers) {
+                        $computers = iterator_to_array($icomputers);
+                        foreach ($computers as $computer) { //only last set will be persisted
+                            $agent['itemtype'] = Computer::class;
+                            $agent['item_id'] = $computer['id'];
+                        }
+                        $DB->update(self::getTable(), $agent, ['id' => $agent['id']]);
+                    }
+                }
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     static function syncAgents(): bool {
         $ids = (new Connection())->find(['is_deleted' => 0]);
         $allOk = true;

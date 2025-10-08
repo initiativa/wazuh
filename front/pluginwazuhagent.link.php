@@ -9,16 +9,17 @@ use GlpiPlugin\Wazuh\Connection;
 use GlpiPlugin\Wazuh\PluginWazuhAgent;
 
 // Check if user has access to this page
+//Session::checkRight("plugin_wazuh_agent", UPDATE);
+
 Session::checkLoginUser();
 Session::checkRight("plugin_wazuh_agent", UPDATE);
-
 
 // Get configuration
 $config = new Connection();
 $config->getFromDB(1);
 
 // Synchronize agents
-if (PluginWazuhAgent::syncAgents()) {
+if (PluginWazuhAgent::linkAgents()) {
     // Update last sync time
     $config->update([
         'id' => 1,
@@ -26,13 +27,13 @@ if (PluginWazuhAgent::syncAgents()) {
     ]);
     
     Session::addMessageAfterRedirect(
-        __('Agents synchronized successfully', 'wazuh'),
+        __('Agents linked successfully', 'wazuh'),
         true,
         INFO
     );
 } else {
     Session::addMessageAfterRedirect(
-        __('Not synchronizing all agents', 'wazuh'),
+        __('Not linked all agents', 'wazuh'),
         true,
         ERROR
     );
