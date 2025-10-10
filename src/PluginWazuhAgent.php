@@ -591,8 +591,8 @@ class PluginWazuhAgent extends CommonDBTM {
     }
 
     static function syncAgents(): bool {
-        $entities = getSonsOf(Entity::getTable(), Session::getActiveEntity());
-        $ids = (new Connection())->find(['is_deleted' => 0, $entities]);
+        $entities = array_values(getSonsOf(Entity::getTable(), Session::getActiveEntity()));
+        $ids = (new Connection())->find(['is_deleted' => 0, Entity::getForeignKeyField() => $entities]);
         $allOk = true;
         foreach ($ids as $id) {
             Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
@@ -612,7 +612,9 @@ class PluginWazuhAgent extends CommonDBTM {
    static function syncAgent(Connection $wazuhConfig): bool {
         global $DB;
 
-        $agents = self::fetchAgentsFromWazuh($wazuhConfig);
+       Logger::addDebug(__FUNCTION__ . json_encode($wazuhConfig));
+
+       $agents = self::fetchAgentsFromWazuh($wazuhConfig);
         if (empty($agents)) {
             Logger::addError(__FUNCTION__ . ' Empty agents.');
             return false;
@@ -644,7 +646,7 @@ class PluginWazuhAgent extends CommonDBTM {
                     }
                 }
 
-                $active_entity = $wazuhConfig[Entity::getForeignKeyField()];
+                $active_entity = $wazuhConfig->fields[Entity::getForeignKeyField()];
                 $agent_data = [
                     'agent_id' => $agent['id'],
                     'name' => $agent['name'],
