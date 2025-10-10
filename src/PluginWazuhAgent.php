@@ -213,7 +213,7 @@ class PluginWazuhAgent extends CommonDBTM {
 
             $migration->updateDisplayPrefs(
                     [
-                        'GlpiPlugin\Wazuh\PluginWazuhAgent' => [3, 4, 5, 6, 7, 8, 12]
+                        self::class => [13, 3, 4, 5, 6, 7, 8, 12]
                     ],
             );
         }
@@ -369,6 +369,17 @@ class PluginWazuhAgent extends CommonDBTM {
             "name" => __("Agent Status", PluginConfig::APP_CODE),
             "table" => self::getTable(),
             "field" => "status",
+            "searchtype" => "contains",
+            "datatype" => "text",
+            "massiveaction" => false,
+        ];
+
+        $tab[] = [
+            "id" => 13,
+            "name" => _n("Entity", "Entities", 2, PluginConfig::APP_CODE),
+            "table" => Entity::getTable(),
+            "linkfield" => "entities_id",
+            "field" => "completename",
             "searchtype" => "contains",
             "datatype" => "text",
             "massiveaction" => false,
@@ -535,10 +546,14 @@ class PluginWazuhAgent extends CommonDBTM {
     static function linkAgents(): bool {
        global $DB;
 
+       $entities = getSonsOf(Entity::getTable(), $_SESSION['glpiactive_entity']);
+
         $iterator = $DB->request([
             'FROM' => self::getTable(),
             'WHERE' => [
-                Entity::getForeignKeyField() => Session::getActiveEntity(),
+                Entity::getForeignKeyField() => $entities,
+                'item_id' => 0,
+                'is_deleted' => 0,
             ]
         ]);
 
@@ -547,7 +562,8 @@ class PluginWazuhAgent extends CommonDBTM {
             foreach ($agents as $agent) {
                 if (isset($agent['name'])) {
                     $aname = $agent['name'];
-                    $idevices = $DB->request(['FROM' => NetworkEquipment::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => Session::getActiveEntity(), 'is_deleted' => false]]);
+                    $aentity = $agent[Entity::getForeignKeyField()];
+                    $idevices = $DB->request(['FROM' => NetworkEquipment::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => $aentity, 'is_deleted' => false]]);
                     if ($idevices) {
                         $devices = iterator_to_array($idevices);
                         foreach ($devices as $device) { //only last set will be persisted
@@ -557,7 +573,7 @@ class PluginWazuhAgent extends CommonDBTM {
                         $DB->update(self::getTable(), $agent, ['id' => $agent['id']]);
                     }
 
-                    $icomputers = $DB->request(['FROM' => Computer::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => Session::getActiveEntity(), 'is_deleted' => false]]);
+                    $icomputers = $DB->request(['FROM' => Computer::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => $aentity, 'is_deleted' => false]]);
                     if ($icomputers) {
                         $computers = iterator_to_array($icomputers);
                         foreach ($computers as $computer) { //only last set will be persisted
@@ -700,17 +716,17 @@ class PluginWazuhAgent extends CommonDBTM {
         return $success_count > 0;
     }
 
-    private function collectDevices() {
+    private function collectDevices(int $agent_entity_id) {
         $elements = [];
 
         $elements[''] = Dropdown::EMPTY_VALUE;
 
         $computer = new Computer();
 
-        $entities = getSonsOf(Entity::getTable(), $_SESSION['glpiactive_entity']);
+//        $entities = getSonsOf(Entity::getTable(), $_SESSION['glpiactive_entity']);
         $computers = $computer->find([
             'is_deleted' => 0,
-            'entities_id' => $entities,
+            'entities_id' => $agent_entity_id,
         ]);
 
         foreach ($computers as $comp) {
@@ -720,7 +736,7 @@ class PluginWazuhAgent extends CommonDBTM {
         $network = new NetworkEquipment();
         $networks = $network->find([
             'is_deleted' => 0,
-            'entities_id' => $entities,
+            'entities_id' => $agent_entity_id,
         ]);
 
         foreach ($networks as $net) {
@@ -806,7 +822,7 @@ class PluginWazuhAgent extends CommonDBTM {
         echo "<td>" . __('Device') . "</td>";
         echo "<td>";
 
-        $elements = $this->collectDevices();
+        $elements = $this->collectDevices($this->fields['entities_id']);
 
         Dropdown::showFromArray('itemtype_item_id', $elements, [
             'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : 0,

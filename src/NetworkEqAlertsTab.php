@@ -61,6 +61,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     protected function countElements($device_id) {
         $count = countElementsInTableForMyEntities($this->getTable(), [
             NetworkEquipment::getForeignKeyField() => $device_id,
+            Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => ['<>', 0],
             'is_deleted' => 0
         ]);
@@ -90,7 +91,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
         global $DB;
         $key = $result['_id'];
         $item = new self();
-        $founded = $item->find(['key' => $key]);
+        $founded = $item->find(['key' => $key, Entity::getForeignKeyField() => $device->getEntityID(), 'is_deleted' => 0]);
 
         if (count($founded) > 1) {
             throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
@@ -110,14 +111,14 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
                 'date_mod' => (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
-                Entity::getForeignKeyField() => Session::getActiveEntity(),
+                Entity::getForeignKeyField() => $device->getEntityID(),
             ];
         } catch (\Exception $e) {
             Logger::addError($e->getMessage());
             return false;
         }
 
-        $parent_id = self::createParentItem($item_data, new self());
+        $parent_id = self::createParentItem($item_data, new self(), $device->getEntityID());
         if ($parent_id) {
             $item_data[self::getForeignKeyField()] = $parent_id;
         }
@@ -353,7 +354,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                      KEY `$networkeq_fkey` (`$networkeq_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
                      KEY `$itil_category_fkey` (`$itil_category_fkey`),
-                     UNIQUE KEY `key` (`key`),
+                     UNIQUE KEY `key` (`key`, `entities_id`),
                      KEY `source_timestamp` (`source_timestamp`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),

@@ -335,11 +335,18 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         );
     }
 
-    protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+    protected static function createParentItem(array $item_data, CommonDBTM $item, int $entity_id): int | false {
+        if ($item instanceof ComputerTab) {
+            $fkey = \Computer::getForeignKeyField();
+        } else {
+            $fkey = \NetworkEquipment::getForeignKeyField();
+        }
+
         $founded = $item->find([
             'name' => $item_data['name'],
             'is_discontinue' => false,
-            Entity::getForeignKeyField() => Session::getActiveEntity(),
+            $fkey => $item_data[$fkey],
+            Entity::getForeignKeyField() => $entity_id,
             static::getForeignKeyField() => 0
         ]);
 
@@ -347,14 +354,10 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             return reset($founded)['id'];
         }
 
-        if ($item instanceof ComputerTab) {
-            $fkey = \Computer::getForeignKeyField();
-        } else {
-            $fkey = \NetworkEquipment::getForeignKeyField();
-        }
-        
+
         $id = $item->add([
             'name' => $item_data['name'],
+            Entity::getForeignKeyField() => $entity_id,
             $fkey => $item_data[$fkey]
         ]);
 

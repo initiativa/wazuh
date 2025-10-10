@@ -64,7 +64,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
 
-    protected static function createParentItem(array $item_data, CommonDBTM $item): int | false {
+    protected static function createParentItem(array $item_data, CommonDBTM $item, int $entity_id): int | false {
 //        Logger::addDebug(__FUNCTION__ . json_encode($item_data, JSON_PRETTY_PRINT));
 
         if ($item_data['name'] === 'syscheck_integrity_changed') {
@@ -83,7 +83,8 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         $founded = $item->find([
             'name' => $item_data['name'],
             'is_discontinue' => false,
-            Entity::getForeignKeyField() => Session::getActiveEntity(),
+            $fkey => $item_data[$fkey],
+            Entity::getForeignKeyField() => $entity_id,
             static::getForeignKeyField() => 0
         ]);
 
@@ -98,6 +99,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
         $id = $item->add([
             'name' => $item_data['name'],
+            Entity::getForeignKeyField() => $entity_id,
             $fkey => $item_data[$fkey]
         ]);
 

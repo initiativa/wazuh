@@ -59,6 +59,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
    protected function countElements($computers_id) {
        $count = countElementsInTableForMyEntities($this->getTable(), [
            Computer::getForeignKeyField() => $computers_id,
+           Entity::getForeignKeyField() => Session::getActiveEntity(),
            static::getForeignKeyField() => ['<>', 0],
            'is_deleted' => 0
        ]);
@@ -143,7 +144,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
         global $DB;
         $key = $result['_id'];
         $item = new self();
-        $founded = $item->find(['key' => $key]);
+        $founded = $item->find(['key' => $key, Entity::getForeignKeyField() => $device->getEntityID(), 'is_deleted' => 0]);
         
         if (count($founded) > 1) {
             throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
@@ -169,10 +170,10 @@ class ComputerTab extends DeviceTab implements Ticketable {
             'p_description' => $DB->escape($result['_source']['package']['description'] ?? ''),
             'p_installed' => static::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'package', 'installed'])),
             'date_mod' => (new \DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
-            Entity::getForeignKeyField() => Session::getActiveEntity(),
+            Entity::getForeignKeyField() => $device->getEntityID(),
         ];
         
-        $parent_id = self::createParentItem($item_data, new self());
+        $parent_id = self::createParentItem($item_data, new self(), $device->getEntityID());
         if ($parent_id) {
             $item_data[self::getForeignKeyField()] = $parent_id;
         }
@@ -411,7 +412,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
                      KEY `$parent_fkey` (`$parent_fkey`),
                      KEY `$computer_fkey` (`$computer_fkey`),
                      KEY `$ticket_fkey` (`$ticket_fkey`),
-                     UNIQUE KEY `key` (`key`),
+                     UNIQUE KEY `key` (`key`, `entities_id`),
                      KEY `v_detected` (`v_detected`),
                      KEY `entities_id` (`entities_id`),
                      KEY `date_mod` (`date_mod`),

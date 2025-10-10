@@ -29,6 +29,7 @@ This plugin integrates Wazuh server alerts and events into GLPI, allowing automa
 
 4. **Link agents to devices**:
     - Use the **Devices** dropdown to assign each agent to a corresponding GLPI asset
+    - It is possible to link all devicess automatically with "Link Agents" button at the top. To this aim agent.name <-> device.name matching system is in use.
 
 5. **Fetching alerts and vulnerabilities**:
     - By default, the plugin fetches data **every hour**
