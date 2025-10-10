@@ -310,7 +310,7 @@ trait IndexerRequestsTrait {
         }
 
         $currentTime = time();
-        $session_key = PluginConfig::VQUERY_TIME_SESSION_KEY . $agentIds[0];
+        $session_key = PluginConfig::VQUERY_TIME_SESSION_KEY . '_' . $agentIds[0] . '_' . Session::getActiveEntity();
 
         $lastExecutionTime = isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : -1;
 
@@ -402,7 +402,7 @@ trait IndexerRequestsTrait {
         }
 
         $currentTime = time();
-        $session_key = PluginConfig::VQUERY_ALERT_TIME_SESSION_KEY . $agentIds[0];
+        $session_key = PluginConfig::VQUERY_ALERT_TIME_SESSION_KEY . '_' . $agentIds[0] . '_' . Session::getActiveEntity();
 
         $lastExecutionTime = isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : -1;
 
