@@ -35,11 +35,16 @@ class PluginConfig
 
     public const PLUGIN_ROOT = GLPI_ROOT . "/plugins/" . self::APP_CODE;
 
-    public static function loadVersionNumber(): string
-    {
+    public static function loadVersionNumber(): string {
         $xml = simplexml_load_file(static::PLUGIN_ROOT . "/wazuh.xml");
-        $versionNumber = (string) $xml->versions->version->num;
 
-        return $versionNumber;
+        foreach ($xml->versions->version as $version) {
+            $compatibility = (string) $version->compatibility;
+            if (str_contains($compatibility, '~11.0') || str_contains($compatibility, '11.0')) {
+                return (string) $version->num;
+            }
+        }
+
+        return '0';
     }
 }

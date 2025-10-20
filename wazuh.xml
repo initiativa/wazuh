@@ -28,11 +28,16 @@
       <author>Tomasz W. / Initiativa srl</author>
    </authors>
    <versions>
-      <version>
-         <num>0.0.22</num>
-         <compatibility>~10.0</compatibility>
-         <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.22/wazuh-0.0.22.tar.gz</download_url>
-      </version>
+       <version>
+           <num>0.1.0</num>
+           <compatibility>~11.0</compatibility>
+           <download_url>https://github.com/initiativa/wazuh/releases/download/0.1.0/wazuh-0.1.0.tar.gz</download_url>
+       </version>
+       <version>
+           <num>0.0.22</num>
+           <compatibility>~10.0</compatibility>
+           <download_url>https://github.com/initiativa/wazuh/releases/download/0.0.22/wazuh-0.0.22.tar.gz</download_url>
+       </version>
    </versions>
    <langs>
       <lang>de_DE</lang>
