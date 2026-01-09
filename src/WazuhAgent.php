@@ -19,9 +19,14 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use Cluster;
 use CommonDBTM;
+use Config;
 use Entity;
 use Exception;
+use Glpi\Application\View\TemplateRenderer;
+use GlpiPlugin\Conformitas\User_Item;
+use GlpiPlugin\Wazuh\Traits\FieldValidation;
 use Migration;
 use Session;
 use Html;
@@ -30,12 +35,14 @@ use NetworkEquipment;
 use Computer;
 use DBConnection;
 /**
- * Description of PluginWazuhAgent
+ * Description of WazuhAgent
  *
  * @author w-tomasz
  */
 
-class PluginWazuhAgent extends CommonDBTM {
+class WazuhAgent extends CommonDBTM {
+    use FieldValidation;
+
    public static $rightname = 'plugin_wazuh_agent';
    public $dohistory = true;
    
@@ -44,6 +51,12 @@ class PluginWazuhAgent extends CommonDBTM {
 //        $relation->showItems($this);
 //    }
 //
+
+    public static function getSectorizedDetails(): array {
+        return ['admin', self::class];
+    }
+
+
     /**
     * Visible tabs definitions
     * @param array $options
@@ -58,26 +71,10 @@ class PluginWazuhAgent extends CommonDBTM {
       
       return $ong;
    }
-   
+
     #[\Override]
-    public static function getMenuContent()
-    {
-        $menu = [];
-        if (\Config::canUpdate()) {
-            $menu["title"] = self::getMenuName();
-            $menu["page"] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhagent.php";
-            $menu["icon"] = self::getIcon();
-            
-        $menu['options']['tools']['title'] = self::getMenuName() . '2';
-        $menu['options']['tools']['page'] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhagent.php";
-        $menu['options']['tools']['icon'] = self::getIcon();
-
-        $menu['tools']['title'] = self::getMenuName() . '3';
-        $menu['tools']['page'] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/pluginwazuhagent.php";
-        $menu['tools']['icon'] = self::getIcon();
-
-        }
-
+    public static function getMenuContent(): false|array {
+        $menu = parent::getMenuContent();
         $sync_agents = "<i class='fas fa-shield-alt m-1' title='sync_btn' data-bs-toggle='tooltip'></i>" . _n(' Sync Agent', 'Sync Agents', 2, PluginConfig::APP_CODE);
         $link_agents = "<i class='fas fa-link m-1' title='link_btn'></i>" . _n(' Link Agent', 'Link Agents', 2, PluginConfig::APP_CODE);
 
@@ -91,27 +88,30 @@ class PluginWazuhAgent extends CommonDBTM {
         return false;
     }
 
+    public static function canCreate(): bool {
+        return false;
+    }
+
 
     #[\Override]
-    public static function getIcon() {
+    public static function getIcon(): string {
         return "fa-solid fa-user-secret";
     }
 
     #[\Override]
-    public static function getTypeName($nb = 0)
-    {
+    public static function getTypeName($nb = 0): string {
         return _n("Wazuh Agent", "Wazuh Agent's", $nb, "wazuh");
     }
 
-   /**
-    * Foreignkeys returning
-    * @return string
-    */
-   static function getForeignKeyField() {
-      return 'plugin_wazuh_agents_id';
-   }
+//   /**
+//    * Foreignkeys returning
+//    * @return string
+//    */
+//   static function getForeignKeyField() {
+//      return 'plugin_wazuh_agents_id';
+//   }
    
-   public static function getByDeviceTypeAndId(string $itemtype, int $item_id): ?PluginWazuhAgent {
+   public static function getByDeviceTypeAndId(string $itemtype, int $item_id): ?WazuhAgent {
        $agent = new self();
        global $DB;
 
@@ -166,7 +166,7 @@ class PluginWazuhAgent extends CommonDBTM {
     * @param object $migration
     * @return boolean
     */
-   static function install(Migration $migration, string $version) {
+   static function install(Migration $migration, string $version): bool {
         global $DB;
 
         $table = self::getTable();
@@ -232,7 +232,7 @@ class PluginWazuhAgent extends CommonDBTM {
        return true;
     }
 
-    static function indexExists($table, $index_name) {
+    static function indexExists($table, $index_name): bool {
         global $DB;
 
         $iterator = $DB->request([
@@ -592,13 +592,18 @@ class PluginWazuhAgent extends CommonDBTM {
 
     static function syncAgents(): bool {
         $entities = array_values(getSonsOf(Entity::getTable(), Session::getActiveEntity()));
-        $ids = (new Connection())->find(['is_deleted' => 0, Entity::getForeignKeyField() => $entities]);
+        $ids = (new Connection())->find(['is_deleted' => 0, 'is_conn_active' => 1, Entity::getForeignKeyField() => $entities]);
         $allOk = true;
         foreach ($ids as $id) {
             Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
             $wazuhConfig = Connection::getById($id['id']);
             if (!self::syncAgent($wazuhConfig)) {
                 $allOk = false;
+            } else {
+                $wazuhConfig->update([
+                    'id' => 1,
+                    'last_sync' => date('Y-m-d H:i:s')
+                ]);
             }
         }
         return $allOk;
@@ -719,173 +724,23 @@ class PluginWazuhAgent extends CommonDBTM {
         return $success_count > 0;
     }
 
-    private function collectDevices(int $agent_entity_id) {
-        $elements = [];
-
-        $elements[''] = Dropdown::EMPTY_VALUE;
-
-        $computer = new Computer();
-
-//        $entities = getSonsOf(Entity::getTable(), $_SESSION['glpiactive_entity']);
-        $computers = $computer->find([
-            'is_deleted' => 0,
-            'entities_id' => $agent_entity_id,
-        ]);
-
-        foreach ($computers as $comp) {
-            $elements['Computer___' . $comp['id']] = 'Computer > ' . $comp['name'];
-        }
-
-        $network = new NetworkEquipment();
-        $networks = $network->find([
-            'is_deleted' => 0,
-            'entities_id' => $agent_entity_id,
-        ]);
-
-        foreach ($networks as $net) {
-            $elements['NetworkEquipment___' . $net['id']] = 'NetworkEquipment > ' . $net['name'];
-        }
-        
-        return $elements;
-    }
-    
-    /**
-    * @param integer $ID ID agenta
-    * @param array $options
-    * @return boolean
-    */
-   function showForm($ID, array $options = []) {
+    public function showForm($ID, array $options = []): true {
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
-        $this->showFormHeader($options);
+        $new_item = static::isNewID($ID);
+        $in_modal = (bool) ($_GET['_in_modal'] ?? false);
+        $cluster = !$new_item && in_array(static::class, $CFG_GLPI['cluster_types'], true)
+            ? Cluster::getClusterByItem($this)
+            : null;
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Name') . "</td>";
-        echo "<td>";
-        echo Html::input('name', ['value' => $this->fields['name'], 'class' => 'form-control']);
-        echo "</td>";
-        echo "<td>" . __('Agent ID', 'wazuh') . "</td>";
-        echo "<td>";
-        echo Html::input('agent_id', ['value' => $this->fields['agent_id'], 'class' => 'form-control', 'readonly' => 'readonly']);
-        echo "</td>";
-        echo "</tr>";
 
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('IP Address') . "</td>";
-        echo "<td>";
-        echo Html::input('ip', ['value' => $this->fields['ip'], 'class' => 'form-control']);
-        echo "</td>";
-        echo "<td>" . __('Status', 'wazuh') . "</td>";
-        echo "<td>";
-        echo Dropdown::showFromArray('status', [
-            'active' => __('Active', 'wazuh'),
-            'disconnected' => __('Disconnected', 'wazuh'),
-            'pending' => __('Pending', 'wazuh'),
-            'never_connected' => __('Never Connected', 'wazuh')
-                ], ['value' => $this->fields['status'], 'display' => false]);
-        echo "</td>";
-        echo "</tr>";
-
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Version', 'wazuh') . "</td>";
-        echo "<td>";
-        echo Html::input('version', ['value' => $this->fields['version'], 'class' => 'form-control']);
-        echo "</td>";
-        echo "<td>" . __('Last Keep Alive', 'wazuh') . "</td>";
-        echo "<td>";
-        Html::showDateTimeField('last_keepalive', ['value' => $this->fields['last_keepalive']]);
-        echo "</td>";
-        echo "</tr>";
-
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('OS Name', 'wazuh') . "</td>";
-        echo "<td>";
-        echo Html::input('os_name', ['value' => $this->fields['os_name'], 'class' => 'form-control']);
-        echo "</td>";
-        echo "<td>" . __('OS Version', 'wazuh') . "</td>";
-        echo "<td>";
-        echo Html::input('os_version', ['value' => $this->fields['os_version'], 'class' => 'form-control']);
-        echo "</td>";
-        echo "</tr>";
-
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Groups', 'wazuh') . "</td>";
-        echo "<td colspan='3'>";
-        echo Html::textarea([
-            'name' => 'groups',
-            'value' => $this->fields['groups'],
-            'cols' => 100,
-            'rows' => 3
-        ]);
-        echo "</td>";
-        echo "</tr>";
-
-        echo "<tr class='tab_bg_1'>";
-        echo "<td>" . __('Device') . "</td>";
-        echo "<td>";
-
-        $elements = $this->collectDevices($this->fields['entities_id']);
-
-        Dropdown::showFromArray('itemtype_item_id', $elements, [
-            'value' => (!empty($this->fields['item_id'])) ? $this->fields['itemtype'] . '___' . $this->fields['item_id'] : 0,
-            'rand' => mt_rand(),
-            'width' => '100%'
+        echo TemplateRenderer::getInstance()->render('@wazuh/agent.form.html.twig', [
+            'item'   => $this,
+            'params' => $options,
+            'additional_field_options' => self::getAdditionalFieldOptions(),
         ]);
 
-        echo Html::scriptBlock("
-            $(document).ready(function() {
-                $('form').submit(function() {
-                    var selected = $('select[name=\"itemtype_item_id\"]').val();
-                    if (selected) {
-                        var parts = selected.split('___');
-                        if (parts.length == 2) {
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'itemtype',
-                                value: parts[0]
-                            }).appendTo('form');
-
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'item_id',
-                                value: parts[1]
-                            }).appendTo('form');
-                        } else {
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'itemtype',
-                                value: ''
-                            }).appendTo('form');
-
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'item_id',
-                                value: '0'
-                            }).appendTo('form');
-                        }
-                    } else {
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'itemtype',
-                                value: ''
-                            }).appendTo('form');
-
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'item_id',
-                                value: '0'
-                            }).appendTo('form');
-                    }
-                    return true;
-                });
-            });
-        ");
-
-        echo "</td>";
-        echo "</tr>";
-
-        $this->showFormButtons($options);
-       return true;
+        return true;
     }
 }

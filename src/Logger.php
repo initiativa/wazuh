@@ -30,8 +30,13 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use Monolog\Level;
+use Session;
+
 class Logger {
     use LoggerArrayTrait;
+
+    private static string $plugin = PluginConfig::APP_CODE;
 
     protected static $DEBUG = 100;
     protected static $INFO = 200;
@@ -44,73 +49,78 @@ class Logger {
 
     /**
      *
-     * @global Logger $PHPLOGGER
      * @param int $type
      * @param string $message
      * @param array $details
+     *@global Logger $PHPLOGGER
      */
-    protected static function add($type, $message, $details = [])
-    {
+    protected static function add(int $type, string $message, array $details = []): void {
         global $PHPLOGGER;
-        switch ($type) {
-            case self::$DEBUG:
-                $recordType = \Monolog\Logger::DEBUG;
-                break;
-            case self::$INFO:
-                $recordType = \Monolog\Logger::INFO;
-                break;
-            case self::$NOTICE:
-                $recordType = \Monolog\Logger::NOTICE;
-                break;
-            case self::$WARNING:
-                $recordType = \Monolog\Logger::WARNING;
-                break;
-            case self::$ERROR:
-                $recordType = \Monolog\Logger::ERROR;
-                break;
-            case self::$CRITICAL:
-                $recordType = \Monolog\Logger::CRITICAL;
-                break;
-            default:
-                $recordType = \Monolog\Logger::INFO;
-                break;
-        }
+        $recordType = match ($type) {
+            self::$DEBUG => Level::Debug,
+            self::$NOTICE => Level::Notice,
+            self::$WARNING => Level::Warning,
+            self::$ERROR => Level::Error,
+            self::$CRITICAL => Level::Critical,
+            default => Level::Info,
+        };
         $PHPLOGGER->addRecord($recordType, $message, $details);
     }
 
-    public static function addDebug($message, $details = [])
-    {
-        $message = __NAMESPACE__ . ":: " . $message;
+    public static function addDebug($message, $details = []): void {
+        $message = self::format($message);
         self::add(self::$DEBUG, $message, $details);
     }
 
-    public static function addInfo($message, $details = [])
-    {
-        $message = __NAMESPACE__ . ":: " . $message;
+    public static function addInfo($message, $details = []): void {
+        $message = self::format($message);
         self::add(self::$INFO, $message, $details);
     }
 
-    public static function addNotice($message, $details = [])
-    {
-        $message = __NAMESPACE__ . ":: " . $message;
+    public static function addNotice($message, $details = []): void {
+        $message = self::format($message);
         self::add(self::$NOTICE, $message, $details);
     }
 
-    public static function addWarning($message, $details = [])
-    {
-        $message = __NAMESPACE__ . ":: " . $message;
+    public static function addWarning($message, $details = []): void {
+        $message = self::format($message);
         self::add(self::$WARNING, $message, $details);
     }
 
-    public static function addError($message, $details = [])
-    {
-        $message = __NAMESPACE__ . ":: " . $message;
+    public static function addError($message, $details = []): void {
+        $message = self::format($message);
         self::add(self::$ERROR, $message, $details);
     }
 
-    public static function addCritical($message, $details = [])
-    {
-        $message = __NAMESPACE__ . ":: " . $message;
+    public static function addCritical($message, $details = []): void {
+        $message = self::format($message);
         self::add(self::$CRITICAL, $message, $details);
     }
+
+    private static function format($message): string {
+        if ($_SESSION['glpi_use_mode'] === Session::DEBUG_MODE) {
+            $trace = debug_backtrace();
+
+            $call = $trace[2] ?? [];
+            $file = $call['file'] ?? null;
+            $line = $call['line'] ?? '0';
+            $function = $call['function'] ?? null;
+            $class = $call['class'] ?? $trace[3]['class'] ?? null;
+            $shortClass = null;
+            if ($class != null) {
+                $parts = explode('\\', $class);
+                $shortClass = end($parts);
+            }
+            $type = $call['type'] ?? null;
+
+            return "[" . self::$plugin . "/$shortClass/$function/$line/" . Session::getLoginUserID() . "]: " . $message . "\n";
+        }
+
+        return __NAMESPACE__ . ":: " . $message;
+    }
+
+    public static function debug(string $msg): void {
+        self::addDebug($msg);
+    }
+
 }

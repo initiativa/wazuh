@@ -5,39 +5,29 @@
 
 include ('../../../inc/includes.php');
 
-use GlpiPlugin\Wazuh\Connection;
-use GlpiPlugin\Wazuh\PluginWazuhAgent;
+use Glpi\Exception\RedirectException;
+use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\WazuhAgent;
 
 // Check if user has access to this page
 Session::checkLoginUser();
 Session::checkRight("plugin_wazuh_agent", UPDATE);
 
-
-// Get configuration
-$config = new Connection();
-$config->getFromDB(1);
-
 // Synchronize agents
-if (PluginWazuhAgent::syncAgents()) {
-    // Update last sync time
-    $config->update([
-        'id' => 1,
-        'last_sync' => date('Y-m-d H:i:s')
-    ]);
-    
+if (WazuhAgent::syncAgents()) {
+
     Session::addMessageAfterRedirect(
-        __('Agents synchronized successfully', 'wazuh'),
+        __('Active agents synchronized successfully', PluginConfig::APP_CODE),
         true,
         INFO
     );
 } else {
     Session::addMessageAfterRedirect(
-        __('Not synchronizing all agents', 'wazuh'),
+        __('Not synchronizing all agents', PluginConfig::APP_CODE),
         true,
         ERROR
     );
 }
 
 // Redirect to agent list
-Html::redirect('pluginwazuhagent.php');
-
+Html::redirect(WazuhAgent::getSearchURL());

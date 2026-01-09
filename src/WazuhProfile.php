@@ -47,7 +47,7 @@ class WazuhProfile extends \Profile {
       
       self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'],
                 [
-                    PluginWazuhAgent::$rightname => \ALLSTANDARDRIGHT,
+                    WazuhAgent::$rightname => \ALLSTANDARDRIGHT,
                     Connection::$rightname => \ALLSTANDARDRIGHT
                 ]
         );

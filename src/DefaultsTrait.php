@@ -42,6 +42,7 @@ trait DefaultsTrait {
                 'indexer_port' => '9200',
                 'indexer_user' => 'admin_tomasz',
                 'indexer_password' => (new GLPIKey())->encrypt(getenv('IPASS2')),
+                'is_conn_active' => 0,
             ]);
             $DB->insert($table, [
                 'id' => 2,

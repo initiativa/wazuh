@@ -57,7 +57,7 @@ function plugin_wazuh_install() {
     $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
 
     \GlpiPlugin\Wazuh\Connection::install($migration, $version);
-    \GlpiPlugin\Wazuh\PluginWazuhAgent::install($migration, $version);
+    \GlpiPlugin\Wazuh\WazuhAgent::install($migration, $version);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::install($migration);
     \GlpiPlugin\Wazuh\ComputerTab::install($migration, $version);
     \GlpiPlugin\Wazuh\NetworkEqTab::install($migration, $version);
@@ -92,7 +92,7 @@ function plugin_wazuh_uninstall() {
     $migration = new Migration(PLUGIN_WAZUH_VERSION);
     $migration->displayMessage("Uninstalling tables from " . PLUGIN_WAZUH_VERSION);
     
-    \GlpiPlugin\Wazuh\PluginWazuhAgent::uninstall($migration);
+    \GlpiPlugin\Wazuh\WazuhAgent::uninstall($migration);
     \GlpiPlugin\Wazuh\Connection::uninstall($migration);
     \GlpiPlugin\Wazuh\WazuhAgentAssetsRelation::uninstall($migration);
     \GlpiPlugin\Wazuh\ComputerTab::uninstall($migration);

@@ -40,7 +40,7 @@ use Ticket;
 class ExtApi {
 
     /**
-     * @param CommonGLPI $device device of type Computer or NetworkEquipment with active link of PluginWazuhAgent->device. For example \Computer::getById(1) ...
+     * @param CommonGLPI $device device of type Computer or NetworkEquipment with active link of WazuhAgent->device. For example \Computer::getById(1) ...
      * @return array|false
      */
     public static function fetchLatestVulnerabilities(CommonGLPI $device): array | false {

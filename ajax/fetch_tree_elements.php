@@ -5,13 +5,13 @@ use GlpiPlugin\Wazuh\ComputerTab;
 use GlpiPlugin\Wazuh\Logger;
 use GlpiPlugin\Wazuh\NetworkEqAlertsTab;
 use GlpiPlugin\Wazuh\NetworkEqTab;
-use GlpiPlugin\Wazuh\PluginWazuhAgent;
+use GlpiPlugin\Wazuh\WazuhAgent;
 
 include('../../../inc/includes.php');
 
 // Check user session and rights
 Session::checkLoginUser();
-Session::checkRight(PluginWazuhAgent::$rightname, READ);
+Session::checkRight(WazuhAgent::$rightname, READ);
 
 const page_size = 10;
 

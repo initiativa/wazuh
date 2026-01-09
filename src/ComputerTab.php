@@ -218,7 +218,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
 
     public static function getAgentVulnerabilities(CommonGLPI $device): array | false {
         if ($device instanceof Computer) {
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            $agent = WazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
@@ -334,7 +334,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
             return 0;
         }
 
-        $agents_table = PluginWazuhAgent::getTable();
+        $agents_table = WazuhAgent::getTable();
         $agents_criteria = [
             'SELECT' => [Connection::getForeignKeyField()],
             'FROM' => $agents_table,

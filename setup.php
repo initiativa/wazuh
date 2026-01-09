@@ -72,7 +72,7 @@ function plugin_init_wazuh() {
         }
 
         $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
-            'admin' => [\GlpiPlugin\Wazuh\PluginWazuhAgent::class],
+            'admin' => [\GlpiPlugin\Wazuh\WazuhAgent::class],
         ];
 
         $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];
@@ -97,7 +97,7 @@ function plugin_wazuh_registerClasses() {
         'addtabon' => ['NetworkEquipment']
     ]);
 
-    Plugin::registerClass(\GlpiPlugin\Wazuh\PluginWazuhAgent::class);
+    Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhAgent::class);
     Plugin::registerClass(\GlpiPlugin\Wazuh\Connection::class);
 }
 

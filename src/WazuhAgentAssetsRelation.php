@@ -30,7 +30,7 @@ use Migration;
  */
 class WazuhAgentAssetsRelation extends CommonDBRelation {
 
-    static $itemtype_1 = 'PluginWazuhAgent';
+    static $itemtype_1 = 'WazuhAgent';
     static $items_id_1 = 'pluginwazuhagent_id'; // Foreign key to your class
     static $table_name = 'glpi_plugin_wazuh_agentassets';
 
@@ -48,7 +48,7 @@ class WazuhAgentAssetsRelation extends CommonDBRelation {
     function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
         if ($item->getType() == 'Computer' || $item->getType() == 'NetworkEquipment') {
             return self::getTypeName(2);
-        } else if ($item->getType() == 'PluginWazuhAgent') {
+        } else if ($item->getType() == 'WazuhAgent') {
             return _n('Associated item', 'Associated items', Session::getPluralNumber());
         }
         return '';
@@ -65,7 +65,7 @@ class WazuhAgentAssetsRelation extends CommonDBRelation {
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
         if ($item->getType() == 'Computer' || $item->getType() == 'NetworkEquipment') {
             self::showForItem($item);
-        } else if ($item->getType() == 'PluginWazuhAgent') {
+        } else if ($item->getType() == 'WazuhAgent') {
             self::showItems($item);
         }
         return true;
@@ -115,7 +115,7 @@ class WazuhAgentAssetsRelation extends CommonDBRelation {
         $rand = mt_rand();
 
         if ($number > 0) {
-            $customClass = new PluginWazuhAgent();
+            $customClass = new WazuhAgent();
 
             echo "<div class='spaced'>";
             if ($number > 0) {

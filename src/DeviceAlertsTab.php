@@ -243,7 +243,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         $cron_status = 0;
         Logger::addInfo("Executing cron - FetchAlerts.");
 
-        $agents = (new PluginWazuhAgent())->find([
+        $agents = (new WazuhAgent())->find([
             'itemtype' => 'Computer',
         ]);
         $device_ids = [];
@@ -263,7 +263,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
             }
         }
 
-        $agents = (new PluginWazuhAgent())->find([
+        $agents = (new WazuhAgent())->find([
             'itemtype' => 'NetworkEquipment',
         ]);
 

@@ -6,7 +6,7 @@
 include ('../../../inc/includes.php');
 
 use GlpiPlugin\Wazuh\Connection;
-use GlpiPlugin\Wazuh\PluginWazuhAgent;
+use GlpiPlugin\Wazuh\WazuhAgent;
 
 // Check if user has access to this page
 //Session::checkRight("plugin_wazuh_agent", UPDATE);
@@ -19,7 +19,7 @@ $config = new Connection();
 $config->getFromDB(1);
 
 // Synchronize agents
-if (PluginWazuhAgent::linkAgents()) {
+if (WazuhAgent::linkAgents()) {
     // Update last sync time
     $config->update([
         'id' => 1,
@@ -40,5 +40,4 @@ if (PluginWazuhAgent::linkAgents()) {
 }
 
 // Redirect to agent list
-Html::redirect('pluginwazuhagent.php');
-
+Html::redirect(WazuhAgent::getSearchURL());

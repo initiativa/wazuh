@@ -242,8 +242,6 @@ class Connection extends CommonDBTM implements Upgradeable {
                   ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation}";
             $DB->doQuery($query) or die("Error creating $table table");
 
-            self::defaultsConfigData($table);
-
         }
 
         if (version_compare('0.0.5', $version, '<=')) {
@@ -256,6 +254,9 @@ class Connection extends CommonDBTM implements Upgradeable {
             $migration->addField($table, 'is_conn_active', "tinyint(1) NOT NULL DEFAULT '1'");
             $migration->addKey($table, 'is_conn_active', 'is_conn_active');
         }
+
+        $migration->migrationOneTable($table);
+        self::defaultsConfigData($table);
 
         $migration->updateDisplayPrefs(
             [

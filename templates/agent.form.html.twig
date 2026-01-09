@@ -1,0 +1,92 @@
+{% extends "generic_show_form.html.twig" %}
+{% import '@wazuh/fields_macros.html.twig' as fields %}
+
+{% block form_fields %}
+    {% set APP_CODE = constant('GlpiPlugin\\Wazuh\\PluginConfig::APP_CODE') %}
+
+    {{ fields.textField(
+        'name',
+        item.fields['name'],
+        __('Name', APP_CODE),
+        { 'required': true }|merge(additional_field_options['name']|default({}))
+    ) }}
+
+    {{ fields.textField(
+        'agent_id',
+        item.fields['agent_id'],
+        __('Agent ID', APP_CODE),
+        { 'required': true }|merge(additional_field_options['agent_id']|default({}))
+    ) }}
+
+    {{ fields.textField(
+        'ip',
+        item.fields['ip'],
+        __('Address IP', APP_CODE),
+        { 'required': true }|merge(additional_field_options['ip']|default({}))
+    ) }}
+
+    {{ fields.dropdownArrayField(
+        'status',
+        item.fields['status'],
+        {
+            'active': __('Active', APP_CODE),
+            'disconnected': __('Disconnected', APP_CODE),
+            'pending': __('Pending', APP_CODE),
+            'never_connected': __('Never Connected', APP_CODE),
+        },
+        __('Status', APP_CODE),
+        { 'required': false }|merge(additional_field_options['status']|default({}))
+    ) }}
+
+    {{ fields.textField(
+        'version',
+        item.fields['version'],
+        __('Version', APP_CODE),
+        { 'required': true }|merge(additional_field_options['version']|default({}))
+    ) }}
+
+    {{ fields.dateField(
+        'last_keepalive',
+        item.fields['last_keepalive'],
+        __('Last Keep Alive', APP_CODE),
+        {'required': false}|merge(additional_field_options['last_keepalive']|default({}))
+    )}}
+
+    {{ fields.textField(
+        'os_name',
+        item.fields['os_name'],
+        __('OS Name', APP_CODE),
+        { 'required': true }|merge(additional_field_options['os_name']|default({}))
+    ) }}
+
+    {{ fields.textField(
+        'os_version',
+        item.fields['os_version'],
+        __('OS Version', APP_CODE),
+        { 'required': false }|merge(additional_field_options['os_version']|default({}))
+    ) }}
+
+    {{ fields.textareaField(
+        'groups',
+        item.fields['groups'],
+        __('Groups', APP_CODE),
+        { 'required': false }|merge(additional_field_options['groups']|default({}))
+    ) }}
+
+    {{ fields.dropdownItemsFromItemtypes(
+        'device_type_id',
+        __('Device', APP_CODE),
+        {
+            itemtypes: ['Computer', 'NetworkEquipment'],
+            itemtype_name: 'itemtype',
+            items_id_name: 'item_id',
+            checkright: true,
+            entity_restrict: session('glpiactive_entity'),
+            default_itemtype: item.fields['itemtype'] ?? '',
+            default_items_id: item.fields['item_id'] ?? '',
+            required: true,
+            width: '45%',
+        },
+    ) }}
+
+{% endblock %}
