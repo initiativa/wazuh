@@ -19,11 +19,11 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use CommonDBTM;
 use Exception;
-use Migration;
-use Html;
-use GLPIKey;
 use Glpi\Application\View\TemplateRenderer;
+use GLPIKey;
+use Migration;
 
 /**
  * Description of PluginWazuhConnection
@@ -31,7 +31,7 @@ use Glpi\Application\View\TemplateRenderer;
  * @author w-tomasz
  */
 
-class Connection extends \CommonDropdown implements Upgradeable {
+class Connection extends CommonDBTM implements Upgradeable {
     use DefaultsTrait;
 
     public static $rightname = 'plugin_wazuh_connection';
@@ -39,17 +39,17 @@ class Connection extends \CommonDropdown implements Upgradeable {
     public $dohistory = true;
    
     #[\Override]
-    public static function getTypeName($nb = 0) {
+    public static function getTypeName($nb = 0): string {
         return _n("Wazuh Config", "Wazuh Config's", $nb, PluginConfig::APP_CODE);
     }
 
     #[\Override]
-    public function prepareInputForAdd($input) {
+    public function prepareInputForAdd($input): array|false {
         return $this->prepareInput($input);
     }
 
     #[\Override]
-    public function prepareInputForUpdate($input) {
+    public function prepareInputForUpdate($input): array|false {
         return $this->prepareInput($input);
     }
 
@@ -66,38 +66,14 @@ class Connection extends \CommonDropdown implements Upgradeable {
        return true;
     }
 
-//    public static function canCreate() {
-//        return true;
-//    }
 
     #[\Override]
-    public static function getMenuContent()
-    {
-        $menu = [];
-        if (\Config::canUpdate()) {
-            $menu["title"] = self::getMenuName();
-            $menu["page"] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/connection.php";
-            $menu["icon"] = self::getIcon();
-        }
-        
-        $menu['options']['config']['title'] = 'Connection3';
-        $menu['options']['config']['page'] = "/" . \Plugin::getWebDir(PluginConfig::APP_CODE, false) . "/front/connection.php";
-        $menu['options']['config']['icon'] = 'fas fa-cog';
-
-        if (count($menu)) {
-            return $menu;
-        }
-
-        return false;
-    }
-    
-    #[\Override]
-    public static function getIcon() {
+    public static function getIcon(): string {
         return "fa-solid fa-satellite-dish";
     }
 
     #[\Override]
-    public function rawSearchOptions() {
+    public function rawSearchOptions(): array {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [

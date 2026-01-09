@@ -32,11 +32,6 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 }
 
 require_once (PLUGIN_WAZUH_DIR . "/src/PluginConfig.php");
-//require_once (PLUGIN_WAZUH_DIR .  "/src/Logger.php");
-//require_once (PLUGIN_WAZUH_DIR .  "/src/Menu.php");
-//require_once (PLUGIN_WAZUH_DIR .  "/hook.php");
-
-//require_once (PLUGIN_WAZUH_DIR . "/vendor/autoload.php");
 
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\Logger;
@@ -46,9 +41,9 @@ use Glpi\Plugin\Hooks;
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
 // Minimal GLPI version, inclusive
-define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "10.0.11");
+define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "11.0.4");
 // Maximum GLPI version, exclusive
-define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "11.0.1");
+define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "12.0.1");
 
 /**
  * Init hooks of the plugin.
@@ -62,8 +57,6 @@ function plugin_init_wazuh() {
     ini_set('display_errors', 1);
     ini_set('display_startup_errors', 1);
     error_reporting(E_ALL);
-
-    $PLUGIN_HOOKS[Hooks::CSRF_COMPLIANT][PluginConfig::APP_CODE] = true;
 
     if (Plugin::isPluginActive(PluginConfig::APP_CODE)) {
 

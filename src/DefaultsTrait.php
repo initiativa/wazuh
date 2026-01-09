@@ -26,7 +26,7 @@ use GLPIKey;
  */
 trait DefaultsTrait {
 
-    protected static function defaultsConfigData($table) {
+    protected static function defaultsConfigData($table): void {
         global $DB;
 
         if (strlen(getenv('WPASS1')) > 2) {
@@ -50,7 +50,11 @@ trait DefaultsTrait {
                 'api_port' => '55000',
                 'api_username' => 'wazuh-wui',
                 'api_password' => (new GLPIKey())->encrypt(getenv('WPASS1')),
-                'sync_interval' => 86400
+                'sync_interval' => 86400,
+                'indexer_url' => 'https://192.168.0.2',
+                'indexer_port' => '9200',
+                'indexer_user' => 'admin',
+                'indexer_password' => (new GLPIKey())->encrypt(getenv('IPASS1')),
             ]);
 
         }
