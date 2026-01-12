@@ -19,23 +19,20 @@
 
 namespace GlpiPlugin\Wazuh;
 
-use Glpi\Application\View\TemplateRenderer;
-use CommonGLPI;
 use CommonDBTM;
-use Migration;
+use CommonGLPI;
+use CommonTreeDropdown;
 use Computer;
-use NetworkEquipment;
-use QueryExpression;
-use Ticket;
-use MassiveAction;
-use DBConnection;
-use Html;
 use Entity;
+use Glpi\Application\View\TemplateRenderer;
+use Glpi\DBAL\QueryExpression;
+use Glpi\Features\TreeBrowseInterface;
+use Html;
+use MassiveAction;
+use NetworkEquipment;
 use Search;
 use Session;
-use ITILFollowup;
-use Item_Ticket;
-use CommonTreeDropdown;
+use Ticket;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -46,7 +43,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
+abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, TreeBrowseInterface {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -152,7 +149,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return true;
     }
 
-    static function showBrowseView($itemtype, $params): void
+    static function showBrowseView(string $itemtype, array $params, $update = false)
     {
         $item_id = $params['criteria'][0]['value'];
         $params['criteria'][] = [
@@ -626,6 +623,16 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 //        ];
 
         return $tab;
+    }
+
+    public static function getTreeCategoryList(string $itemtype, array $params): array {
+        // Seems implementation is no needed while our own showBrowserView is in operation
+        return [];
+    }
+
+    public static function getCategoryItem(string $itemtype): ?CommonDBTM {
+        // Seems implementation is no needed while our own showBrowserView is in operation
+        return null;
     }
 
 }

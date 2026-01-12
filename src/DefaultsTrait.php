@@ -55,7 +55,7 @@ trait DefaultsTrait {
                 'indexer_url' => 'https://192.168.0.2',
                 'indexer_port' => '9200',
                 'indexer_user' => 'admin',
-                'indexer_password' => (new GLPIKey())->encrypt(getenv('IPASS1')),
+                'indexer_password' => (new GLPIKey())->encrypt('SecretPassword'),
             ]);
 
         }

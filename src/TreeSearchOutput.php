@@ -33,7 +33,7 @@ use Ticket;
 use Toolbox;
 
 
-class TreeSearchOutput extends \CommonDBTM {
+class TreeSearchOutput extends CommonDBTM {
     
     private array $search_opt_array;
     private static $search_options_cache = [];

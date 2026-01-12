@@ -170,6 +170,9 @@ class PluginLogger{
             $formattedMessage = "[" . self::$plugin . "/$shortClass/$function/$line/" . Session::getLoginUserID() . "/" . self::getLevelName($level) . "]: " . $msg . "\n";
             Toolbox::logInFile('php-all', $formattedMessage);
             if ($level === self::DEV) {
+                ob_start();
+                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+                Toolbox::logInFile('php-dev', ob_get_clean());
                 Toolbox::logInFile('php-dev', $formattedMessage);
             }
         }

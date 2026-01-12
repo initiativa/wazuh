@@ -24,6 +24,8 @@ use DateTime;
 use DateTimeZone;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
+use Glpi\Features\TreeBrowse;
+use Glpi\Features\TreeBrowseInterface;
 use Migration;
 use Computer;
 use NetworkEquipment;

@@ -87,13 +87,13 @@ trait IndexerRequestsTrait {
      * @param array $query Query in JSON/array format
      * @return array Server response
      */
-    private static function executeQuery($query, \CommonDBTM $device, $index = '/wazuh-states-vulnerabilities-*/_search') {
+    private static function executeQuery(array $query, CommonDBTM $device, $index = '/wazuh-states-vulnerabilities-*/_search'): array {
         if (!self::$isInitialized) {
             return ['success' => false, 'error' => 'Connection not initialized'];
         }
 
         $endpoint = self::$indexerUrl . $index;
-        PluginLogger::debug(__FUNCTION__ . " " . $endpoint . " Query: " . json_encode($query));
+        PluginLogger::dev($endpoint . " Query: " . json_encode($query));
 
         $ch = curl_init($endpoint);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -196,9 +196,10 @@ trait IndexerRequestsTrait {
         $query['from'] = 0;
         $result = self::executeQuery($query, $device, $index);
         if ($result['success']) {
-            PluginLogger::debug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
+            PluginLogger::dev("Total query result size: " . count($result['data']['hits']['hits']));
             return $result['data']['hits']['total']['value'];
         } else {
+            PluginLogger::dev("No SUCCESS: \n" . json_encode($result, JSON_PRETTY_PRINT));
             return false;
         }
     }
@@ -404,11 +405,11 @@ trait IndexerRequestsTrait {
         $currentTime = time();
         $session_key = PluginConfig::VQUERY_ALERT_TIME_SESSION_KEY . '_' . $agentIds[0] . '_' . Session::getActiveEntity();
 
-        $lastExecutionTime = isset($_SESSION[$session_key]) ? $_SESSION[$session_key] : -1;
+        $lastExecutionTime = $_SESSION[$session_key] ?? -1;
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-            PluginLogger::debug("To early: " . $currentTime - $lastExecutionTime);
+            PluginLogger::dev("To early: " . $currentTime - $lastExecutionTime);
 //            return ['success' => false, 'error' => 'To early.'];
         }
 
@@ -422,7 +423,7 @@ trait IndexerRequestsTrait {
         }
         $totalPages = ceil($total / $pageSize);
 
-        PluginLogger::debug(__FUNCTION__ . " Total size: " . $total);
+        PluginLogger::dev(" Total size: " . $total);
 
         for ($page = 0; $page < $totalPages; $page++) {
             $from = $page * $pageSize;
@@ -444,8 +445,8 @@ trait IndexerRequestsTrait {
     }
 
     
-    protected static function convertIsoToMysqlDatetime($isoDate) {
-        if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z' || $isoDate == null) {
+    protected static function convertIsoToMysqlDatetime($isoDate): ?string {
+        if (empty($isoDate) || $isoDate === '0000-00-00T00:00:00Z' || $isoDate === '0000-00-00T00:00:00.000Z') {
             return null;
         }
 

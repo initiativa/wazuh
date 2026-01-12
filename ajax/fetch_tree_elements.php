@@ -6,8 +6,9 @@ use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\NetworkEqAlertsTab;
 use GlpiPlugin\Wazuh\NetworkEqTab;
 use GlpiPlugin\Wazuh\WazuhAgent;
-
 include('../../../inc/includes.php');
+
+use \Glpi\DBAL\QueryExpression;
 
 // Check user session and rights
 Session::checkLoginUser();
