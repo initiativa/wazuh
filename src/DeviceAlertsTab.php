@@ -105,7 +105,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
         if (!$id) {
             global $DB;
-            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            PluginLogger::warning(__FUNCTION__ . " " . $DB->error());
             return false;
         }
 
@@ -134,7 +134,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
             if (!$did) {
                 global $DB;
-                Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+                PluginLogger::warning(__FUNCTION__ . " " . $DB->error());
             }
             return $did;
     }
@@ -155,7 +155,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
             ],
         ];
 
-        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
+        PluginLogger::debug(__FUNCTION__ . " : " . json_encode($params));
         $data = Search::getDatas($itemtype, $params);
 
         global $DB;
@@ -214,7 +214,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
             }
         }
 
-        Logger::addDebug(__FUNCTION__ . " $id not found.");
+        PluginLogger::debug(__FUNCTION__ . " $id not found.");
         return false;
     }
 
@@ -241,7 +241,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     {
         global $DB;
         $cron_status = 0;
-        Logger::addInfo("Executing cron - FetchAlerts.");
+        PluginLogger::dev("Executing cron - FetchAlerts.");
 
         $agents = (new WazuhAgent())->find([
             'itemtype' => 'Computer',
@@ -410,7 +410,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     
     #[\Override]
     static function showMassiveActionsSubForm(\MassiveAction $ma) {
-        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
+        PluginLogger::debug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
         switch ($ma->getAction()) {
             case "create_ticket":
                 self::createTicketForm($ma);

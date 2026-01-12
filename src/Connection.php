@@ -167,7 +167,7 @@ class Connection extends CommonDBTM implements Upgradeable {
                 $decrypted_password = $str;
             }
         } catch (Exception $e) {
-            Logger::addError(__FUNCTION__ . " " . $e->getMessage());
+            PluginLogger::error(__FUNCTION__ . " " . $e->getMessage());
             $decrypted_password = $str;
         }
         

@@ -2,7 +2,7 @@
 include('../../../inc/includes.php');
 
 use Glpi\Application\View\TemplateRenderer;
-use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\Connection;
 
 Session::checkLoginUser();
@@ -35,18 +35,18 @@ $curl_error = curl_error($ch);
 $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-Logger::addDebug(json_encode($_POST));
-Logger::addDebug("Authentication attempt to Wazuh INDEXER: $status_code, URL: $wazuh_server:$api_port");
+PluginLogger::debug(json_encode($_POST));
+PluginLogger::debug("Authentication attempt to Wazuh INDEXER: $status_code, URL: $wazuh_server:$api_port");
 
 header('Content-Type: application/json');
 if ($curl_error) {
-    Logger::addDebug("cURL Error: $curl_error");
+    PluginLogger::debug("cURL Error: $curl_error");
     echo json_encode(['success' => false, 'message' => $curl_error]);
     return;
 }
 
 if ($status_code != 200) {
-    Logger::addDebug("Auth Response: $response");
+    PluginLogger::debug("Auth Response: $response");
 
     echo json_encode(['success' => false, 'status_code' => $status_code]);
     return;

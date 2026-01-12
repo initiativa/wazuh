@@ -49,7 +49,7 @@ class ExtApi {
         } else if ($device instanceof NetworkEquipment) {
             return NetworkEqTab::getAgentVulnerabilities($device);
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
@@ -60,7 +60,7 @@ class ExtApi {
         } else if ($device instanceof NetworkEquipment) {
             return NetworkEqAlertsTab::getAgentAlerts($device);
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }

@@ -93,7 +93,7 @@ trait IndexerRequestsTrait {
         }
 
         $endpoint = self::$indexerUrl . $index;
-        Logger::addDebug(__FUNCTION__ . " " . $endpoint . " Query: " . json_encode($query));
+        PluginLogger::debug(__FUNCTION__ . " " . $endpoint . " Query: " . json_encode($query));
 
         $ch = curl_init($endpoint);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
@@ -116,7 +116,7 @@ trait IndexerRequestsTrait {
         curl_close($ch);
 
         if ($error) {
-            Logger::addError(__FUNCTION__ . " HttpCode: $httpCode. $endpoint. $error");
+            PluginLogger::error(__FUNCTION__ . " HttpCode: $httpCode. $endpoint. $error");
             Session::addMessageAfterRedirect($error, true, ERROR);
             echo Html::scriptBlock("$(function() { displayAjaxMessageAfterRedirect(); }); ");
             return [
@@ -196,7 +196,7 @@ trait IndexerRequestsTrait {
         $query['from'] = 0;
         $result = self::executeQuery($query, $device, $index);
         if ($result['success']) {
-            Logger::addDebug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
+            PluginLogger::debug(__FUNCTION__ . " Total query result size: " . count($result['data']['hits']['hits']));
             return $result['data']['hits']['total']['value'];
         } else {
             return false;
@@ -211,7 +211,7 @@ trait IndexerRequestsTrait {
     public static function getQueryByAgentIds(array $agentIds, CommonDBTM $computer): array {
         $latestDtStr = static::getLatestDeviceVulnerabilityDetectionDate($computer);
         $agentIdsStr = json_encode($agentIds);
-        Logger::addDebug("Quering Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
+        PluginLogger::debug("Quering Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
 
         $a = $agentIds;
         if (count($agentIds) == 1) {
@@ -257,7 +257,7 @@ trait IndexerRequestsTrait {
     public static function getAlertsQueryByAgentIds(array $agentIds, CommonDBTM $computer): array {
         $latestDtStr = static::getLatestDeviceAlertDetectionDate($computer);
         $agentIdsStr = json_encode($agentIds);
-        Logger::addDebug("Alerts Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
+        PluginLogger::debug("Alerts Wazuh Indexer for agent: $agentIdsStr after: $latestDtStr");
 
         $a = $agentIds;
         if (count($agentIds) == 1) {
@@ -329,7 +329,7 @@ trait IndexerRequestsTrait {
         }
         $totalPages = ceil($total / $pageSize);
 
-        Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+        PluginLogger::debug(__FUNCTION__ . " Total size: " . $total);
         static::discontinue_all($device->getID());
 
         for ($page = 0; $page < $totalPages; $page++) {
@@ -380,7 +380,7 @@ trait IndexerRequestsTrait {
             $source = $result['data']['hits']['hits'][0]['_source'] ?? false;
             $isoDateTime = $source['timestamp'] ?? false;
             if ($isoDateTime) {
-                Logger::addDebug(__FUNCTION__ . " Latest time fetched: $isoDateTime");
+                PluginLogger::debug(__FUNCTION__ . " Latest time fetched: $isoDateTime");
                 return self::convertIsoToMysqlDatetime($isoDateTime);
             }
         }
@@ -408,7 +408,7 @@ trait IndexerRequestsTrait {
 
         // 5 minutes = 300 seconds
         if ($currentTime - $lastExecutionTime < 300) {
-            Logger::addDebug("To early: " . $currentTime - $lastExecutionTime);
+            PluginLogger::debug("To early: " . $currentTime - $lastExecutionTime);
 //            return ['success' => false, 'error' => 'To early.'];
         }
 
@@ -422,7 +422,7 @@ trait IndexerRequestsTrait {
         }
         $totalPages = ceil($total / $pageSize);
 
-        Logger::addDebug(__FUNCTION__ . " Total size: " . $total);
+        PluginLogger::debug(__FUNCTION__ . " Total size: " . $total);
 
         for ($page = 0; $page < $totalPages; $page++) {
             $from = $page * $pageSize;
@@ -468,7 +468,7 @@ trait IndexerRequestsTrait {
         $current = $res;
         foreach ($path as $key) {
             if (!isset($current[$key])) {
-                Logger::addWarning(__FUNCTION__ . " *** No key $key in path " . json_encode($path));
+                PluginLogger::warning(__FUNCTION__ . " *** No key $key in path " . json_encode($path));
                 return null;
             }
             $current = $current[$key];

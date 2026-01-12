@@ -79,7 +79,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     {
         global $DB;
         $cron_status = 0;
-        Logger::addInfo("Executing cron - FetchVulnerabilities.");
+        PluginLogger::dev("Executing cron - FetchVulnerabilities.");
 
         $agents = (new WazuhAgent())->find([
             'itemtype' => 'Computer',
@@ -161,7 +161,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             'value' => 0
         ];
 
-        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
+        PluginLogger::debug(__FUNCTION__ . " : " . json_encode($params));
         $data = Search::getDatas($itemtype, $params);
 
         global $DB;
@@ -291,7 +291,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             }
         }
         
-        Logger::addDebug(__FUNCTION__ . " $id not found.");
+        PluginLogger::debug(__FUNCTION__ . " $id not found.");
         return false;
     }
 
@@ -363,7 +363,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 
         if (!$id) {
             global $DB;
-            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            PluginLogger::warning(__FUNCTION__ . " " . $DB->error());
         }
 
         return $id;
@@ -379,7 +379,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $key = array_keys($iids)[0];
         $ids = array_map('intval', array_values($iids[$key]));
 
-        Logger::addDebug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
+        PluginLogger::debug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
 
          $criteria = [
             'SELECT' => ['v_severity'],
@@ -403,7 +403,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 
         $result = (int)($average / $size);
         if ($result < 1 || $result > 6) {
-            Logger::addError("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
+            PluginLogger::error("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
             throw new \RuntimeException("Average urgency level outof expecting values.");
         }
         
@@ -413,7 +413,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     
     #[\Override]
     static function showMassiveActionsSubForm(\MassiveAction $ma) {
-        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
+        PluginLogger::debug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
         switch ($ma->getAction()) {
             case "create_ticket":
                 self::createTicketForm($ma);

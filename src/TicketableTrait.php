@@ -36,7 +36,7 @@ trait TicketableTrait {
         }
 
         $content = __('Wazuh auto ticket', PluginConfig::APP_CODE) . "<br>";
-        Logger::addDebug(__FUNCTION__ . " Device: $device_id");
+        PluginLogger::debug(__FUNCTION__ . " Device: $device_id");
 
         $device = static::newDeviceInstance();
         if ($device->getFromDB($device_id)) {

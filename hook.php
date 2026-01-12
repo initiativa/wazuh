@@ -35,7 +35,7 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 
 //require_once (PLUGIN_WAZUH_DIR .  "/vendor/autoload.php");
 
-use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\Connection;
 use GlpiPlugin\Wazuh\ComputerTab;
@@ -47,11 +47,11 @@ use GlpiPlugin\Wazuh\NetworkEqTab;
  * @return boolean
  */
 function plugin_wazuh_install() {
-    Logger::addNotice(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
+    PluginLogger::dev(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
 
 
     $version = getOldVersion();
-    Logger::addDebug(__FUNCTION__ . " Version: " . $version);
+    PluginLogger::debug(__FUNCTION__ . " Version: " . $version);
     
     $migration = new \Migration(PLUGIN_WAZUH_VERSION);
     $migration->displayMessage("Migrating tables to " . PLUGIN_WAZUH_VERSION);
@@ -76,7 +76,7 @@ function plugin_wazuh_install() {
  * @return bool
  */
 function plugin_myplugin_upgrade($old_version) {
-    Logger::addNotice(__FUNCTION__ . " ############# Upgrading from $old_version.");
+    PluginLogger::dev(__FUNCTION__ . " ############# Upgrading from $old_version.");
 
     return true;
 }
@@ -87,7 +87,7 @@ function plugin_myplugin_upgrade($old_version) {
  * @return boolean
  */
 function plugin_wazuh_uninstall() {
-    Logger::addNotice(__FUNCTION__ . " Uninstalling.");
+    PluginLogger::dev(__FUNCTION__ . " Uninstalling.");
     
     $migration = new Migration(PLUGIN_WAZUH_VERSION);
     $migration->displayMessage("Uninstalling tables from " . PLUGIN_WAZUH_VERSION);

@@ -21,6 +21,7 @@ namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
 use DateTime;
+use DateTimeZone;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use Migration;
@@ -108,12 +109,12 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                 'rule' => $DB->escape(json_encode($result['_source']['rule'] ?? '')),
                 'syscheck' => $DB->escape(json_encode($result['_source']['syscheck'] ?? '')),
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
-                'date_mod' => (new DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
+                'date_mod' => (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
                 Entity::getForeignKeyField() => $device->getEntityID(),
             ];
         } catch (\Exception $e) {
-            Logger::addError($e->getMessage());
+            PluginLogger::error($e->getMessage());
             return false;
         }
 
@@ -125,8 +126,8 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         if (!$founded) {
             $newId = $item->add($item_data);
             if (!$newId) {
-                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
-                Logger::addDebug(json_encode($item_data, JSON_PRETTY_PRINT));
+                PluginLogger::warning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                PluginLogger::debug(json_encode($item_data, JSON_PRETTY_PRINT));
                 return false;
             }
         } else {
@@ -142,7 +143,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     #[\Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
-        Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
+        PluginLogger::debug($item->getType());
         self::getAgentAlerts($item);
         $item_type = self::class;
         $params = [
@@ -175,10 +176,10 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                 }
             } else {
                 $message = sprintf("%s %s Can not find active and not deleted agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType());
-                Logger::addError($message);
+                PluginLogger::error($message);
             }
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
@@ -218,19 +219,19 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
         global $DB;
 
-        Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
+        PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
         switch ($ma->getAction()) {
             case "create_ticket":
                 $input = $ma->getInput();
-                Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . Logger::implodeWithKeys($input));
+                PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . PluginLogger::implodeWithKeys($input));
                 
                 if (!isset($input['entities_id'])) {
-                    Logger::addWarning("Missing entity while ticket creating.");
+                    PluginLogger::warning("Missing entity while ticket creating.");
                     return false;
                 }
 
                 if (!isset($input['ticket_title']) || empty($input['ticket_title'])) {
-                    Logger::addWarning("Missing ticket title while ticket creating.");
+                    PluginLogger::warning("Missing ticket title while ticket creating.");
                     return false;
                 }
  

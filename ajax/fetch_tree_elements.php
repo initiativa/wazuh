@@ -2,7 +2,7 @@
 
 use GlpiPlugin\Wazuh\ComputerAlertsTab;
 use GlpiPlugin\Wazuh\ComputerTab;
-use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\NetworkEqAlertsTab;
 use GlpiPlugin\Wazuh\NetworkEqTab;
 use GlpiPlugin\Wazuh\WazuhAgent;
@@ -45,10 +45,10 @@ $params['criteria'] = [
     ],
 ];
 
-Logger::addDebug(__FILE__ . " : " . json_encode($params) . " :: " . $itemtype);
+PluginLogger::debug(__FILE__ . " : " . json_encode($params) . " :: " . $itemtype);
 $params['list_limit'] = page_size;
 $start = ($page_no -1) * page_size;
-Logger::addDebug(__FILE__ . " OFFSET: $start , PAGE_NO: $page_no");
+PluginLogger::debug(__FILE__ . " OFFSET: $start , PAGE_NO: $page_no");
 
 $params['start'] = $start;
 

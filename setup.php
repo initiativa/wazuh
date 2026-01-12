@@ -34,7 +34,7 @@ if (!defined('PLUGIN_WAZUH_DIR')) {
 require_once (PLUGIN_WAZUH_DIR . "/src/PluginConfig.php");
 
 use GlpiPlugin\Wazuh\PluginConfig;
-use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\ComputerTab;
 use Glpi\Plugin\Hooks;
 

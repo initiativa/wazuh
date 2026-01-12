@@ -103,14 +103,7 @@ class WazuhAgent extends CommonDBTM {
         return _n("Wazuh Agent", "Wazuh Agent's", $nb, "wazuh");
     }
 
-//   /**
-//    * Foreignkeys returning
-//    * @return string
-//    */
-//   static function getForeignKeyField() {
-//      return 'plugin_wazuh_agents_id';
-//   }
-   
+
    public static function getByDeviceTypeAndId(string $itemtype, int $item_id): ?WazuhAgent {
        $agent = new self();
        global $DB;
@@ -140,7 +133,7 @@ class WazuhAgent extends CommonDBTM {
        ];
 
         $iterator = $DB->request($criteria);
-        Logger::addDebug(__FUNCTION__ . " " . $iterator->getSql());
+        PluginLogger::debug($iterator->getSql());
 
         $count = count($iterator);
 
@@ -464,10 +457,10 @@ class WazuhAgent extends CommonDBTM {
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        Logger::addDebug("Authentication attempt to Wazuh API: $status_code, URL: $wazuh_server:$api_port/security/user/authenticate");
+        PluginLogger::debug("Authentication attempt to Wazuh API: $status_code, URL: $wazuh_server:$api_port/security/user/authenticate");
 
         if ($curl_error) {
-            Logger::addDebug("cURL Error: $curl_error");
+            PluginLogger::debug("cURL Error: $curl_error");
             Session::addMessageAfterRedirect(
                     __('Connection error to Wazuh API', 'wazuh') . ": $curl_error. Server name: $config_name",
                     true,
@@ -477,7 +470,7 @@ class WazuhAgent extends CommonDBTM {
         }
 
         if ($status_code != 200) {
-            Logger::addDebug("Auth Response: $response");
+            PluginLogger::debug("Auth Response: $response");
             Session::addMessageAfterRedirect(
                     __('Error connectiong to Wazuh API', 'wazuh') . ": " . $status_code,
                     true,
@@ -515,10 +508,10 @@ class WazuhAgent extends CommonDBTM {
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        Logger::addDebug("Fetching agents from Wazuh API: $status_code, URL: $wazuh_server:$api_port/agents?pretty=true&limit=500");
+        PluginLogger::debug("Fetching agents from Wazuh API: $status_code, URL: $wazuh_server:$api_port/agents?pretty=true&limit=500");
 
         if ($curl_error) {
-            Logger::addDebug("cURL Error: $curl_error");
+            PluginLogger::debug("cURL Error: $curl_error");
             Session::addMessageAfterRedirect(
                     __('Connection error to Wazuh API', 'wazuh') . ": " . $curl_error,
                     true,
@@ -530,7 +523,7 @@ class WazuhAgent extends CommonDBTM {
         // Process response
         if ($status_code == 200) {
             $agents_data = json_decode($response, true);
-            Logger::addDebug(__FUNCTION__ . ' agents data: ' . $response);
+            PluginLogger::debug(__FUNCTION__ . ' agents data: ' . $response);
             return $agents_data['data']['affected_items'] ?? [];
         } else {
             Session::addMessageAfterRedirect(
@@ -595,7 +588,7 @@ class WazuhAgent extends CommonDBTM {
         $ids = (new Connection())->find(['is_deleted' => 0, 'is_conn_active' => 1, Entity::getForeignKeyField() => $entities]);
         $allOk = true;
         foreach ($ids as $id) {
-            Logger::addDebug("Syncing agents: " . Logger::implodeWithKeys($id));
+            PluginLogger::debug("Syncing agents: " . PluginLogger::implodeWithKeys($id));
             $wazuhConfig = Connection::getById($id['id']);
             if (!self::syncAgent($wazuhConfig)) {
                 $allOk = false;
@@ -617,15 +610,15 @@ class WazuhAgent extends CommonDBTM {
    static function syncAgent(Connection $wazuhConfig): bool {
         global $DB;
 
-       Logger::addDebug(__FUNCTION__ . json_encode($wazuhConfig));
+       PluginLogger::debug(__FUNCTION__ . json_encode($wazuhConfig));
 
        $agents = self::fetchAgentsFromWazuh($wazuhConfig);
         if (empty($agents)) {
-            Logger::addError(__FUNCTION__ . ' Empty agents.');
+            PluginLogger::error(__FUNCTION__ . ' Empty agents.');
             return false;
         }
 
-        Logger::addDebug(__FUNCTION__ . ' Got ' . count($agents) . ' agents from Wazuh');
+        PluginLogger::debug(__FUNCTION__ . ' Got ' . count($agents) . ' agents from Wazuh');
 
         $table = self::getTable();
         $currentDate = date('Y-m-d H:i:s');
@@ -633,10 +626,10 @@ class WazuhAgent extends CommonDBTM {
         $failure_count = 0;
 
         foreach ($agents as $agent) {
-            Logger::addDebug("Processing agent: " . $agent['id'] . " - " . $agent['name']);
+            PluginLogger::debug("Processing agent: " . $agent['id'] . " - " . $agent['name']);
 
             if (isset($agent['lastKeepAlive'])) {
-                Logger::addDebug("Raw lastKeepAlive value: " . $agent['lastKeepAlive'] . ", strtotime result: " . strtotime($agent['lastKeepAlive']));
+                PluginLogger::debug("Raw lastKeepAlive value: " . $agent['lastKeepAlive'] . ", strtotime result: " . strtotime($agent['lastKeepAlive']));
             }
 
             try {
@@ -647,7 +640,7 @@ class WazuhAgent extends CommonDBTM {
                     if ($timestamp !== false && $timestamp > 0 && $timestamp < strtotime('2100-01-01')) {
                         $last_keepalive = date('Y-m-d H:i:s', $timestamp);
                     } else {
-                        Logger::addDebug("Invalid lastKeepAlive timestamp, using current date instead");
+                        PluginLogger::debug("Invalid lastKeepAlive timestamp, using current date instead");
                     }
                 }
 
@@ -667,8 +660,8 @@ class WazuhAgent extends CommonDBTM {
                     Connection::getForeignKeyField() => $wazuhConfig->fields['id']
                 ];
             } catch (Exception $e) {
-                Logger::addError("Error preparing agent data for ID " . $agent['id'] . ": " . $e->getMessage());
-                Logger::addDebug("Agent data: " . print_r($agent, true));
+                PluginLogger::error("Error preparing agent data for ID " . $agent['id'] . ": " . $e->getMessage());
+                PluginLogger::debug("Agent data: " . print_r($agent, true));
                 $failure_count++;
                 continue;
             }
@@ -687,31 +680,31 @@ class WazuhAgent extends CommonDBTM {
             if ($existing_agent) {
                 $agent_data['id'] = $existing_agent['id'];
 
-                Logger::addDebug("Updating agent ID: " . $existing_agent['id'] . " with data: " . json_encode($agent_data));
+                PluginLogger::debug("Updating agent ID: " . $existing_agent['id'] . " with data: " . json_encode($agent_data));
 
                 if ($agent_obj->update($agent_data)) {
                     $success_count++;
                 } else {
-                    Logger::addError("Failed to update agent ID: " . $existing_agent['id']);
+                    PluginLogger::error("Failed to update agent ID: " . $existing_agent['id']);
                     $failure_count++;
                 }
             } else {
                 $agent_data['date_creation'] = $currentDate;
 
-                Logger::addDebug("Adding new agent with data: " . json_encode($agent_data));
+                PluginLogger::debug("Adding new agent with data: " . json_encode($agent_data));
 
                 $new_id = $agent_obj->add($agent_data);
                 if ($new_id) {
                     $success_count++;
-                    Logger::addDebug("Successfully added agent with new ID: " . $new_id);
+                    PluginLogger::debug("Successfully added agent with new ID: " . $new_id);
                 } else {
-                    Logger::addError("Failed to add new agent: " . $agent['name']);
+                    PluginLogger::error("Failed to add new agent: " . $agent['name']);
                     $failure_count++;
                 }
             }
         }
 
-        Logger::addDebug(__FUNCTION__ . " completed. Success: $success_count, Failures: $failure_count");
+        PluginLogger::debug(__FUNCTION__ . " completed. Success: $success_count, Failures: $failure_count");
 
         if ($failure_count > 0) {
             Session::addMessageAfterRedirect(

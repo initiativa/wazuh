@@ -5,7 +5,7 @@ namespace GlpiPlugin\Wazuh\Traits;
 use DateTime;
 use Entity;
 use Exception;
-use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\PluginConfig;
 use Session;
 
@@ -27,7 +27,7 @@ trait FieldValidation {
     protected function getAdditionalFieldOptions(): array {
         $additional_options = [];
 
-        Logger::debug(static::class);
+        PluginLogger::debug(static::class);
         if (isset($_SESSION['conformitas_validation_errors'][static::class])) {
             $validation_errors = $_SESSION['conformitas_validation_errors'][static::class];
             foreach ($validation_errors as $field => $error_message) {
