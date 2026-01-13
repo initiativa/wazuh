@@ -49,7 +49,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
     public $dohistory = true;
 
     #[\Override]
-    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
+    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
         if (!$withtemplate && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
             global $DB;
             $count = $this->countElements($item->getID());
@@ -63,7 +63,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
-    static function cronInfo($name) {
+    static function cronInfo($name): array {
         switch ($name) {
             case 'fetchvulenrabilities' :
                 return array('description' => __('Fetch vulnerabilities information for linked with Wazuh\'s Agents, Computers and NetworkEquipments.'),

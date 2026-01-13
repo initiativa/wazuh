@@ -20,23 +20,23 @@
 namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
+use CommonGLPI;
+use Computer;
+use CronTask;
 use DateTime;
 use DateTimeZone;
-use Glpi\Application\View\TemplateRenderer;
-use CommonGLPI;
-use Glpi\Features\TreeBrowse;
-use Glpi\Features\TreeBrowseInterface;
-use Migration;
-use Computer;
-use NetworkEquipment;
-use Ticket;
 use DBConnection;
-use Html;
 use Entity;
+use Exception;
+use GlpiPlugin\Wazuh\Traits\DeviceHelper;
+use Html;
+use Migration;
+use NetworkEquipment;
+use Override;
+use RuntimeException;
 use Search;
 use Session;
-use ITILFollowup;
-use Item_Ticket;
+use Ticket;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -50,6 +50,7 @@ if (!defined('GLPI_ROOT')) {
 class ComputerAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
+    use DeviceHelper;
 
     public $dohistory = true;
     public static $itemtype = 'Computer';
@@ -60,31 +61,13 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         return _n('Wazuh Alert', 'Wazuh Alerts', $nb, PluginConfig::APP_CODE);
     }
     
-    protected function countElements($computers_id) {
+    protected function countElements($device_id) {
         $count = countElementsInTableForMyEntities($this->getTable(), [
-            Computer::getForeignKeyField() => $computers_id,
+            Computer::getForeignKeyField() => $device_id,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => ['<>', 0],
             'is_deleted' => 0
         ]);
-
-//        global $DB;
-//
-//        $count = 0;
-//        $iterator = $DB->request([
-//            'COUNT' => 'count',
-//            'FROM' => $this->getTable(),
-//            'WHERE' => [
-//                Computer::getForeignKeyField() => $computers_id,
-//                static::getForeignKeyField() => ['<>', 0],
-//                'is_deleted' => 0
-//                ]
-//        ]);
-//
-//        if (count($iterator)) {
-//            $data = $iterator->current();
-//            $count = $data['count'];
-//        }
 
         return $count;
     }
@@ -96,7 +79,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         $founded = $item->find(['key' => $key, Entity::getForeignKeyField() => $device->getEntityID(), 'is_deleted' => 0]);
 
         if (count($founded) > 1) {
-            throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
+            throw new RuntimeException("Founded ComputerTab collection exceeded limit 1.");
         }
 
         try {
@@ -107,15 +90,15 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                 'a_ip' => $DB->escape($result['_source']['agent']['ip'] ?? ''),
                 'a_name' => $DB->escape($result['_source']['agent']['name'] ?? ''),
                 'a_id' => $DB->escape($result['_source']['agent']['id'] ?? ''),
-                'data' => $DB->escape(json_encode($result['_source']['data'] ?? '')),
-                'rule' => $DB->escape(json_encode($result['_source']['rule'] ?? '')),
-                'syscheck' => $DB->escape(json_encode($result['_source']['syscheck'] ?? '')),
+                'data' => json_encode($result['_source']['data'] ?? ''),
+                'rule' => json_encode($result['_source']['rule'] ?? ''),
+                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
                 'date_mod' => (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
                 Entity::getForeignKeyField() => $device->getEntityID(),
             ];
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             PluginLogger::error($e->getMessage());
             return false;
         }
@@ -142,7 +125,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
 
 
-    #[\Override]
+    #[Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         PluginLogger::debug($item->getType());
@@ -187,7 +170,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
 
 
-    #[\Override]
+    #[Override]
     public function rawSearchOptions(): array
     {
         $tab = parent::rawSearchOptions();
@@ -209,7 +192,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
     
     
-    #[\Override]
+    #[Override]
     public function getSpecificMassiveActions($checkitem = null) {
         $actions = parent::getSpecificMassiveActions($checkitem);
 
@@ -253,7 +236,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
     }
 
-    #[\Override]
+    #[Override]
     protected static function getConnectionId($iids): int {
         global $DB;
         $table = static::getTable();
@@ -377,15 +360,15 @@ class ComputerAlertsTab extends DeviceAlertsTab {
             );
         }
 
-        \CronTask::register(ComputerAlertsTab::class, 'FetchAlerts' , HOUR_TIMESTAMP, array(
+        CronTask::register(ComputerAlertsTab::class, 'FetchAlerts' , HOUR_TIMESTAMP, array(
             'comment'   => '',
-            'mode'      => \CronTask::MODE_EXTERNAL
+            'mode'      => CronTask::MODE_EXTERNAL
         ));
 
         return true;
     }
 
-    #[\Override]
+    #[Override]
     static function uninstall(Migration $migration):bool {
         global $DB;
 

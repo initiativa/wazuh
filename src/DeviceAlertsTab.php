@@ -290,7 +290,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
      * @return boolean
      */
     #[\Override]
-    function showForm($ID, array $options = []) {
+    function showForm($ID, array $options = []): bool {
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
@@ -316,70 +316,6 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     function sanitizeOutput($input) {
         //after json_encode just javascript
         return preg_replace('#</script#i', '<\/script', $input);
-    }
-
-    /**
-     * Format JSON data to HTML for display in GLPI
-     * 
-     * @param string|array $json JSON string or already decoded array
-     * @return string Formatted HTML
-     */
-    function formatJsonToHtml($json) {
-        // If string provided, decode it first
-        if (is_string($json)) {
-            $data = json_decode($json, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                return "<div class='alert alert-warning'>Invalid JSON format</div>";
-            }
-        } else {
-            $data = $json;
-        }
-
-        // Start building HTML output
-        $html = "<div class='json-viewer'>";
-
-        // Use recursive function to build nested structure
-        $html .= $this->formatJsonNodeToHtml($data);
-
-        $html .= "</div>";
-
-        return $html;
-    }
-
-    /**
-     * Helper function to recursively format JSON nodes
-     * 
-     * @param mixed $node Current JSON node
-     * @param int $level Nesting level
-     * @return string HTML representation
-     */
-    function formatJsonNodeToHtml($node, $level = 0) {
-        $html = "";
-        if (is_null($node)) {
-            $node = '';
-        }
-        $padding = str_repeat("&nbsp;&nbsp;", $level);
-
-        if (is_array($node)) {
-            $html .= "<ul class='json-list'>";
-            foreach ($node as $key => $value) {
-                $html .= "<li>";
-                $html .= "<span class='json-key'>" . htmlspecialchars($key) . "</span>: ";
-
-                if (is_array($value)) {
-                    $html .= $this->formatJsonNodeToHtml($value, $level + 1);
-                } else {
-                    $html .= "<span class='json-value'>" . htmlspecialchars($value) . "</span>";
-                }
-
-                $html .= "</li>";
-            }
-            $html .= "</ul>";
-        } else {
-            $html .= "<span class='json-value'>" . htmlspecialchars($node) . "</span>";
-        }
-
-        return $html;
     }
 
     private static function getSeverityValue(string $severity): int | null {

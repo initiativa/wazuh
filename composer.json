@@ -1,6 +1,7 @@
 {
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+      "ext-curl": "*"
     },
     "require-dev": {
         "glpi-project/tools": "^0.4"

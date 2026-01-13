@@ -64,24 +64,6 @@ class ComputerTab extends DeviceTab implements Ticketable {
            'is_deleted' => 0
        ]);
 
-//       global $DB;
-//
-//        $count = 0;
-//        $iterator = $DB->request([
-//            'COUNT' => 'count',
-//            'FROM' => $this->getTable(),
-//            'WHERE' => [
-//                Computer::getForeignKeyField() => $computers_id,
-//                static::getForeignKeyField() => ['<>', 0],
-//                'is_deleted' => 0
-//                ]
-//        ]);
-//
-//        if (count($iterator)) {
-//            $data = $iterator->current();
-//            $count = $data['count'];
-//        }
-
         return $count;
     }
 

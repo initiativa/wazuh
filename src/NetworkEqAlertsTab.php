@@ -25,6 +25,7 @@ use DateTime;
 use DateTimeZone;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
+use GlpiPlugin\Wazuh\Traits\DeviceHelper;
 use Migration;
 use NetworkEquipment;
 use Ticket;
@@ -48,6 +49,7 @@ if (!defined('GLPI_ROOT')) {
 class NetworkEqAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
+    use DeviceHelper;
 
     public $dohistory = true;
     public static $itemtype = 'NetworkEquipment';
@@ -105,9 +107,9 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                 'a_ip' => $DB->escape($result['_source']['agent']['ip'] ?? ''),
                 'a_name' => $DB->escape($result['_source']['agent']['name'] ?? ''),
                 'a_id' => $DB->escape($result['_source']['agent']['id'] ?? ''),
-                'data' => $DB->escape(json_encode($result['_source']['data'] ?? '')),
-                'rule' => $DB->escape(json_encode($result['_source']['rule'] ?? '')),
-                'syscheck' => $DB->escape(json_encode($result['_source']['syscheck'] ?? '')),
+                'data' => json_encode($result['_source']['data'] ?? ''),
+                'rule' => json_encode($result['_source']['rule'] ?? ''),
+                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
                 'date_mod' => (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
