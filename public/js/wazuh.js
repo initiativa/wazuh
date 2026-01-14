@@ -16,6 +16,7 @@ function wazuhExpandAllTreeNodes(buttonElement, tableId) {
     table.querySelectorAll('.tree-toggle').forEach(function (toggler) {
         toggler.classList.remove('fa-caret-right');
         toggler.classList.add('fa-caret-down');
+        wazuhFetchPageableTreeData(toggler, tableId);
     });
 }
 
@@ -293,7 +294,7 @@ function wazuhToggleTreeNode(element, tableId) {
         element.classList.remove('fa-caret-down');
         element.classList.add('fa-caret-right');
         children = wazuhTreeFindChildren(nodeId);
-        $(children).remove();
+        $(children).hide();
     } else {
         element.classList.remove('fa-caret-right');
         element.classList.add('fa-caret-down');
