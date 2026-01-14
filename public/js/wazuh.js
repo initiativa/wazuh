@@ -250,13 +250,22 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
     return fragment;
 }
 
-function wazuhFetchPageableTreeData(element, formId) {
+function wazuhFetchPageableTreeData(element, formId, successFunction = null) {
     let page_no = parseInt(element.getAttribute('data-page'));
     if (page_no === 0) {
         page_no ++;
         element.setAttribute('data-page', page_no);
     }
     let nodeId = element.getAttribute('data-node-id');
+
+    if (!successFunction) {
+        successFunction = function(response) {
+            let elements = wazuhCreateTableRowsFromData(response, formId, element);
+            let children = wazuhTreeFindChildren(nodeId);
+            $(children).remove();
+            element.parentNode.parentNode.parentNode.after(elements[0]);
+        };
+    }
     $.ajax({
         url: '/plugins/wazuh/ajax/fetch_tree_elements.php',
         type: 'GET',
@@ -270,19 +279,14 @@ function wazuhFetchPageableTreeData(element, formId) {
         beforeSend: function() {
             console.debug("Wazuh fetch pageable data: ", this.url);
         },
-        success: function(response) {
-            let elements = wazuhCreateTableRowsFromData(response, formId, element);
-            let children = wazuhTreeFindChildren(nodeId);
-            $(children).remove();
-            element.parentNode.parentNode.parentNode.after(elements[0]);
-        },
+        success: successFunction,
         error: function(xhr, status, error) {
             console.error('AJAX error:', error);
         }
     });
 }
 
-function wazuhToggleTreeNode(element, tableId) {
+function wazuhToggleTreeNode(element, searchform_id) {
     let nodeId = element.getAttribute('data-node-id');
     let page = parseInt(element.getAttribute('data-page'));
     let itemtype2 = element.getAttribute('data-itemtype');
@@ -298,9 +302,9 @@ function wazuhToggleTreeNode(element, tableId) {
     } else {
         element.classList.remove('fa-caret-right');
         element.classList.add('fa-caret-down');
-        wazuhFetchPageableTreeData(element, tableId);
+        wazuhFetchPageableTreeData(element, searchform_id);
     }
-    wazuhTreeUpdateZebraStripes(tableId);
+    wazuhTreeUpdateZebraStripes(searchform_id);
 }
 
 function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
@@ -322,6 +326,27 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     }
 
     if (rowTr.dataset.hasChildren === 'true') {
+        let expander = $(rowTr).find('i.tree-toggle').first();
+        if (!expander) {
+            console.error('No expander element found.', rowTr);
+            return;
+        }
+        expander = expander.get(0);
+
+        if ($(expander).hasClass('fa-caret-right')) {
+            wazuhFetchPageableTreeData(expander, searchform_id, response => {
+                if (response && response.data && Array.isArray(response.data.rows)) {
+                    response.data.rows.forEach((row, index) => {
+                        if (isChecked) {
+                            selected.add(parseInt(row.id));
+                        } else {
+                            selected.delete(parseInt(row.id));
+                        }
+                    });
+                }
+            });
+        }
+
         const children = wazuhTreeFindAllChildren(rowId);
         children.forEach(function (child) {
             const childCheckbox = child.querySelector('.massive_action_checkbox');
@@ -336,17 +361,6 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
                 }
             }
         });
-    }
-
-    if (selected.size === 0) {
-        $('.massiveactions-control')
-            .removeClass('animate__slideInLeft')
-            .addClass('animate__slideOutLeft')
-    } else {
-        $('.massiveactions-control')
-            .removeClass('d-none')
-            .removeClass('animate__slideOutLeft')
-            .addClass('animate__slideInLeft');
     }
 
     const data2 = JSON.stringify(Array.from(selected));
