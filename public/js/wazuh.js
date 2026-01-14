@@ -304,6 +304,7 @@ function wazuhToggleTreeNode(element, tableId) {
 
 function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     let selected = window[searchform_id + '_selected'];
+
     const rowTr = element.closest('tr');
     if (!rowTr)
         return;
@@ -335,6 +336,18 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
             }
         });
     }
+
+    if (selected.size === 0) {
+        $('.massiveactions-control')
+            .removeClass('animate__slideInLeft')
+            .addClass('animate__slideOutLeft')
+    } else {
+        $('.massiveactions-control')
+            .removeClass('d-none')
+            .removeClass('animate__slideOutLeft')
+            .addClass('animate__slideInLeft');
+    }
+
     const data2 = JSON.stringify(Array.from(selected));
     document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
     // console.log(itemtype);
