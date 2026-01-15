@@ -63,6 +63,14 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
+    public function getForbiddenStandardMassiveAction(): array {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'update';
+        $forbidden[] = 'CommonDBConnexity:unaffect';
+        $forbidden[] = 'CommonDBConnexity:affect';
+        return $forbidden;
+    }
+    
     static function cronInfo($name): array {
         switch ($name) {
             case 'fetchvulenrabilities' :

@@ -61,6 +61,14 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
 
+    public function getForbiddenStandardMassiveAction(): array {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'update';
+        $forbidden[] = 'CommonDBConnexity:unaffect';
+        $forbidden[] = 'CommonDBConnexity:affect';
+        return $forbidden;
+    }
+
     protected static function createParentItem(array $item_data, CommonDBTM $item, int $entity_id): int | false {
 //        Logger::addDebug(__FUNCTION__ . json_encode($item_data, JSON_PRETTY_PRINT));
 

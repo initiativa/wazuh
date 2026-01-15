@@ -57,11 +57,11 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     public static $items_id = 'computers_id';
 
     #[\Override]
-    static function getTypeName($nb = 0) {
+    static function getTypeName($nb = 0): string {
         return _n('Wazuh Alert', 'Wazuh Alerts', $nb, PluginConfig::APP_CODE);
     }
     
-    protected function countElements($device_id) {
+    protected function countElements($device_id): int {
         $count = countElementsInTableForMyEntities($this->getTable(), [
             Computer::getForeignKeyField() => $device_id,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
@@ -70,6 +70,10 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         ]);
 
         return $count;
+    }
+
+    public static function getSectorizedDetails(): array {
+        return ['assets', self::class];
     }
 
     protected static function createItem($result, CommonDBTM $device): self | false {
@@ -129,6 +133,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
         PluginLogger::debug($item->getType());
+        unset($_SESSION['glpisearch'][$item->getType()]);
         self::getAgentAlerts($item);
         $item_type = self::class;
         $params = [
@@ -169,10 +174,8 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         return false;
     }
 
-
     #[Override]
-    public function rawSearchOptions(): array
-    {
+    public function rawSearchOptions(): array {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [

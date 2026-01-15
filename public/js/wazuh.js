@@ -261,7 +261,7 @@ function wazuhFetchPageableTreeData(element, formId, successFunction = null) {
     if (!successFunction) {
         successFunction = function(response) {
             let elements = wazuhCreateTableRowsFromData(response, formId, element);
-            let children = wazuhTreeFindChildren(nodeId);
+            let children = wazuhTreeFindChildren(formId, nodeId);
             $(children).remove();
             element.parentNode.parentNode.parentNode.after(elements[0]);
         };
@@ -290,15 +290,15 @@ function wazuhToggleTreeNode(element, searchform_id) {
     let nodeId = element.getAttribute('data-node-id');
     let page = parseInt(element.getAttribute('data-page'));
     let itemtype2 = element.getAttribute('data-itemtype');
-    let children = wazuhTreeFindChildren(nodeId);
+    let children = wazuhTreeFindChildren(searchform_id, nodeId);
     let isExpanded = element.classList.contains('fa-caret-down');
 
     // Toggle icon
     if (isExpanded) {
         element.classList.remove('fa-caret-down');
         element.classList.add('fa-caret-right');
-        children = wazuhTreeFindChildren(nodeId);
-        $(children).hide();
+        children = wazuhTreeFindChildren(searchform_id, nodeId);
+        $(children).remove();
     } else {
         element.classList.remove('fa-caret-right');
         element.classList.add('fa-caret-down');
@@ -347,7 +347,7 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
             });
         }
 
-        const children = wazuhTreeFindAllChildren(rowId);
+        const children = wazuhTreeFindAllChildren(searchform_id, rowId);
         children.forEach(function (child) {
             const childCheckbox = child.querySelector('.massive_action_checkbox');
             if (childCheckbox) {
@@ -401,16 +401,16 @@ function wazuhAddHiddenOutOfScopeSelection(outofscopeElement, itemtype, row_id) 
     outofscopeElement.append(checkbox);
 }
 
-function wazuhTreeFindAllChildren(nodeId) {
+function wazuhTreeFindAllChildren(searchform_id, nodeId) {
     nodeId = String(nodeId);
 
-    const directChildren = wazuhTreeFindChildren(nodeId);
+    const directChildren = wazuhTreeFindChildren(searchform_id, nodeId);
     let allChildren = [...directChildren];
 
     directChildren.forEach(function (child) {
         if (child.dataset.hasChildren === 'true') {
             const childId = child.dataset.nodeId;
-            const childrenOfChild = wazuhTreeFindAllChildren(childId);
+            const childrenOfChild = wazuhTreeFindAllChildren(searchform_id, childId);
             allChildren = allChildren.concat(childrenOfChild);
         }
     });
@@ -439,9 +439,15 @@ function wazuhTreeUpdateZebraStripes(tableId) {
     });
 }
 
-function wazuhTreeFindChildren(nodeId) {
+function wazuhTreeFindChildren(searchform_id, nodeId) {
     nodeId = String(nodeId);
-    const parentRow = document.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
+    let form = document.getElementById(searchform_id);
+    if (!form) {
+        console.error(`Can not find ${searchform_id}`);
+        return [];
+    }
+    const parentRow = form.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
+    console.debug('Find children: ', parentRow);
     if (!parentRow)
         return [];
 
@@ -487,9 +493,6 @@ function wazuhTreeFindChildren2(nodeId) {
 
     return children;
 }
-
-
-
 
 /**
  * Initialize Wazuh plugin JavaScript functions
