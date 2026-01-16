@@ -20,22 +20,19 @@
 namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
-use CommonTreeDropdown;
-use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
-use Migration;
+use CommonTreeDropdown;
 use Computer;
-use NetworkEquipment;
-use QueryExpression;
-use Ticket;
-use MassiveAction;
-use DBConnection;
-use Html;
 use Entity;
+use Glpi\Application\View\TemplateRenderer;
+use Glpi\DBAL\QueryExpression;
+use Glpi\Features\TreeBrowseInterface;
+use Html;
+use MassiveAction;
+use NetworkEquipment;
 use Search;
 use Session;
-use ITILFollowup;
-use Item_Ticket;
+use Ticket;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -46,7 +43,7 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable, Ticketable {
+abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable, Ticketable, TreeBrowseInterface {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
@@ -63,6 +60,14 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
     abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
+
+    public function getForbiddenStandardMassiveAction(): array {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'update';
+        $forbidden[] = 'CommonDBConnexity:unaffect';
+        $forbidden[] = 'CommonDBConnexity:affect';
+        return $forbidden;
+    }
 
     protected static function createParentItem(array $item_data, CommonDBTM $item, int $entity_id): int | false {
 //        Logger::addDebug(__FUNCTION__ . json_encode($item_data, JSON_PRETTY_PRINT));
@@ -105,7 +110,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
         if (!$id) {
             global $DB;
-            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            PluginLogger::warning(__FUNCTION__ . " " . $DB->error());
             return false;
         }
 
@@ -134,12 +139,12 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
             if (!$did) {
                 global $DB;
-                Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+                PluginLogger::warning(__FUNCTION__ . " " . $DB->error());
             }
             return $did;
     }
 
-    static function showBrowseView($itemtype, $params): void
+    static function showBrowseView(string $itemtype, array $params, $update = false)
     {
         $item_id = $params['criteria'][0]['value'];
         $params['criteria'] = [
@@ -155,7 +160,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
             ],
         ];
 
-        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
+        PluginLogger::debug(json_encode($params));
         $data = Search::getDatas($itemtype, $params);
 
         global $DB;
@@ -214,7 +219,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
             }
         }
 
-        Logger::addDebug(__FUNCTION__ . " $id not found.");
+        PluginLogger::debug(__FUNCTION__ . " $id not found.");
         return false;
     }
 
@@ -241,9 +246,9 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     {
         global $DB;
         $cron_status = 0;
-        Logger::addInfo("Executing cron - FetchAlerts.");
+        PluginLogger::dev("Executing cron - FetchAlerts.");
 
-        $agents = (new PluginWazuhAgent())->find([
+        $agents = (new WazuhAgent())->find([
             'itemtype' => 'Computer',
         ]);
         $device_ids = [];
@@ -263,7 +268,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
             }
         }
 
-        $agents = (new PluginWazuhAgent())->find([
+        $agents = (new WazuhAgent())->find([
             'itemtype' => 'NetworkEquipment',
         ]);
 
@@ -293,7 +298,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
      * @return boolean
      */
     #[\Override]
-    function showForm($ID, array $options = []) {
+    function showForm($ID, array $options = []): bool {
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
@@ -321,70 +326,6 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         return preg_replace('#</script#i', '<\/script', $input);
     }
 
-    /**
-     * Format JSON data to HTML for display in GLPI
-     * 
-     * @param string|array $json JSON string or already decoded array
-     * @return string Formatted HTML
-     */
-    function formatJsonToHtml($json) {
-        // If string provided, decode it first
-        if (is_string($json)) {
-            $data = json_decode($json, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                return "<div class='alert alert-warning'>Invalid JSON format</div>";
-            }
-        } else {
-            $data = $json;
-        }
-
-        // Start building HTML output
-        $html = "<div class='json-viewer'>";
-
-        // Use recursive function to build nested structure
-        $html .= $this->formatJsonNodeToHtml($data);
-
-        $html .= "</div>";
-
-        return $html;
-    }
-
-    /**
-     * Helper function to recursively format JSON nodes
-     * 
-     * @param mixed $node Current JSON node
-     * @param int $level Nesting level
-     * @return string HTML representation
-     */
-    function formatJsonNodeToHtml($node, $level = 0) {
-        $html = "";
-        if (is_null($node)) {
-            $node = '';
-        }
-        $padding = str_repeat("&nbsp;&nbsp;", $level);
-
-        if (is_array($node)) {
-            $html .= "<ul class='json-list'>";
-            foreach ($node as $key => $value) {
-                $html .= "<li>";
-                $html .= "<span class='json-key'>" . htmlspecialchars($key) . "</span>: ";
-
-                if (is_array($value)) {
-                    $html .= $this->formatJsonNodeToHtml($value, $level + 1);
-                } else {
-                    $html .= "<span class='json-value'>" . htmlspecialchars($value) . "</span>";
-                }
-
-                $html .= "</li>";
-            }
-            $html .= "</ul>";
-        } else {
-            $html .= "<span class='json-value'>" . htmlspecialchars($node) . "</span>";
-        }
-
-        return $html;
-    }
-
     private static function getSeverityValue(string $severity): int | null {
         $levels = [
             'very low' => 1,
@@ -410,7 +351,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     
     #[\Override]
     static function showMassiveActionsSubForm(\MassiveAction $ma) {
-        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
+        PluginLogger::debug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
         switch ($ma->getAction()) {
             case "create_ticket":
                 self::createTicketForm($ma);
@@ -605,6 +546,16 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         ];
 
         return $tab;
+    }
+
+    public static function getTreeCategoryList(string $itemtype, array $params): array {
+        // Seems implementation is no needed while our own showBrowserView is in operation
+        return [];
+    }
+
+    public static function getCategoryItem(string $itemtype): ?CommonDBTM {
+        // Seems implementation is no needed while our own showBrowserView is in operation
+        return null;
     }
 
 }

@@ -20,20 +20,23 @@
 namespace GlpiPlugin\Wazuh;
 
 use CommonDBTM;
-use DateTime;
-use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
-use Migration;
 use Computer;
-use NetworkEquipment;
-use Ticket;
+use CronTask;
+use DateTime;
+use DateTimeZone;
 use DBConnection;
-use Html;
 use Entity;
+use Exception;
+use GlpiPlugin\Wazuh\Traits\DeviceHelper;
+use Html;
+use Migration;
+use NetworkEquipment;
+use Override;
+use RuntimeException;
 use Search;
 use Session;
-use ITILFollowup;
-use Item_Ticket;
+use Ticket;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -47,43 +50,30 @@ if (!defined('GLPI_ROOT')) {
 class ComputerAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
+    use DeviceHelper;
 
     public $dohistory = true;
     public static $itemtype = 'Computer';
     public static $items_id = 'computers_id';
 
     #[\Override]
-    static function getTypeName($nb = 0) {
+    static function getTypeName($nb = 0): string {
         return _n('Wazuh Alert', 'Wazuh Alerts', $nb, PluginConfig::APP_CODE);
     }
     
-    protected function countElements($computers_id) {
+    protected function countElements($device_id): int {
         $count = countElementsInTableForMyEntities($this->getTable(), [
-            Computer::getForeignKeyField() => $computers_id,
+            Computer::getForeignKeyField() => $device_id,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => ['<>', 0],
             'is_deleted' => 0
         ]);
 
-//        global $DB;
-//
-//        $count = 0;
-//        $iterator = $DB->request([
-//            'COUNT' => 'count',
-//            'FROM' => $this->getTable(),
-//            'WHERE' => [
-//                Computer::getForeignKeyField() => $computers_id,
-//                static::getForeignKeyField() => ['<>', 0],
-//                'is_deleted' => 0
-//                ]
-//        ]);
-//
-//        if (count($iterator)) {
-//            $data = $iterator->current();
-//            $count = $data['count'];
-//        }
-
         return $count;
+    }
+
+    public static function getSectorizedDetails(): array {
+        return ['assets', self::class];
     }
 
     protected static function createItem($result, CommonDBTM $device): self | false {
@@ -93,7 +83,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         $founded = $item->find(['key' => $key, Entity::getForeignKeyField() => $device->getEntityID(), 'is_deleted' => 0]);
 
         if (count($founded) > 1) {
-            throw new \RuntimeException("Founded ComputerTab collection exceeded limit 1.");
+            throw new RuntimeException("Founded ComputerTab collection exceeded limit 1.");
         }
 
         try {
@@ -104,16 +94,16 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                 'a_ip' => $DB->escape($result['_source']['agent']['ip'] ?? ''),
                 'a_name' => $DB->escape($result['_source']['agent']['name'] ?? ''),
                 'a_id' => $DB->escape($result['_source']['agent']['id'] ?? ''),
-                'data' => $DB->escape(json_encode($result['_source']['data'] ?? '')),
-                'rule' => $DB->escape(json_encode($result['_source']['rule'] ?? '')),
-                'syscheck' => $DB->escape(json_encode($result['_source']['syscheck'] ?? '')),
+                'data' => json_encode($result['_source']['data'] ?? ''),
+                'rule' => json_encode($result['_source']['rule'] ?? ''),
+                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
-                'date_mod' => (new DateTime('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
+                'date_mod' => (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
                 Entity::getForeignKeyField() => $device->getEntityID(),
             ];
-        } catch (\Exception $e) {
-            Logger::addError($e->getMessage());
+        } catch (Exception $e) {
+            PluginLogger::error($e->getMessage());
             return false;
         }
 
@@ -125,8 +115,8 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         if (!$founded) {
             $newId = $item->add($item_data);
             if (!$newId) {
-                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
-                Logger::addDebug(json_encode($item_data, JSON_PRETTY_PRINT));
+                PluginLogger::warning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                PluginLogger::debug(json_encode($item_data, JSON_PRETTY_PRINT));
                 return false;
             }
         } else {
@@ -139,10 +129,11 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
 
 
-    #[\Override]
+    #[Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool
     {
-        Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
+        PluginLogger::debug($item->getType());
+        unset($_SESSION['glpisearch'][$item->getType()]);
         self::getAgentAlerts($item);
         $item_type = self::class;
         $params = [
@@ -165,7 +156,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
 
     public static function getAgentAlerts(CommonGLPI $device): array | false {
         if ($device instanceof Computer) {
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            $agent = WazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
@@ -175,18 +166,16 @@ class ComputerAlertsTab extends DeviceAlertsTab {
                 }
             } else {
                 $message = sprintf("%s %s Can not find active and not deleted agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType());
-                Logger::addError($message);
+                PluginLogger::error($message);
             }
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
 
-
-    #[\Override]
-    public function rawSearchOptions(): array
-    {
+    #[Override]
+    public function rawSearchOptions(): array {
         $tab = parent::rawSearchOptions();
 
         $tab[] = [
@@ -206,7 +195,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
     
     
-    #[\Override]
+    #[Override]
     public function getSpecificMassiveActions($checkitem = null) {
         $actions = parent::getSpecificMassiveActions($checkitem);
 
@@ -218,19 +207,19 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
         global $DB;
 
-        Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
+        PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
         switch ($ma->getAction()) {
             case "create_ticket":
                 $input = $ma->getInput();
-                Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . Logger::implodeWithKeys($input));
+                PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . PluginLogger::implodeWithKeys($input));
                 
                 if (!isset($input['entities_id'])) {
-                    Logger::addWarning("Missing entity while ticket creating.");
+                    PluginLogger::warning("Missing entity while ticket creating.");
                     return false;
                 }
 
                 if (!isset($input['ticket_title']) || empty($input['ticket_title'])) {
-                    Logger::addWarning("Missing ticket title while ticket creating.");
+                    PluginLogger::warning("Missing ticket title while ticket creating.");
                     return false;
                 }
  
@@ -250,7 +239,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
     }
 
-    #[\Override]
+    #[Override]
     protected static function getConnectionId($iids): int {
         global $DB;
         $table = static::getTable();
@@ -282,7 +271,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
             return 0;
         }
 
-        $agents_table = PluginWazuhAgent::getTable();
+        $agents_table = WazuhAgent::getTable();
         $agents_criteria = [
             'SELECT' => [Connection::getForeignKeyField()],
             'FROM' => $agents_table,
@@ -374,15 +363,15 @@ class ComputerAlertsTab extends DeviceAlertsTab {
             );
         }
 
-        \CronTask::register(ComputerAlertsTab::class, 'FetchAlerts' , HOUR_TIMESTAMP, array(
+        CronTask::register(ComputerAlertsTab::class, 'FetchAlerts' , HOUR_TIMESTAMP, array(
             'comment'   => '',
-            'mode'      => \CronTask::MODE_EXTERNAL
+            'mode'      => CronTask::MODE_EXTERNAL
         ));
 
         return true;
     }
 
-    #[\Override]
+    #[Override]
     static function uninstall(Migration $migration):bool {
         global $DB;
 

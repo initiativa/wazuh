@@ -25,6 +25,7 @@ use DateTime;
 use DateTimeZone;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
+use GlpiPlugin\Wazuh\Traits\DeviceHelper;
 use Migration;
 use NetworkEquipment;
 use Ticket;
@@ -48,6 +49,7 @@ if (!defined('GLPI_ROOT')) {
 class NetworkEqAlertsTab extends DeviceAlertsTab {
     use TicketableTrait;
     use IndexerRequestsTrait;
+    use DeviceHelper;
 
     public $dohistory = true;
     public static $itemtype = 'NetworkEquipment';
@@ -105,16 +107,16 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                 'a_ip' => $DB->escape($result['_source']['agent']['ip'] ?? ''),
                 'a_name' => $DB->escape($result['_source']['agent']['name'] ?? ''),
                 'a_id' => $DB->escape($result['_source']['agent']['id'] ?? ''),
-                'data' => $DB->escape(json_encode($result['_source']['data'] ?? '')),
-                'rule' => $DB->escape(json_encode($result['_source']['rule'] ?? '')),
-                'syscheck' => $DB->escape(json_encode($result['_source']['syscheck'] ?? '')),
+                'data' => json_encode($result['_source']['data'] ?? ''),
+                'rule' => json_encode($result['_source']['rule'] ?? ''),
+                'syscheck' => json_encode($result['_source']['syscheck'] ?? ''),
                 'input_type' => $DB->escape($result['_source']['input']['type'] ?? ''),
                 'date_mod' => (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s'),
                 'source_timestamp' => self::convertIsoToMysqlDatetime(self::array_getvalue($result, ['_source', 'timestamp'])),
                 Entity::getForeignKeyField() => $device->getEntityID(),
             ];
         } catch (\Exception $e) {
-            Logger::addError($e->getMessage());
+            PluginLogger::error($e->getMessage());
             return false;
         }
 
@@ -126,7 +128,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
         if (!$founded) {
             $newId = $item->add($item_data);
             if (!$newId) {
-                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                PluginLogger::warning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
                 return false;
             }
         } else {
@@ -140,7 +142,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     
     #[\Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool {
-        Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
+        PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
         self::getAgentAlerts($item);
         $item_type = self::class;
         $params = [
@@ -163,7 +165,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
 
     public static function getAgentAlerts(CommonGLPI $device): array | false {
         if ($device instanceof NetworkEquipment) {
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            $agent = WazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
@@ -173,10 +175,10 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
                 }
             } else {
                 $message = sprintf("%s %s Can not find active and not deleted agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType());
-                Logger::addError($message);
+                PluginLogger::error($message);
             }
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
@@ -235,7 +237,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
             return 0;
         }
 
-        $agents_table = PluginWazuhAgent::getTable();
+        $agents_table = WazuhAgent::getTable();
         $agents_criteria = [
             'SELECT' => [Connection::getForeignKeyField()],
             'FROM' => $agents_table,
@@ -269,19 +271,19 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
         global $DB;
 
-        Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
+        PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
         switch ($ma->getAction()) {
             case "create_ticket":
                 $input = $ma->getInput();
-                Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . Logger::implodeWithKeys($input));
+                PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . PluginLogger::implodeWithKeys($input));
                 
                 if (!isset($input['entities_id'])) {
-                    Logger::addWarning("Missing entity while ticket creating.");
+                    PluginLogger::warning("Missing entity while ticket creating.");
                     return false;
                 }
 
                 if (!isset($input['ticket_title']) || empty($input['ticket_title'])) {
-                    Logger::addWarning("Missing ticket title while ticket creating.");
+                    PluginLogger::warning("Missing ticket title while ticket creating.");
                     return false;
                 }
  

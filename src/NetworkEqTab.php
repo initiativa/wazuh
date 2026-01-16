@@ -136,7 +136,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
               `p_installed` = VALUES(`p_installed`),
               `date_mod` = VALUES(`date_mod`)
           ";
-        Logger::addDebug($query, ['computer_fkey' => $device_fkey]);
+        PluginLogger::debug($query, ['computer_fkey' => $device_fkey]);
         return $query;
     }
 
@@ -181,7 +181,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
         if (!$founded) {
             $newId = $item->add($item_data);
             if (!$newId) {
-                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                PluginLogger::warning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
             }
         } else {
             $fid = reset($founded)['id'];
@@ -194,7 +194,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
 
     #[\Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
-        Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
+        PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
         self::getAgentVulnerabilities($item);
         $item_type = self::class;
         $params = [
@@ -217,7 +217,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
 
     public static function getAgentVulnerabilities(CommonGLPI $device): array | false {
         if ($device instanceof NetworkEquipment) {
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            $agent = WazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
@@ -227,10 +227,10 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
                 }
             } else {
                 $message = sprintf("%s %s Can not find active and not deleted agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType());
-                Logger::addError($message);
+                PluginLogger::error($message);
             }
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
@@ -289,7 +289,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
             return 0;
         }
 
-        $agents_table = PluginWazuhAgent::getTable();
+        $agents_table = WazuhAgent::getTable();
         $agents_criteria = [
             'SELECT' => [Connection::getForeignKeyField()],
             'FROM' => $agents_table,
@@ -323,19 +323,19 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
     static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
         global $DB;
 
-        Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
+        PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
         switch ($ma->getAction()) {
             case "create_ticket":
                 $input = $ma->getInput();
-                Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . Logger::implodeWithKeys($input));
+                PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . PluginLogger::implodeWithKeys($input));
                 
                 if (!isset($input['entities_id'])) {
-                    Logger::addWarning("Missing entity while ticket creating.");
+                    PluginLogger::warning("Missing entity while ticket creating.");
                     return false;
                 }
 
                 if (!isset($input['ticket_title']) || empty($input['ticket_title'])) {
-                    Logger::addWarning("Missing ticket title while ticket creating.");
+                    PluginLogger::warning("Missing ticket title while ticket creating.");
                     return false;
                 }
  
@@ -383,12 +383,12 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
         }
 
         $content = __('Wazuh auto ticket', PluginConfig::APP_CODE) . "<br>";
-        Logger::addDebug(__FUNCTION__ . " Network Eq: $device_id");
+        PluginLogger::debug(__FUNCTION__ . " Network Eq: $device_id");
 
         if ($device_id) {
             $device = new \NetworkEquipment();
             if ($device->getFromDB($device_id)) {
-                Logger::addDebug(__FUNCTION__ . " Network Eq: $device_id");
+                PluginLogger::debug(__FUNCTION__ . " Network Eq: $device_id");
                 $device_name = $cve->fields['name'] . "/" . $cve->fields['p_name'];
                 $content = $comment  . "<br>";
                 $content .= sprintf(

@@ -64,24 +64,6 @@ class ComputerTab extends DeviceTab implements Ticketable {
            'is_deleted' => 0
        ]);
 
-//       global $DB;
-//
-//        $count = 0;
-//        $iterator = $DB->request([
-//            'COUNT' => 'count',
-//            'FROM' => $this->getTable(),
-//            'WHERE' => [
-//                Computer::getForeignKeyField() => $computers_id,
-//                static::getForeignKeyField() => ['<>', 0],
-//                'is_deleted' => 0
-//                ]
-//        ]);
-//
-//        if (count($iterator)) {
-//            $data = $iterator->current();
-//            $count = $data['count'];
-//        }
-
         return $count;
     }
 
@@ -110,7 +92,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
               `p_installed` = VALUES(`p_installed`),
               `date_mod` = VALUES(`date_mod`)
           ";
-        Logger::addDebug($query, ['computer_fkey' => $computer_fkey]);
+        PluginLogger::debug($query, ['computer_fkey' => $computer_fkey]);
         return $query;
     }
 
@@ -181,7 +163,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
         if (!$founded) {
             $newId = $item->add($item_data);
             if (!$newId) {
-                Logger::addWarning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
+                PluginLogger::warning(__FUNCTION__ . ' INSERT ERROR: ' . $DB->error());
                 return false;
             }
         } else {
@@ -196,7 +178,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
     #[\Override]
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
     {
-        Logger::addDebug(__FUNCTION__ . " item type: " . $item->getType());
+        PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
         self::getAgentVulnerabilities($item);
         $item_type = self::class;
         $params = [
@@ -218,7 +200,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
 
     public static function getAgentVulnerabilities(CommonGLPI $device): array | false {
         if ($device instanceof Computer) {
-            $agent = PluginWazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
+            $agent = WazuhAgent::getByDeviceTypeAndId($device->getType(), $device->fields['id']);
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
@@ -228,10 +210,10 @@ class ComputerTab extends DeviceTab implements Ticketable {
                 }
             } else {
                 $message = sprintf("%s %s Can not find active and not deleted agent id = %s type = %s", __CLASS__, __FUNCTION__, $device->fields['id'], $device->getType());
-                Logger::addError($message);
+                PluginLogger::error($message);
             }
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
@@ -270,19 +252,19 @@ class ComputerTab extends DeviceTab implements Ticketable {
     public static function processMassiveActionsForOneItemtype(\MassiveAction $ma, \CommonDBTM $item, array $ids) {
         global $DB;
 
-        Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
+        PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . $item->getType() . " :: " . $item->getID() . " :: " . implode(", ", $ids));
         switch ($ma->getAction()) {
             case "create_ticket":
                 $input = $ma->getInput();
-                Logger::addDebug(__FUNCTION__ . " " . $ma->getAction() . " :: " . Logger::implodeWithKeys($input));
+                PluginLogger::debug(__FUNCTION__ . " " . $ma->getAction() . " :: " . PluginLogger::implodeWithKeys($input));
                 
                 if (!isset($input['entities_id'])) {
-                    Logger::addWarning("Missing entity while ticket creating.");
+                    PluginLogger::warning("Missing entity while ticket creating.");
                     return false;
                 }
 
                 if (empty($input['ticket_title'])) {
-                    Logger::addWarning("Missing ticket title.");
+                    PluginLogger::warning("Missing ticket title.");
                     return false;
                 }
  
@@ -334,7 +316,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
             return 0;
         }
 
-        $agents_table = PluginWazuhAgent::getTable();
+        $agents_table = WazuhAgent::getTable();
         $agents_criteria = [
             'SELECT' => [Connection::getForeignKeyField()],
             'FROM' => $agents_table,

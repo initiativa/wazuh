@@ -33,7 +33,7 @@ use Ticket;
 use Toolbox;
 
 
-class TreeSearchOutput extends \CommonDBTM {
+class TreeSearchOutput extends CommonDBTM {
     
     private array $search_opt_array;
     private static $search_options_cache = [];
@@ -210,7 +210,7 @@ class TreeSearchOutput extends \CommonDBTM {
             'massiveactionparams' => $data['search']['massiveactionparams'] + [
                 'num_displayed' => min($_SESSION['glpilist_limit'], $count),
                 'is_deleted'    => $is_deleted,
-                'container'     => "massform$itemtype$rand",
+                'container'     => "massform" . \str_replace('\\', '', $itemtype) . $rand,
             ],
             'can_config'          => \Session::haveRightsOr('search_config', [
                 \DisplayPreference::PERSONAL,

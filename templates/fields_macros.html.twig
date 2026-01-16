@@ -1,0 +1,220 @@
+{% extends 'components/form/fields_macros.html.twig' %}
+
+{% macro passwordFieldWithToggle(name, value, label = '', options = {}) %}
+    {% set options = {'rand': random()}|merge(options) %}
+    {% set id = options.id|default(name ~ options.rand) %}
+    
+    <div class="form-field row align-items-center w-100 mb-2">
+        <label class="col-form-label col-xxl-5 text-xxl-end " for="{{ id }}">
+            {{ label }}
+        </label>
+        <div class="col-xxl-7 field-container">
+            <div class="input-group is-invalid">
+                <input type="password" id="{{ id }}" name="{{ name }}" value="{{ value }}" class="form-control"
+               {% if options.compare_against %}
+                   {% set against_id = (options.compare_against ~ options.rand) %}
+                   onblur="passwordCompareAgainst(this, '{{ against_id }}')"
+               {% endif %}
+                >
+                <div class="input-group-append">
+                    <div class="input-group-text" onclick="togglePluginPassword('{{ id }}')">
+                        <i class="ti ti-eye" ></i>
+                    </div>
+                </div>
+               {% if options.invalid_feedback %}
+                <div class="invalid-feedback">{{ options.invalid_feedback }}</div>
+               {% endif %}
+            </div>
+
+
+        </div>
+
+    </div>
+{% endmacro %}
+
+{% macro passwordField2(name, value, label = '', options = {}) %}
+   {% set options = {
+      'id': '%id%',
+      'can_regenerate': options.can_regenerate,
+      'clearable': options.clearable is defined ? options.clearable : not options.is_disclosable,
+      'is_copyable': options.is_disclosable ?? false
+   }|merge(options) %}
+
+    {% set field %}
+        {% import 'components/form/basic_inputs_macros.html.twig' as _inputs %}
+        {{ _inputs.password(name, value, options) }}
+        <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;" onclick="togglePluginPassword('{{ options.id }}')">
+            <i class="ti ti-eye"></i>
+        </button>
+    {% endset %}
+
+   {# Add checkbox if needed to regenerate password (controler side) #}
+   {% if options.can_regenerate %}
+      {% set regenerate_chk %}
+         <input type="checkbox" name="_regenerate_{{ name }}" id="_regenerate_{{ name }}">&nbsp;<label for="_regenerate_{{ name }}">{{ __('Regenerate') }}</label>
+      {% endset %}
+      {% set field = field ~ regenerate_chk %}
+   {% endif %}
+
+   {{ _self.field(name, field, label, options) }}
+{% endmacro %}
+
+{% macro smallTitle(label, icon = '', helper = '', id = '') %}
+    {% set margins = 'mt-2 mb-2' %}
+    {% set id = id != '' ? id : 'formsection' ~ random() %}
+
+    <div class="card border-0 shadow-none p-0 m-0 {{ margins }} w-100">
+        <div id="{{ id }}" class="card-header mb-1 p-0 ps-3 py-1 ">
+            <h4 class="card-subtitle w-100 {{ icon|length ? 'ms-4' : '' }}">
+                {% if icon|length %}
+                    <div class="ribbon ribbon-bookmark ribbon-top ribbon-start bg-blue s-1">
+                        <i class="fs-2x {{ icon }}"></i>
+                    </div>
+                {% endif %}
+                <span class="ms-2">{{ label }}</span>
+                {% if helper is not empty %}
+                    <div class="card-body d-flex flex-wrap w-100">{{ helper }}</div>
+                {% endif %}
+            </h4>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro frameFull(label, icon = '', helper = '', id = '') %}
+    {% set margins = 'mt-2 mb-2' %}
+    {% set id = id != '' ? id : 'formsection' ~ random() %}
+
+    <div class="card bg-light border-0 shadow-none p-0 m-0 {{ margins }}">
+        <div id="{{ id }}" class="card-header mb-1 p-0 ps-3 py-1">
+            <h4 class="card-subtitle {{ icon|length ? 'ms-4' : '' }}">
+                {% if icon|length %}
+                    <div class="ribbon ribbon-bookmark ribbon-top ribbon-start bg-blue s-1">
+                        <i class="fs-2x {{ icon }}"></i>
+                    </div>
+                {% endif %}
+                <span class="ms-2">{{ label }}</span>
+            </h4>
+        </div>
+        {% if helper is not empty %}
+            <div class="card-body d-flex flex-column w-100">{{ helper }}</div>
+        {% endif %}
+
+    </div>
+{% endmacro %}
+
+{% macro frame(label, icon = '', helper = '', id = '') %}
+    {% set margins = 'mt-2 mb-2' %}
+    {% set id = id != '' ? id : 'formsection' ~ random() %}
+
+    <div class="card bg-light border-0 shadow-none p-0 m-0 {{ margins }}">
+        <div id="{{ id }}" class="card-header mb-1 p-0 ps-3 py-1">
+            <h4 class="card-subtitle {{ icon|length ? 'ms-4' : '' }}">
+                {% if icon|length %}
+                    <div class="ribbon ribbon-bookmark ribbon-top ribbon-start bg-blue s-1">
+                        <i class="fs-2x {{ icon }}"></i>
+                    </div>
+                {% endif %}
+                <span class="ms-2">{{ label }}</span>
+            </h4>
+        </div>
+        {% if helper is not empty %}
+            <div class="card-body d-flex flex-wrap w-100">{{ helper }}</div>
+        {% endif %}
+
+    </div>
+{% endmacro %}
+
+{% macro checkboxListField(name, selected_values, table_values, label, options) %}
+    {% set options = {
+        'full_width': false,
+        'full_width_adapt_column': true,
+        'label_class': 'col-xxl-5',
+        'input_class': 'col-xxl-7',
+        'add_field_class': '',
+        'field_class': 'col-12 col-sm-6',
+        'center': false,
+        'mb': 'mb-3',
+        'required': false,
+        'disabled': false,
+        'readonly': false,
+        'helper': '',
+        'rand': random()
+    }|merge(options|default({})) %}
+
+    {% set field %}
+        <div class="form-check-list">
+            {% for item_id, item_data in table_values %}
+                {% set is_selected = false %}
+                {% for selected_data, selected_id in selected_values|default([]) %}
+                    {% if selected_id == item_id %}
+                        {% set is_selected = true %}
+                    {% endif %}
+                {% endfor %}
+                <div class="form-check">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="{{ name }}[]"
+                           data-group="{{ name }}"
+                           value="{{ item_id }}"
+                           id="{{ name }}_{{ item_id }}_{{ options.rand }}"
+                           {% if is_selected %}checked{% endif %}
+                            {% if options.disabled %}disabled{% endif %}
+                            {% if options.readonly %}readonly{% endif %}>
+                    <label class="form-check-label" for="{{ name }}_{{ item_id }}_{{ options.rand }}">
+                        {{ item_data.name }}
+                    </label>
+                </div>
+            {% endfor %}
+        </div>
+    {% endset %}
+
+    {{ _self.field(name, field, label, options) }}
+{% endmacro %}
+
+{% macro escapePlainText(content) %}
+    {{ content|replace({'\n': '<br/>',"\\'": "'", "\\\"": "\""})|raw }}
+{% endmacro %}
+
+
+{% macro badges(name, items, options = {}) %}
+    {% set options = {
+        'id': name|safe_dom_id,
+        'label': name|capitalize,
+        'class': 'col-form-label col-xxl-5 text-xxl-end',
+        'badge_class': 'badge bg-secondary me-1',
+        'helper': null,
+    }|merge(options) %}
+
+    <div class="form-field row align-items-center col-12 col-sm-6 mb-2">
+        <label for="{{ options.id }}" class="{{ options.class }}">
+            {{ options.label }}
+            {% if options.helper %}
+                <span class="form-help"
+                      data-bs-toggle="popover"
+                      data-bs-placement="top"
+                      data-bs-html="true"
+                      data-bs-content="{{ options.helper|escape|nl2br }}">
+                    ?
+                </span>
+            {% endif %}
+        </label>
+        <div id="{{ options.id }}" class="col-xxl-7  field-container">
+            {% for it in items %}
+                <span class="{{ options.badge_class }}"
+                      data-bs-toggle="tooltip"
+                      data-bs-placement="top"
+                      title="{{ it.description is defined ? it.description : it.name }}">
+                    {{ it.name }}
+                </span>
+            {% else %}
+                <span class="text-muted">{{ __('(none)') }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        $(function () {
+            $('[data-bs-toggle="tooltip"]').tooltip();
+        });
+    </script>
+{% endmacro %}

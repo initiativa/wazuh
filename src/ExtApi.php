@@ -40,7 +40,7 @@ use Ticket;
 class ExtApi {
 
     /**
-     * @param CommonGLPI $device device of type Computer or NetworkEquipment with active link of PluginWazuhAgent->device. For example \Computer::getById(1) ...
+     * @param CommonGLPI $device device of type Computer or NetworkEquipment with active link of WazuhAgent->device. For example \Computer::getById(1) ...
      * @return array|false
      */
     public static function fetchLatestVulnerabilities(CommonGLPI $device): array | false {
@@ -49,7 +49,7 @@ class ExtApi {
         } else if ($device instanceof NetworkEquipment) {
             return NetworkEqTab::getAgentVulnerabilities($device);
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }
@@ -60,7 +60,7 @@ class ExtApi {
         } else if ($device instanceof NetworkEquipment) {
             return NetworkEqAlertsTab::getAgentAlerts($device);
         } else {
-            Logger::addError(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
+            PluginLogger::error(sprintf("%s %s Device %s outside of NetworkEquipment or Computer scope.", __CLASS__, __FUNCTION__, $device->getType()));
         }
         return false;
     }

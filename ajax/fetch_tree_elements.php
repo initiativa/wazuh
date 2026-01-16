@@ -2,18 +2,19 @@
 
 use GlpiPlugin\Wazuh\ComputerAlertsTab;
 use GlpiPlugin\Wazuh\ComputerTab;
-use GlpiPlugin\Wazuh\Logger;
+use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\NetworkEqAlertsTab;
 use GlpiPlugin\Wazuh\NetworkEqTab;
-use GlpiPlugin\Wazuh\PluginWazuhAgent;
+use GlpiPlugin\Wazuh\WazuhAgent;
 
-include('../../../inc/includes.php');
+use \Glpi\DBAL\QueryExpression;
+use function Safe\json_encode;
 
 // Check user session and rights
 Session::checkLoginUser();
-Session::checkRight(PluginWazuhAgent::$rightname, READ);
+Session::checkRight(WazuhAgent::$rightname, READ);
 
-const page_size = 10;
+const PAGE_SIZE = 10;
 
 // Get parameters
 $itemtype = $_GET['itemtype'] ?? null;
@@ -25,11 +26,11 @@ $device_id = isset($_GET['device_id']) ? intval($_GET['device_id']) : 0;
 $page_no = isset($_GET['page_no']) ? intval($_GET['page_no']) : 1;
 
 if (is_null($itemtype) || $parent_id === 0 || $device_id === 0) {
-    throw new \Exception('Illegal Arguments Exception.');
+    throw new Exception('Illegal Arguments Exception.');
 }
 
 if (!($itemtype === ComputerAlertsTab::class || $itemtype === ComputerTab::class || $itemtype === NetworkEqAlertsTab::class || $itemtype === NetworkEqTab::class)) {
-    throw new \Exception('Illegal Argument Exception. ' . $itemtype . ' -- ' . ComputerAlertsTab::class);
+    throw new Exception('Illegal Argument Exception. ' . $itemtype . '  ');
 }
 
 $params['criteria'] = [
@@ -45,10 +46,10 @@ $params['criteria'] = [
     ],
 ];
 
-Logger::addDebug(__FILE__ . " : " . json_encode($params) . " :: " . $itemtype);
-$params['list_limit'] = page_size;
-$start = ($page_no -1) * page_size;
-Logger::addDebug(__FILE__ . " OFFSET: $start , PAGE_NO: $page_no");
+PluginLogger::debug(__FILE__ . " : " . json_encode($params) . " :: " . $itemtype);
+$params['list_limit'] = PAGE_SIZE;
+$start = ($page_no -1) * PAGE_SIZE;
+PluginLogger::debug(__FILE__ . " OFFSET: $start , PAGE_NO: $page_no");
 
 $params['start'] = $start;
 
@@ -80,5 +81,6 @@ $data['has_child_ids'] = $has_child_ids;
 $data['child_map'] = $child_map;
 
 // Send JSON response
-header('Content-Type: application/json');
+header('Content-Type: application/json;  charset=UTF-8');
+Html::header_nocache();
 echo json_encode($data);

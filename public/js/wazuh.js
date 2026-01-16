@@ -16,6 +16,7 @@ function wazuhExpandAllTreeNodes(buttonElement, tableId) {
     table.querySelectorAll('.tree-toggle').forEach(function (toggler) {
         toggler.classList.remove('fa-caret-right');
         toggler.classList.add('fa-caret-down');
+        wazuhFetchPageableTreeData(toggler, tableId);
     });
 }
 
@@ -123,12 +124,12 @@ function wazuhCreatePageableRow(data, search_id, element) {
     return tr;
 }
 
-function calculateTreeLevel(row_id, current_level = 0) {
-    const parent_map = window['tree_parent_map'];
+function calculateTreeLevel(searchform_id, row_id, current_level = 0) {
+    const parent_map = window[searchform_id + '_tree_parent_map'];
     const parent_id = parent_map[row_id];
     if (parent_id !== undefined) {
         current_level++;
-        return calculateTreeLevel(parent_id, current_level);
+        return calculateTreeLevel(searchform_id, parent_id, current_level);
     }
     return current_level;
 }
@@ -155,7 +156,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
             const has_children = has_child_ids.includes(row_id);
             const has_parent = parent_id > 0;
 
-            let level = calculateTreeLevel(row_id, 0);
+            let level = calculateTreeLevel(searchform_id, row_id, 0);
 
             let display_style = "";
             let parent_class = "";
@@ -249,13 +250,22 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
     return fragment;
 }
 
-function wazuhFetchPageableTreeData(element, formId) {
+function wazuhFetchPageableTreeData(element, formId, successFunction = null) {
     let page_no = parseInt(element.getAttribute('data-page'));
     if (page_no === 0) {
         page_no ++;
         element.setAttribute('data-page', page_no);
     }
     let nodeId = element.getAttribute('data-node-id');
+
+    if (!successFunction) {
+        successFunction = function(response) {
+            let elements = wazuhCreateTableRowsFromData(response, formId, element);
+            let children = wazuhTreeFindChildren(formId, nodeId);
+            $(children).remove();
+            element.parentNode.parentNode.parentNode.after(elements[0]);
+        };
+    }
     $.ajax({
         url: '/plugins/wazuh/ajax/fetch_tree_elements.php',
         type: 'GET',
@@ -267,43 +277,39 @@ function wazuhFetchPageableTreeData(element, formId) {
         },
         dataType: 'json',
         beforeSend: function() {
-            console.debug("Wazuh fetch pageable data: ", this.url);
+            // console.debug("Wazuh fetch pageable data: ", this.url);
         },
-        success: function(response) {
-            let elements = wazuhCreateTableRowsFromData(response, formId, element);
-            let children = wazuhTreeFindChildren(nodeId);
-            $(children).remove();
-            element.parentNode.parentNode.parentNode.after(elements[0]);
-        },
+        success: successFunction,
         error: function(xhr, status, error) {
             console.error('AJAX error:', error);
         }
     });
 }
 
-function wazuhToggleTreeNode(element, tableId) {
+function wazuhToggleTreeNode(element, searchform_id) {
     let nodeId = element.getAttribute('data-node-id');
     let page = parseInt(element.getAttribute('data-page'));
     let itemtype2 = element.getAttribute('data-itemtype');
-    let children = wazuhTreeFindChildren(nodeId);
+    let children = wazuhTreeFindChildren(searchform_id, nodeId);
     let isExpanded = element.classList.contains('fa-caret-down');
 
     // Toggle icon
     if (isExpanded) {
         element.classList.remove('fa-caret-down');
         element.classList.add('fa-caret-right');
-        children = wazuhTreeFindChildren(nodeId);
+        children = wazuhTreeFindChildren(searchform_id, nodeId);
         $(children).remove();
     } else {
         element.classList.remove('fa-caret-right');
         element.classList.add('fa-caret-down');
-        wazuhFetchPageableTreeData(element, tableId);
+        wazuhFetchPageableTreeData(element, searchform_id);
     }
-    wazuhTreeUpdateZebraStripes(tableId);
+    wazuhTreeUpdateZebraStripes(searchform_id);
 }
 
 function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     let selected = window[searchform_id + '_selected'];
+
     const rowTr = element.closest('tr');
     if (!rowTr)
         return;
@@ -320,7 +326,29 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
     }
 
     if (rowTr.dataset.hasChildren === 'true') {
-        const children = wazuhTreeFindAllChildren(rowId);
+        let expander = $(rowTr).find('i.tree-toggle').first();
+        if (!expander) {
+            console.error('No expander element found.', rowTr);
+            return;
+        }
+        expander = expander.get(0);
+
+        if ($(expander).hasClass('fa-caret-right')) {
+            wazuhFetchPageableTreeData(expander, searchform_id, response => {
+                if (response && response.data && Array.isArray(response.data.rows)) {
+                    response.data.rows.forEach((row, index) => {
+                        if (isChecked) {
+                            selected.add(parseInt(row.id));
+                        } else {
+                            selected.delete(parseInt(row.id));
+                        }
+                    });
+                    wazuhShowHideMassiveAction(searchform_id);
+                }
+            });
+        }
+
+        const children = wazuhTreeFindAllChildren(searchform_id, rowId);
         children.forEach(function (child) {
             const childCheckbox = child.querySelector('.massive_action_checkbox');
             if (childCheckbox) {
@@ -335,10 +363,27 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
             }
         });
     }
+
+    wazuhShowHideMassiveAction(searchform_id);
     const data2 = JSON.stringify(Array.from(selected));
     document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
     // console.log(itemtype);
     wazuhCreateHiddenTrSelection($(rowTr).closest('tbody'), searchform_id, itemtype)
+}
+
+function wazuhShowHideMassiveAction(searchform_id) {
+    let selected = window[searchform_id + '_selected'];
+    if (selected.size === 0) {
+        $('.massiveactions-control')
+            .removeClass('animate__slideInLeft')
+            .addClass('animate__slideOutLeft')
+            .addClass('d-none');
+    } else {
+        $('.massiveactions-control')
+            .removeClass('d-none')
+            .removeClass('animate__slideOutLeft')
+            .addClass('animate__slideInLeft');
+    }
 }
 
 function wazuhCreateHiddenTrSelection(tbodyElement, searchform_id, itemtype) {
@@ -373,16 +418,16 @@ function wazuhAddHiddenOutOfScopeSelection(outofscopeElement, itemtype, row_id) 
     outofscopeElement.append(checkbox);
 }
 
-function wazuhTreeFindAllChildren(nodeId) {
+function wazuhTreeFindAllChildren(searchform_id, nodeId) {
     nodeId = String(nodeId);
 
-    const directChildren = wazuhTreeFindChildren(nodeId);
+    const directChildren = wazuhTreeFindChildren(searchform_id, nodeId);
     let allChildren = [...directChildren];
 
     directChildren.forEach(function (child) {
         if (child.dataset.hasChildren === 'true') {
             const childId = child.dataset.nodeId;
-            const childrenOfChild = wazuhTreeFindAllChildren(childId);
+            const childrenOfChild = wazuhTreeFindAllChildren(searchform_id, childId);
             allChildren = allChildren.concat(childrenOfChild);
         }
     });
@@ -411,9 +456,14 @@ function wazuhTreeUpdateZebraStripes(tableId) {
     });
 }
 
-function wazuhTreeFindChildren(nodeId) {
+function wazuhTreeFindChildren(searchform_id, nodeId) {
     nodeId = String(nodeId);
-    const parentRow = document.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
+    let form = document.getElementById(searchform_id);
+    if (!form) {
+        console.error(`Can not find ${searchform_id}`);
+        return [];
+    }
+    const parentRow = form.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
     if (!parentRow)
         return [];
 
@@ -432,36 +482,6 @@ function wazuhTreeFindChildren(nodeId) {
 
     return children;
 }
-
-function wazuhTreeFindChildren2(nodeId) {
-    // Convert nodeId to string for comparison
-    nodeId = String(nodeId);
-
-    // Get all tree nodes
-    var nodes = document.querySelectorAll('.tree-node');
-    var children = [];
-
-    // First find direct parent row
-    var parentRow = document.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
-
-    if (!parentRow)
-        return [];
-
-    // Get next siblings until we find another node at the same or higher level
-    var currentNode = parentRow.nextElementSibling;
-
-    while (currentNode &&
-            currentNode.classList.contains('tree-node') &&
-            currentNode.dataset.isChild === 'true') {
-        children.push(currentNode);
-        currentNode = currentNode.nextElementSibling;
-    }
-
-    return children;
-}
-
-
-
 
 /**
  * Initialize Wazuh plugin JavaScript functions

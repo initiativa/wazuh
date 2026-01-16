@@ -7,7 +7,7 @@
     <h1>Computer Just test !!</h1>
     {{  APP_VER | raw }}
     
-    {{ fields.dropdownField('\GlpiPlugin\Wazuh\PluginWazuhAgent', 'server_url', item.fields['parent'], __('Wazuh Server URL', 'wazuh'), {
+    {{ fields.dropdownField('\GlpiPlugin\Wazuh\WazuhAgent', 'server_url', item.fields['parent'], __('Wazuh Server URL', 'wazuh'), {
         'rand': rand
     }) }}
 </div>

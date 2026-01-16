@@ -19,23 +19,20 @@
 
 namespace GlpiPlugin\Wazuh;
 
-use Glpi\Application\View\TemplateRenderer;
-use CommonGLPI;
 use CommonDBTM;
-use Migration;
+use CommonGLPI;
+use CommonTreeDropdown;
 use Computer;
-use NetworkEquipment;
-use QueryExpression;
-use Ticket;
-use MassiveAction;
-use DBConnection;
-use Html;
 use Entity;
+use Glpi\Application\View\TemplateRenderer;
+use Glpi\DBAL\QueryExpression;
+use Glpi\Features\TreeBrowseInterface;
+use Html;
+use MassiveAction;
+use NetworkEquipment;
 use Search;
 use Session;
-use ITILFollowup;
-use Item_Ticket;
-use CommonTreeDropdown;
+use Ticket;
 
 if (!defined('GLPI_ROOT')) {
    die("No access.");
@@ -46,13 +43,13 @@ if (!defined('GLPI_ROOT')) {
  *
  * @author w-tomasz
  */
-abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
+abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, TreeBrowseInterface {
     use IndexerRequestsTrait;
 
     public $dohistory = true;
 
     #[\Override]
-    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0) {
+    function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
         if (!$withtemplate && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
             global $DB;
             $count = $this->countElements($item->getID());
@@ -66,7 +63,15 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     abstract static protected function getUpsertStatement(): string;
     abstract static protected function bindStatement($stmt, $result, \CommonDBTM $device): bool;
 
-    static function cronInfo($name) {
+    public function getForbiddenStandardMassiveAction(): array {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'update';
+        $forbidden[] = 'CommonDBConnexity:unaffect';
+        $forbidden[] = 'CommonDBConnexity:affect';
+        return $forbidden;
+    }
+    
+    static function cronInfo($name): array {
         switch ($name) {
             case 'fetchvulenrabilities' :
                 return array('description' => __('Fetch vulnerabilities information for linked with Wazuh\'s Agents, Computers and NetworkEquipments.'),
@@ -79,9 +84,9 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     {
         global $DB;
         $cron_status = 0;
-        Logger::addInfo("Executing cron - FetchVulnerabilities.");
+        PluginLogger::dev("Executing cron - FetchVulnerabilities.");
 
-        $agents = (new PluginWazuhAgent())->find([
+        $agents = (new WazuhAgent())->find([
             'itemtype' => 'Computer',
         ]);
         $device_ids = [];
@@ -101,7 +106,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             }
         }
 
-        $agents = (new PluginWazuhAgent())->find([
+        $agents = (new WazuhAgent())->find([
             'itemtype' => 'NetworkEquipment',
         ]);
 
@@ -152,7 +157,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         return true;
     }
 
-    static function showBrowseView($itemtype, $params): void
+    static function showBrowseView(string $itemtype, array $params, $update = false)
     {
         $item_id = $params['criteria'][0]['value'];
         $params['criteria'][] = [
@@ -161,7 +166,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             'value' => 0
         ];
 
-        Logger::addDebug(__FUNCTION__ . " : " . json_encode($params));
+        PluginLogger::debug(__FUNCTION__ . " : " . json_encode($params));
         $data = Search::getDatas($itemtype, $params);
 
         global $DB;
@@ -291,7 +296,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
             }
         }
         
-        Logger::addDebug(__FUNCTION__ . " $id not found.");
+        PluginLogger::debug(__FUNCTION__ . " $id not found.");
         return false;
     }
 
@@ -363,7 +368,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 
         if (!$id) {
             global $DB;
-            Logger::addWarning(__FUNCTION__ . " " . $DB->error());
+            PluginLogger::warning(__FUNCTION__ . " " . $DB->error());
         }
 
         return $id;
@@ -379,7 +384,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
         $key = array_keys($iids)[0];
         $ids = array_map('intval', array_values($iids[$key]));
 
-        Logger::addDebug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
+        PluginLogger::debug(__FUNCTION__ . " table: " . $table . " :::::: " . json_encode($ids));
 
          $criteria = [
             'SELECT' => ['v_severity'],
@@ -403,7 +408,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 
         $result = (int)($average / $size);
         if ($result < 1 || $result > 6) {
-            Logger::addError("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
+            PluginLogger::error("Average urgency level outof expecting values. Avg=$average, Size=$size, Result=$result");
             throw new \RuntimeException("Average urgency level outof expecting values.");
         }
         
@@ -413,7 +418,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
     
     #[\Override]
     static function showMassiveActionsSubForm(\MassiveAction $ma) {
-        Logger::addDebug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
+        PluginLogger::debug(__FUNCTION__ . " "  . $ma->getAction() . " ----- " . json_encode($ma->getItems()));
         switch ($ma->getAction()) {
             case "create_ticket":
                 self::createTicketForm($ma);
@@ -626,6 +631,16 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable {
 //        ];
 
         return $tab;
+    }
+
+    public static function getTreeCategoryList(string $itemtype, array $params): array {
+        // Seems implementation is no needed while our own showBrowserView is in operation
+        return [];
+    }
+
+    public static function getCategoryItem(string $itemtype): ?CommonDBTM {
+        // Seems implementation is no needed while our own showBrowserView is in operation
+        return null;
     }
 
 }
