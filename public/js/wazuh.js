@@ -124,12 +124,12 @@ function wazuhCreatePageableRow(data, search_id, element) {
     return tr;
 }
 
-function calculateTreeLevel(row_id, current_level = 0) {
-    const parent_map = window['tree_parent_map'];
+function calculateTreeLevel(searchform_id, row_id, current_level = 0) {
+    const parent_map = window[searchform_id + '_tree_parent_map'];
     const parent_id = parent_map[row_id];
     if (parent_id !== undefined) {
         current_level++;
-        return calculateTreeLevel(parent_id, current_level);
+        return calculateTreeLevel(searchform_id, parent_id, current_level);
     }
     return current_level;
 }
@@ -156,7 +156,7 @@ function wazuhCreateTableRowsFromData(data, searchform_id, element) {
             const has_children = has_child_ids.includes(row_id);
             const has_parent = parent_id > 0;
 
-            let level = calculateTreeLevel(row_id, 0);
+            let level = calculateTreeLevel(searchform_id, row_id, 0);
 
             let display_style = "";
             let parent_class = "";
@@ -277,7 +277,7 @@ function wazuhFetchPageableTreeData(element, formId, successFunction = null) {
         },
         dataType: 'json',
         beforeSend: function() {
-            console.debug("Wazuh fetch pageable data: ", this.url);
+            // console.debug("Wazuh fetch pageable data: ", this.url);
         },
         success: successFunction,
         error: function(xhr, status, error) {
@@ -343,6 +343,7 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
                             selected.delete(parseInt(row.id));
                         }
                     });
+                    wazuhShowHideMassiveAction(searchform_id);
                 }
             });
         }
@@ -363,10 +364,26 @@ function wazuhTreeCheckChanged(element, searchform_id, itemtype) {
         });
     }
 
+    wazuhShowHideMassiveAction(searchform_id);
     const data2 = JSON.stringify(Array.from(selected));
     document.getElementById(searchform_id).setAttribute('data-selected-items', data2);
     // console.log(itemtype);
     wazuhCreateHiddenTrSelection($(rowTr).closest('tbody'), searchform_id, itemtype)
+}
+
+function wazuhShowHideMassiveAction(searchform_id) {
+    let selected = window[searchform_id + '_selected'];
+    if (selected.size === 0) {
+        $('.massiveactions-control')
+            .removeClass('animate__slideInLeft')
+            .addClass('animate__slideOutLeft')
+            .addClass('d-none');
+    } else {
+        $('.massiveactions-control')
+            .removeClass('d-none')
+            .removeClass('animate__slideOutLeft')
+            .addClass('animate__slideInLeft');
+    }
 }
 
 function wazuhCreateHiddenTrSelection(tbodyElement, searchform_id, itemtype) {
@@ -447,7 +464,6 @@ function wazuhTreeFindChildren(searchform_id, nodeId) {
         return [];
     }
     const parentRow = form.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
-    console.debug('Find children: ', parentRow);
     if (!parentRow)
         return [];
 
@@ -460,33 +476,6 @@ function wazuhTreeFindChildren(searchform_id, nodeId) {
             currentNode.dataset.isChild === 'true' &&
             parseInt(currentNode.dataset.level) > level)
     {
-        children.push(currentNode);
-        currentNode = currentNode.nextElementSibling;
-    }
-
-    return children;
-}
-
-function wazuhTreeFindChildren2(nodeId) {
-    // Convert nodeId to string for comparison
-    nodeId = String(nodeId);
-
-    // Get all tree nodes
-    var nodes = document.querySelectorAll('.tree-node');
-    var children = [];
-
-    // First find direct parent row
-    var parentRow = document.querySelector('.tree-node[data-node-id="' + nodeId + '"]');
-
-    if (!parentRow)
-        return [];
-
-    // Get next siblings until we find another node at the same or higher level
-    var currentNode = parentRow.nextElementSibling;
-
-    while (currentNode &&
-            currentNode.classList.contains('tree-node') &&
-            currentNode.dataset.isChild === 'true') {
         children.push(currentNode);
         currentNode = currentNode.nextElementSibling;
     }
