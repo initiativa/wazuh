@@ -62,7 +62,6 @@ function plugin_init_wazuh() {
 
         if (Session::haveRight('config', UPDATE)) {
             $PLUGIN_HOOKS[Hooks::CONFIG_PAGE][PluginConfig::APP_CODE] = 'front/connection.php';
-//            Logger::addNotice(__FUNCTION__ . " plugin configuration registered.");
 
             $PLUGIN_HOOKS['use_massive_action'][PluginConfig::APP_CODE] = true;
         }
@@ -73,6 +72,7 @@ function plugin_init_wazuh() {
 
         $PLUGIN_HOOKS['menu_toadd'][PluginConfig::APP_CODE] = [
             'admin' => [\GlpiPlugin\Wazuh\WazuhAgent::class],
+            'config' => [\GlpiPlugin\Wazuh\Connection::class],
         ];
 
         $PLUGIN_HOOKS[Hooks::ADD_CSS][PluginConfig::APP_CODE] = ['css/wazuh.css'];
