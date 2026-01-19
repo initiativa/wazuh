@@ -26,7 +26,6 @@ use GLPIKey;
 use Migration;
 
 /**
- * Description of PluginWazuhConnection
  *
  * @author w-tomasz
  */
@@ -41,6 +40,10 @@ class Connection extends CommonDBTM implements Upgradeable {
     #[\Override]
     public static function getTypeName($nb = 0): string {
         return _n("Wazuh Config", "Wazuh Config's", $nb, PluginConfig::APP_CODE);
+    }
+
+    public static function getSectorizedDetails(): array {
+        return ['config', self::class];
     }
 
     #[\Override]

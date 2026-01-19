@@ -49,7 +49,6 @@ use GlpiPlugin\Wazuh\NetworkEqTab;
 function plugin_wazuh_install() {
     PluginLogger::dev(__FUNCTION__ . " Installing " . PLUGIN_WAZUH_VERSION);
 
-
     $version = getOldVersion();
     PluginLogger::debug(__FUNCTION__ . " Version: " . $version);
     
@@ -110,7 +109,7 @@ function plugin_wazuh_getDropdown()
 
     if ($plugin->isActivated(PluginConfig::APP_CODE)) {
         return [
-            Connection::class => Connection::getTypeName(Session::getPluralNumber()),
+//            Connection::class => Connection::getTypeName(Session::getPluralNumber()),
             ComputerTab::class => "Computer " . ComputerTab::getTypeName(Session::getPluralNumber()),
             NetworkEqTab::class => "Network Eq " . NetworkEqTab::getTypeName(Session::getPluralNumber()),
         ];

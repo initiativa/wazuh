@@ -56,7 +56,6 @@ class WazuhAgent extends CommonDBTM {
         return ['admin', self::class];
     }
 
-
     /**
     * Visible tabs definitions
     * @param array $options
