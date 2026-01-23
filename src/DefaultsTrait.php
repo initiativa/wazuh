@@ -30,6 +30,20 @@ trait DefaultsTrait {
         global $DB;
 
         if (strlen(getenv('WPASS1')) > 2) {
+            $criteria = [
+                'SELECT' => ['id'],
+                'FROM' => $table,
+                'WHERE' => [
+                    'id' => [1,2],
+                ]
+            ];
+
+            $iterator = $DB->request($criteria);
+            $size = count($iterator);
+            if ($size > 0) {
+                return;
+            }
+
             $DB->insert($table, [
                 'id' => 1,
                 'name' => 'VPN Wazuh',
