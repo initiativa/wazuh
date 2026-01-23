@@ -590,7 +590,7 @@ function wazuhTestApiConnection(testButton, token, rand) {
         port: apiPort,
         username: apiUsername,
         password: apiPassword,
-        csrf_token: token,
+        _glpi_csrf_token: token,
         suffix: '/security/user/authenticate'
     };
 
@@ -608,7 +608,7 @@ function wazuhTestIndexerConnection(testButton, token, rand) {
         port: indexerPort,
         username: indexerUsername,
         password: indexerPassword,
-        csrf_token: token,
+        _glpi_csrf_token: token,
         suffix: '/security/user/authenticate'
     };
 
@@ -626,6 +626,9 @@ function wazuhTestConnection(testButton, data, url) {
         method: 'POST',
         dataType: 'json',
         data: data,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
         timeout: 5000,
         success: function(response) {
             // console.debug(response);
@@ -641,7 +644,7 @@ function wazuhTestConnection(testButton, data, url) {
             }
         },
         error: function(xhr) {
-            console.error('Login error:', xhr);
+            console.error('Error:', xhr);
             showToast(`Connection to ${data.url}:${data.port} failed. ${xhr.statusText}`, 'error');
             $(testButton).removeClass(['btn-secondary', 'btn-success']);
             $(testButton).addClass('btn-danger');

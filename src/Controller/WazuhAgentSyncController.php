@@ -39,4 +39,15 @@ class WazuhAgentSyncController extends AbstractController {
         return new Response('true');
     }
 
+    #[Route(
+        path: 'check_api',
+        name: 'wazuh_check_api',
+        methods: ['GET'],
+    )]
+    public function check_api_connection(Request $request): Response {
+
+        return new Response('false');
+    }
+
+
 }
