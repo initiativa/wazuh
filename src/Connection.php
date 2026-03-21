@@ -183,12 +183,10 @@ class Connection extends CommonDBTM implements Upgradeable {
     * @return boolean
     */
    #[\Override]
-   function showForm($ID, array $options = []): bool
-   {
+   function showForm($ID, array $options = []): bool {
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
-        $this->showFormHeader($options);
 
         $this->decryptFields(['api_password', 'indexer_password']);
         TemplateRenderer::getInstance()->display(

@@ -26,7 +26,7 @@ $device_id = isset($_GET['device_id']) ? intval($_GET['device_id']) : 0;
 $page_no = isset($_GET['page_no']) ? intval($_GET['page_no']) : 1;
 
 if (is_null($itemtype) || $parent_id === 0 || $device_id === 0) {
-    throw new Exception('Illegal Arguments Exception.');
+    throw new Exception("Illegal Arguments Exception. Itemtype: $itemtype, parentId: $parent_id, deviceId: $device_id");
 }
 
 if (!($itemtype === ComputerAlertsTab::class || $itemtype === ComputerTab::class || $itemtype === NetworkEqAlertsTab::class || $itemtype === NetworkEqTab::class)) {

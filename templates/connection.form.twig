@@ -1,7 +1,5 @@
 {% extends "generic_show_form.html.twig" %}
-{% import 'components/form/fields_macros.html.twig' as fields %}
-{% import '@wazuh/wazuh_fields_macros.html.twig' as wazuh_fields %}
-
+{% import '@wazuh/fields_macros.html.twig' as fields %}
 
 {% block form_fields %}
     {% set rand = random() %}
@@ -19,7 +17,7 @@
         'rand': rand
     }) }}
     
-    {{ wazuh_fields.passwordFieldWithToggle(
+    {{ fields.passwordFieldWithToggle2(
         'api_password',
         item.fields['api_password'],
         __('API Password', 'wazuh'),
@@ -40,7 +38,7 @@
         'rand': rand
     }) }}
 
-    {{ wazuh_fields.passwordFieldWithToggle(
+    {{ fields.passwordFieldWithToggle2(
         'indexer_password',
         item.fields['indexer_password'],
         __('Indexer API Password', 'wazuh'),

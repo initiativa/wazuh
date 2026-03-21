@@ -302,7 +302,7 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
         global $CFG_GLPI;
 
         $this->initForm($ID, $options);
-        $this->showFormHeader($options);
+//        $this->showFormHeader($options);
 
         $options['formfooter'] = true;
         $options['formactions'] = [
