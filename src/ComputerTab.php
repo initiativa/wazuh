@@ -19,6 +19,7 @@
 
 namespace GlpiPlugin\Wazuh;
 
+use CommonITILObject;
 use Glpi\Application\View\TemplateRenderer;
 use CommonGLPI;
 use CommonDBTM;
@@ -179,7 +180,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
     {
         PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
-        self::getAgentVulnerabilities($item);
+//        self::getAgentVulnerabilities($item);
         $item_type = self::class;
         $params = [
             'sort' => '2',

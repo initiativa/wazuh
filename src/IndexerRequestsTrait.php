@@ -76,8 +76,6 @@ trait IndexerRequestsTrait {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
 
-        curl_close($ch);
-
         return $response !== false && $httpCode < 400;
     }
 
@@ -113,7 +111,6 @@ trait IndexerRequestsTrait {
         $response = curl_exec($ch);
         $error = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($error) {
             PluginLogger::error(__FUNCTION__ . " HttpCode: $httpCode. $endpoint. $error");
