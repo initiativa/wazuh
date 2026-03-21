@@ -579,37 +579,28 @@ function initTooltips() {
 /**
  * Test Wazuh API connection
  */
-function wazuhTestApiConnection(testButton, token, rand) {
-    const serverUrl = $('#server_url_' + rand).val();
-    const apiPort = $('#api_port_' + rand).val();
-    const apiUsername = $('#api_username_' + rand).val();
-    const apiPassword = $('#api_password' + rand).val();
-
+function wazuhTestApiConnection(testButton, token, connId) {
+    if (connId < 1) {
+        showToast(`Please save connection data first.`, 'warning');
+        return;
+    }
     let data = {
-        url: serverUrl,
-        port: apiPort,
-        username: apiUsername,
-        password: apiPassword,
+        connid: connId,
         _glpi_csrf_token: token,
-        suffix: '/security/user/authenticate'
     };
 
     wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_api_connection.php');
 }
 
-function wazuhTestIndexerConnection(testButton, token, rand) {
-    const indexerUrl = $('#indexer_url_' + rand).val();
-    const indexerPort = $('#indexer_port_' + rand).val();
-    const indexerUsername = $('#indexer_user_' + rand).val();
-    const indexerPassword = $('#indexer_password' + rand).val();
+function wazuhTestIndexerConnection(testButton, token, connId) {
+    if (connId < 1) {
+        showToast(`Please save connection data first.`, 'warning');
+        return;
+    }
 
     let data = {
-        url: indexerUrl,
-        port: indexerPort,
-        username: indexerUsername,
-        password: indexerPassword,
+        connid: connId,
         _glpi_csrf_token: token,
-        suffix: '/security/user/authenticate'
     };
 
     wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_indexer_connection.php');

@@ -56,12 +56,12 @@
     }) }}
 
     <div class="d-flex flex-row gap-2 justify-content-end">
-        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestApiConnection(this, '{{ csrf_token() }}', '{{ rand }}');">
+        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestApiConnection(this, '{{ csrf_token() }}', '{{ item.fields['id'] }}');">
             <i class="fas fa-spinner fa-spin d-none"></i>
             {{ button_text|default('API Test') }}
         </button>
 
-        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestIndexerConnection(this, '{{ csrf_token() }}', '{{ rand }}');">
+        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestIndexerConnection(this, '{{ csrf_token() }}', '{{ item.fields['id'] }}');">
             <i class="fas fa-spinner fa-spin d-none"></i>
             {{ button_text|default('Indexer Test') }}
         </button>

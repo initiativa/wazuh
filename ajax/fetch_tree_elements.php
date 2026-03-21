@@ -32,6 +32,7 @@ if (is_null($itemtype) || $parent_id === 0 || $device_id === 0) {
 if (!($itemtype === ComputerAlertsTab::class || $itemtype === ComputerTab::class || $itemtype === NetworkEqAlertsTab::class || $itemtype === NetworkEqTab::class)) {
     throw new Exception('Illegal Argument Exception. ' . $itemtype . '  ');
 }
+Session::checkRight($itemtype::$rightname, READ);
 
 $params['criteria'] = [
     [

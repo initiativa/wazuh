@@ -454,7 +454,7 @@ class WazuhAgent extends CommonDBTM {
         $response = curl_exec($ch);
         $curl_error = curl_error($ch);
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+//        curl_close($ch);
 
         PluginLogger::debug("Authentication attempt to Wazuh API: $status_code, URL: $wazuh_server:$api_port/security/user/authenticate");
 
@@ -505,7 +505,7 @@ class WazuhAgent extends CommonDBTM {
         $response = curl_exec($ch);
         $curl_error = curl_error($ch);
         $status_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+//        curl_close($ch);
 
         PluginLogger::debug("Fetching agents from Wazuh API: $status_code, URL: $wazuh_server:$api_port/agents?pretty=true&limit=500");
 
