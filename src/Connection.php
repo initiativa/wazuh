@@ -23,6 +23,8 @@ use CommonDBTM;
 use Exception;
 use Glpi\Application\View\TemplateRenderer;
 use GLPIKey;
+use GlpiPlugin\Wazuh\Traits\FieldValidation;
+use ITILCategory;
 use Migration;
 
 /**
@@ -31,6 +33,7 @@ use Migration;
  */
 
 class Connection extends CommonDBTM implements Upgradeable {
+    use FieldValidation;
     use DefaultsTrait;
 
     public static $rightname = 'plugin_wazuh_connection';
@@ -48,11 +51,19 @@ class Connection extends CommonDBTM implements Upgradeable {
 
     #[\Override]
     public function prepareInputForAdd($input): array|false {
+        if (!$this->validateInput($input)) {
+            return false;
+        }
+
         return $this->prepareInput($input);
     }
 
     #[\Override]
     public function prepareInputForUpdate($input): array|false {
+        if (!$this->validateInput($input)) {
+            return false;
+        }
+
         return $this->prepareInput($input);
     }
 
@@ -189,11 +200,11 @@ class Connection extends CommonDBTM implements Upgradeable {
         $this->initForm($ID, $options);
 
         $this->decryptFields(['api_password', 'indexer_password']);
-        TemplateRenderer::getInstance()->display(
-                "@wazuh/connection.form.twig",
+        TemplateRenderer::getInstance()->display("@wazuh/connection.form.twig",
                 [
                     "item" => $this,
                     "params" => $options,
+                    'additional_field_options' => self::getAdditionalFieldOptions(),
                 ]
         );
         return true;
@@ -283,6 +294,26 @@ class Connection extends CommonDBTM implements Upgradeable {
 
         return true;
     }
+
+    public function validateInput(array $input): bool {
+        $validation_errors = [];
+
+        self::validateUrl($input, $validation_errors, 'server_url');
+        self::validateUrl($input, $validation_errors, 'indexer_url');
+        self::validateIntMinMax($input, $validation_errors, 'api_port');
+        self::validateIntMinMax($input, $validation_errors, 'indexer_port');
+        self::validateIntMinMax($input, $validation_errors, 'sync_interval', 60);
+        self::validateTextLength($input, $validation_errors, 'name', 2);
+        self::validateTextLength($input, $validation_errors, 'api_username', 0);
+        self::validateTextLength($input, $validation_errors, 'api_password', 0);
+        self::validateTextLength($input, $validation_errors, 'indexer_user', 0);
+        self::validateTextLength($input, $validation_errors, 'indexer_password', 0);
+        self::validateDropdown($input, $validation_errors, 'itilcategories_id', ItilCategory::getTable(), self::ENTITY_CRITERIA());
+        self::validateYesNo($input, $validation_errors, 'is_conn_active');
+
+        return self::setAdditionalFieldOptions($validation_errors);
+    }
+
 }
 
 

@@ -5,8 +5,8 @@ namespace GlpiPlugin\Wazuh\Traits;
 use DateTime;
 use Entity;
 use Exception;
-use GlpiPlugin\Wazuh\PluginLogger;
 use GlpiPlugin\Wazuh\PluginConfig;
+use GlpiPlugin\Wazuh\PluginLogger;
 use Session;
 
 trait FieldValidation {
@@ -15,13 +15,16 @@ trait FieldValidation {
     public const DATE_OR_EMPTY = 'dateOrEmpty';
     public const NOT_BLANK = 'notBlank';
     public const INT_IN_ARRAY = 'intInArray';
+    public const INT_MIN_MAX = 'intMinMax';
     public const CONTAINS_ONLY = 'containsOnly';
+    public const CONTAINS_OR_EMPTY = 'containsOrEmpty';
     public const STRING_IN_ARRAY = 'stringInArray';
     public const STRING_LENGTH = 'stringLength';
     public const STRING_MIN_MAX = 'stringMinMax';
     public const ID_IN_TABLE = 'idInTable';
     public const IDS_IN_TABLE = 'idsInTable';
     public const PATTERN_MATCH = 'patternMatch';
+    public const URL = 'url';
     public const MAX_NOTE_LENGTH = 5000;
 
     protected function getAdditionalFieldOptions(): array {
@@ -41,6 +44,69 @@ trait FieldValidation {
         }
         return $additional_options;
 
+    }
+
+    protected static function validateSet(array $input, array &$validation_errors, string $key): void {
+        if (!isset($input[$key])) {
+            $validation_errors[$key] = "$key value is required.";
+        }
+    }
+
+    protected static function validateArray(array $input, array &$validation_errors, string $key, array $allowed_values, bool $multiselect = false): void {
+        if ($multiselect === true) {
+            if (isset($input[$key])) {
+                $value = $input[$key];
+                self::validate($key, $validation_errors, [self::class, self::CONTAINS_OR_EMPTY], $value, $allowed_values);
+            }
+        } else {
+            if (isset($input[$key])) {
+                $value = $input[$key];
+                self::validate($key, $validation_errors, [self::class, self::STRING_IN_ARRAY], $value, $allowed_values);
+            }
+        }
+    }
+
+    protected static function validateTextLength(array $input, array &$validation_errors, string $key, int $min = 0, int $max = 254): void {
+        if (isset($input[$key])) {
+            $value = $input[$key];
+            self::validate($key, $validation_errors, [self::class, self::STRING_LENGTH], $value, $min, $max);
+        }
+    }
+
+    protected static function validateIntMinMax(array $input, array &$validation_errors, string $key, int $min = 0, int $max = 65535): void {
+        if (isset($input[$key])) {
+            $value = $input[$key];
+            self::validate($key, $validation_errors, [self::class, self::INT_MIN_MAX], $value, $min, $max);
+        }
+    }
+
+    protected static function validateUrl(array $input, array &$validation_errors, string $key): void {
+        if (isset($input[$key])) {
+            $value = $input[$key];
+            self::validate($key, $validation_errors, [self::class, self::URL], $value);
+        }
+    }
+
+    protected static function validateYesNo(array $input, array &$validation_errors, string $key): void {
+        if (isset($input[$key])) {
+            $value = $input[$key];
+            self::validate($key, $validation_errors, [self::class, self::CONTAINS_ONLY], $value, ['0', '1']);
+        }
+    }
+
+    protected static function validateDropdown(array $input, array &$validation_errors, string $key, mixed $table_type, ?array $criteria = null, bool $multiselect = false): void {
+        $criteria ??= static::DEFAULT_CRITERIA();
+        if ($multiselect === true) {
+            if (isset($input[$key])) {
+                $value = self::ensure_array($input[$key]);
+                self::validate($key, $validation_errors, [self::class, self::IDS_IN_TABLE], $value, $table_type, $criteria);
+            }
+        } else {
+            if (isset($input[$key])) {
+                $value = $input[$key];
+                self::validate($key, $validation_errors, [self::class, self::ID_IN_TABLE], $value, $table_type, $criteria);
+            }
+        }
     }
 
     protected function setAdditionalFieldOptions(array $validation_errors): bool {
@@ -200,7 +266,46 @@ trait FieldValidation {
         return ValidationResult::error($error($value, $values));
     }
 
+    public static function intMinMax(int|string $value, int $min, int $max, ?callable $error = null): ValidationResult {
+        if (is_string($value)) {
+            $value = filter_var($value, FILTER_VALIDATE_INT);
+        }
+
+        if ($value === false) {
+            $error = [self::class, 'defaultNotIntError'];
+            return ValidationResult::error($error($value));
+        }
+
+        if ($value < $min || $value > $max) {
+            if ($error === null) {
+                $error = [self::class, 'defaultIntMinMaxError'];
+            }
+            return ValidationResult::error($error($value, $min, $max));
+        }
+        return ValidationResult::ok($value);
+    }
+
     public static function containsOnly(array|string $value, array $values = [], ?callable $error = null): ValidationResult {
+        if (!is_array($value)) {
+            $value = [$value];
+        }
+
+        $diff = array_diff($value, $values);
+
+        if (empty($diff)) {
+            return ValidationResult::ok($value);
+        }
+        if ($error === null) {
+            $error = [self::class, 'defaultArrayNotInArrayError'];
+        }
+        return ValidationResult::error($error($diff, $values));
+    }
+
+    public static function containsOrEmpty(array|string $value, array $values = [], ?callable $error = null): ValidationResult {
+        if (empty($value)) {
+            return ValidationResult::ok($value);
+        }
+
         if (!is_array($value)) {
             $value = [$value];
         }
@@ -261,12 +366,47 @@ trait FieldValidation {
         return ValidationResult::error($error($value, $pattern));
     }
 
+    public static function url(string $url): ValidationResult {
+        $ALLOWED_SCHEMES = ['http', 'https'];
+
+        $length = strlen($url);
+        if ($length >= 254) {
+            return ValidationResult::error(__('URL too long', PluginConfig::APP_CODE));
+        }
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $url)) {
+            return ValidationResult::error(__('URL must not contain control characters', PluginConfig::APP_CODE));
+        }
+
+        $parsed = parse_url($url);
+        if ($parsed === false || empty($parsed['host']) || empty($parsed['scheme'])) {
+            return ValidationResult::error(__('URL must contain a valid scheme and host (e.g. https://example.com)', PluginConfig::APP_CODE));
+        }
+
+        if (!in_array(strtolower($parsed['scheme']), $ALLOWED_SCHEMES, true)) {
+            return ValidationResult::error(__('URL scheme must be http or https', PluginConfig::APP_CODE));
+        }
+
+        if (isset($parsed['user']) || isset($parsed['pass'])) {
+            return ValidationResult::error(__('URL must not contain user credentials', PluginConfig::APP_CODE));
+        }
+
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return ValidationResult::error(__('URL format is not valid', PluginConfig::APP_CODE));
+        }
+
+        return ValidationResult::ok($url);
+    }
 
     private static function defaultLengthError(int $min, int $max): string {
         return sprintf(__('Value length must be between %d and %d characters', PluginConfig::APP_CODE), $min, $max);
     }
 
     private static function defaultMinMaxError(string $value, int $min, int $max): string {
+        return sprintf(__('Value %s exceeds %d, %d', PluginConfig::APP_CODE), $value, $min, $max);
+    }
+
+    private static function defaultIntMinMaxError(int $value, int $min, int $max): string {
         return sprintf(__('Value %s exceeds %d, %d', PluginConfig::APP_CODE), $value, $min, $max);
     }
 
@@ -286,8 +426,12 @@ trait FieldValidation {
         return sprintf(__('Value %s is not look like date time.', PluginConfig::APP_CODE), $value);
     }
 
+    private static function defaultNotIntError(string $value): string {
+        return sprintf(__('Value %s is not an integer.', PluginConfig::APP_CODE), $value);
+    }
+
     private static function defaultNotBlankError(): string {
-        return __('Value can not be blank.', PluginConfig::APP_CODE);
+        return sprintf(__('Value can not be blank.', PluginConfig::APP_CODE));
     }
 
     private static function defaultPatternError(string $value, string $pattern): string {
