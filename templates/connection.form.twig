@@ -5,53 +5,53 @@
     {% set rand = random() %}
 
     {{ fields.textField('name', item.fields['name'], __('Connection Name', 'wazuh'), {
-        'rand': rand
-    }) }}
+        'rand': rand, 'required': true
+    }|merge(additional_field_options['name']|default({}))) }}
     {{ fields.textField('server_url', item.fields['server_url'], __('Wazuh Server URL', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['server_url']|default({}))) }}
     {{ fields.textField('api_port', item.fields['api_port'], __('API Port', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['api_port']|default({}))) }}
     {{ fields.textField('api_username', item.fields['api_username'], __('API Username', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['api_username']|default({}))) }}
     
     {{ fields.passwordFieldWithToggle2(
         'api_password',
         item.fields['api_password'],
         __('API Password', 'wazuh'),
-        {'rand': rand}
+        {'rand': rand}|merge(additional_field_options['api_password']|default({}))
     ) }}
     
     {{ fields.numberField('sync_interval', item.fields['sync_interval'], __('Synchronization Interval (seconds)', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['sync_interval']|default({}))) }}
 
     {{ fields.textField('indexer_url', item.fields['indexer_url'], __('Indexer Server URL', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['indexer_url']|default({}))) }}
     {{ fields.textField('indexer_port', item.fields['indexer_port'], __('Indexer API Port', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['indexer_port']|default({}))) }}
     {{ fields.textField('indexer_user', item.fields['indexer_user'], __('Indexer API Username', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['indexer_user']|default({}))) }}
 
     {{ fields.passwordFieldWithToggle2(
         'indexer_password',
         item.fields['indexer_password'],
         __('Indexer API Password', 'wazuh'),
-        {'rand': rand}
+        {'rand': rand}|merge(additional_field_options['indexer_password']|default({}))
     ) }}
     
     {{ fields.dropdownField('\ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['itilcategories_id']|default({}))) }}
 
     {{ fields.checkboxField('is_conn_active', item.fields['is_conn_active'], __('Active', 'wazuh'), {
         'rand': rand
-    }) }}
+    }|merge(additional_field_options['is_conn_active']|default({}))) }}
 
     <div class="d-flex flex-row gap-2 justify-content-end">
         <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestApiConnection(this, '{{ csrf_token() }}', '{{ item.fields['id'] }}');">
