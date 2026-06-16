@@ -583,8 +583,7 @@ class WazuhAgent extends CommonDBTM {
     }
 
     static function syncAgents(): bool {
-        $entities = array_values(getSonsOf(Entity::getTable(), Session::getActiveEntity()));
-        $ids = (new Connection())->find(['is_deleted' => 0, 'is_conn_active' => 1, Entity::getForeignKeyField() => $entities]);
+        $ids = (new Connection())->find(['is_deleted' => 0, 'is_conn_active' => 1]);
         $allOk = true;
         foreach ($ids as $id) {
             PluginLogger::debug("Syncing agents: " . PluginLogger::implodeWithKeys($id));
