@@ -121,3 +121,6 @@ msgstr ""
 
 msgid "Clear stored password"
 msgstr ""
+
+msgid "Vulnerabilities and alerts"
+msgstr ""

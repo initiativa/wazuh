@@ -33,6 +33,9 @@ class PluginConfig
     public const VQUERY_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_time";
     public const VQUERY_ALERT_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_alert_time";
 
+    /** Right governing vulnerability and alert records (instead of core 'dropdown'). */
+    public const FINDING_RIGHTNAME = 'plugin_wazuh_finding';
+
     // resolved from this file, so it works wherever the plugin is installed (plugins/ or marketplace/)
     public const PLUGIN_ROOT = __DIR__ . '/..';
 

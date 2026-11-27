@@ -116,3 +116,6 @@ msgstr "Link not yet linked agents to computers and network equipments with the 
 
 msgid "Clear stored password"
 msgstr "Clear stored password"
+
+msgid "Vulnerabilities and alerts"
+msgstr "Vulnerabilities and alerts"

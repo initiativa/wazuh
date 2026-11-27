@@ -44,13 +44,48 @@ if (!defined('GLPI_ROOT')) {
  * @author w-tomasz
  */
 abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable, Ticketable, TreeBrowseInterface {
+
+    /** Vulnerability / alert records use a dedicated plugin right, not core 'dropdown'. */
+    public static $rightname = PluginConfig::FINDING_RIGHTNAME;
+
+    /** A record is visible only to users who may read its linked Computer / NetworkEquipment. */
+    #[\Override]
+    public function canViewItem(): bool {
+        if (!parent::canViewItem()) {
+            return false;
+        }
+        $device_id = (int) ($this->fields[static::getDeviceForeignKeyField()] ?? 0);
+        return $device_id > 0 && static::newDeviceInstance()->can($device_id, READ);
+    }
+
+    // Records are created and updated by the Wazuh fetch (cron / tab display): no interactive create/edit.
+    // Cleaning (trash / purge) is allowed to profiles holding DELETE / PURGE on the finding right.
+    #[\Override]
+    public static function canCreate(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public static function canUpdate(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public function canDeleteItem(): bool {
+        return parent::canDeleteItem() && $this->canViewItem();
+    }
+
+    #[\Override]
+    public function canPurgeItem(): bool {
+        return parent::canPurgeItem() && $this->canViewItem();
+    }
     use IndexerRequestsTrait;
 
     public $dohistory = true;
 
     #[\Override]
     function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
-        if (!$withtemplate && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
+        if (!$withtemplate && static::canView() && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
             global $DB;
             $count = $this->countElements($item->getID());
             return self::createTabEntry(static::getTypeName($count), $count);

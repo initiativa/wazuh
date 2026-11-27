@@ -63,6 +63,7 @@ function plugin_wazuh_install() {
     \GlpiPlugin\Wazuh\ComputerAlertsTab::install($migration, $version);
     \GlpiPlugin\Wazuh\NetworkEqAlertsTab::install($migration, $version);
 
+    \GlpiPlugin\Wazuh\WazuhProfile::migrateFindingRight();
     \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
 
     $migration->executeMigration();
@@ -113,6 +114,7 @@ function plugin_wazuh_cleanupProfilesAndPreferences(Migration $migration): void 
     \ProfileRight::deleteProfileRights([
         \GlpiPlugin\Wazuh\WazuhAgent::$rightname,
         \GlpiPlugin\Wazuh\Connection::$rightname,
+        \GlpiPlugin\Wazuh\PluginConfig::FINDING_RIGHTNAME,
     ]);
 
     $migration->displayMessage("Cleaning display preferences.");

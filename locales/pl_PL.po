@@ -116,3 +116,6 @@ msgstr "Powiąż jeszcze niepowiązane agenty z komputerami i urządzeniami siec
 
 msgid "Clear stored password"
 msgstr "Wyczyść zapisane hasło"
+
+msgid "Vulnerabilities and alerts"
+msgstr "Podatności i alerty"

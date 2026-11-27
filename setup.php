@@ -93,6 +93,10 @@ function plugin_wazuh_registerClasses() {
         'addtabon' => ['NetworkEquipment']
     ]);
 
+    Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhProfile::class, [
+        'addtabon' => ['Profile']
+    ]);
+
     Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhAgent::class);
     Plugin::registerClass(\GlpiPlugin\Wazuh\Connection::class);
 }

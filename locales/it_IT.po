@@ -118,3 +118,6 @@ msgstr "Collega gli agenti non ancora collegati a computer e dispositivi di rete
 
 msgid "Clear stored password"
 msgstr "Cancella la password salvata"
+
+msgid "Vulnerabilities and alerts"
+msgstr "Vulnerabilità e avvisi"
