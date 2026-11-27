@@ -37,9 +37,11 @@ class Connection extends CommonDBTM implements Upgradeable {
     use DefaultsTrait;
 
     public static $rightname = 'plugin_wazuh_connection';
-    
+
     public $dohistory = true;
-   
+
+    public static $undisclosedFields = ['api_password', 'indexer_password'];
+
     #[\Override]
     public static function getTypeName($nb = 0): string {
         return _n("Wazuh Config", "Wazuh Config's", $nb, PluginConfig::APP_CODE);
@@ -68,12 +70,69 @@ class Connection extends CommonDBTM implements Upgradeable {
     }
 
     private function prepareInput($input) {
-        foreach (['api_password', 'indexer_password'] as $field_name) {
+        foreach (static::$undisclosedFields as $field_name) {
+            // explicit "clear stored password" checkbox (like core's _blank_passwd)
+            if (!$this->isNewItem() && !empty($input['_blank_' . $field_name])) {
+                $input[$field_name] = '';
+                continue;
+            }
+            if (!$this->isNewItem() && array_key_exists($field_name, $input) && ($input[$field_name] ?? '') === '') {
+                unset($input[$field_name]);
+                continue;
+            }
             if (array_key_exists($field_name, $input) && !empty($input[$field_name]) && $input[$field_name] !== 'NULL') {
                 $input[$field_name] = (new GLPIKey())->encrypt($input[$field_name]);
             }
         }
         return $input;
+    }
+
+    /**
+     * cURL TLS options for every outbound call to this Wazuh connection.
+     * Certificate and host name verification are on unless the connection explicitly disables it;
+     * an optional PEM CA bundle allows self-signed Wazuh certificates without disabling verification.
+     */
+    public function getCurlTlsOptions(): array {
+        if (!(bool) ($this->fields['tls_verify'] ?? true)) {
+            return [
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+            ];
+        }
+
+        $options = [
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ];
+        $ca_pem = trim((string) ($this->fields['tls_ca_pem'] ?? ''));
+        if ($ca_pem !== '') {
+            $options[CURLOPT_CAINFO_BLOB] = $ca_pem;
+        }
+        return $options;
+    }
+
+    /**
+     * Builds an outbound URL from the parsed components of a stored base URL (scheme and host only),
+     * so a path, query or port stored in the URL can never change the request target.
+     */
+    public static function buildEndpointUrl(?string $base_url, $port, string $path = ''): string {
+        $parts = parse_url((string) $base_url) ?: [];
+        $scheme = strtolower($parts['scheme'] ?? 'https');
+        $host = $parts['host'] ?? '';
+        $port = (int) $port;
+        return $scheme . '://' . $host . ($port > 0 ? ':' . $port : '') . $path;
+    }
+
+    private static function isValidPemBundle(string $pem): bool {
+        if (!preg_match_all('/-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----/s', $pem, $matches)) {
+            return false;
+        }
+        foreach ($matches[0] as $certificate) {
+            if (@openssl_x509_read($certificate) === false) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static function getHistoryChangeWhenUpdateField($field) {
@@ -164,30 +223,6 @@ class Connection extends CommonDBTM implements Upgradeable {
         return $tabs;
     }
 
-    private function decryptFields($fields): void
-    {
-        foreach($fields as $field) {
-            $this->fields[$field] = $this->decryptPwd($this->fields[$field]);
-        }
-    }
-    
-    private function decryptPwd($str): string | null {
-        $key = new \GLPIKey();
-        try {
-            $decrypted = @$key->decrypt($str);
-            if (!empty($decrypted)) {
-                $decrypted_password = $decrypted;
-            } else {
-                $decrypted_password = $str;
-            }
-        } catch (Exception $e) {
-            PluginLogger::error(__FUNCTION__ . " " . $e->getMessage());
-            $decrypted_password = $str;
-        }
-        
-        return $decrypted_password;
-    }
-    
    /**
     * @param integer $ID
     * @param array $options
@@ -199,7 +234,6 @@ class Connection extends CommonDBTM implements Upgradeable {
 
         $this->initForm($ID, $options);
 
-        $this->decryptFields(['api_password', 'indexer_password']);
         TemplateRenderer::getInstance()->display("@wazuh/connection.form.twig",
                 [
                     "item" => $this,
@@ -267,6 +301,9 @@ class Connection extends CommonDBTM implements Upgradeable {
             $migration->addKey($table, 'is_conn_active', 'is_conn_active');
         }
 
+        $migration->addField($table, 'tls_verify', "tinyint(1) NOT NULL DEFAULT '1'");
+        $migration->addField($table, 'tls_ca_pem', 'text');
+
         $migration->migrationOneTable($table);
         self::defaultsConfigData($table);
 
@@ -310,10 +347,12 @@ class Connection extends CommonDBTM implements Upgradeable {
         self::validateTextLength($input, $validation_errors, 'indexer_password', 0);
         self::validateDropdown($input, $validation_errors, 'itilcategories_id', ItilCategory::getTable(), self::ENTITY_CRITERIA());
         self::validateYesNo($input, $validation_errors, 'is_conn_active');
+        self::validateYesNo($input, $validation_errors, 'tls_verify');
+        if (trim((string) ($input['tls_ca_pem'] ?? '')) !== '' && !self::isValidPemBundle($input['tls_ca_pem'])) {
+            $validation_errors['tls_ca_pem'] = __('Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----).', 'wazuh');
+        }
 
         return self::setAdditionalFieldOptions($validation_errors);
     }
 
 }
-
-

@@ -144,22 +144,8 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool {
         PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
         self::getAgentAlerts($item);
-        $item_type = self::class;
-        $params = [
-            'sort' => '2',
-            'order' => 'DESC',
-            'reset' => 'reset',
-            'browse' => 1,
-            'criteria' => [
-                [
-                    'field' => 7,
-                    'searchtype' => 'equals',
-                    'value' => $item->getID()
-                ]
-            ],
-        ];
-        Search::manageParams($item_type, $params);
-        Search::show(NetworkEqAlertsTab::class);
+        static::showDeviceSearch($item);
+        static::displayTabCountUpdate($item);
         return true;
     }
 
@@ -169,7 +155,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
-                    static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password']);
+                    static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password'], $connection->getCurlTlsOptions());
                     $agentId = $agent->fields['agent_id'];
                     return static::queryAlertsByAgentIds([$agentId], $device);
                 }

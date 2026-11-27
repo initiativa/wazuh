@@ -61,3 +61,62 @@ msgid "server_adding_connection_error"
 msgstr "Error adding server: %1$s"
 
 
+msgid "Leave blank to keep the current value"
+msgstr "Leave blank to keep the current value"
+
+msgid "Verify TLS certificate"
+msgstr "Verify TLS certificate"
+
+msgid "CA certificate (PEM)"
+msgstr "CA certificate (PEM)"
+
+msgid "Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store."
+msgstr "Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store."
+
+msgid "TLS certificate verification is disabled for this connection: credentials sent to Wazuh can be intercepted. Use only for testing; prefer providing the CA certificate instead."
+msgstr "TLS certificate verification is disabled for this connection: credentials sent to Wazuh can be intercepted. Use only for testing; prefer providing the CA certificate instead."
+
+msgid "Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----)."
+msgstr "Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----)."
+
+msgid "All agents are already linked"
+msgstr "All agents are already linked"
+
+#, php-format
+msgid "Linked agents: %d"
+msgstr "Linked agents: %d"
+
+#, php-format
+msgid "Linked %1$d of %2$d agents, %3$d without matching device"
+msgstr "Linked %1$d of %2$d agents, %3$d without matching device"
+
+#, php-format
+msgid "Wazuh indexer error (HTTP %1$d): %2$s"
+msgstr "Wazuh indexer error (HTTP %1$d): %2$s"
+
+msgid "Agent can be linked only to a Computer or a Network equipment."
+msgstr "Agent can be linked only to a Computer or a Network equipment."
+
+msgid "Connection failed"
+msgstr "Connection failed"
+
+msgid "Authentication failed"
+msgstr "Authentication failed"
+
+msgid "URL must contain only scheme and host, without port, path or query (e.g. https://wazuh.example.com)"
+msgstr "URL must contain only scheme and host, without port, path or query (e.g. https://wazuh.example.com)"
+
+msgid "Link-local addresses (169.254.0.0/16, fe80::/10) are not allowed"
+msgstr "Link-local addresses (169.254.0.0/16, fe80::/10) are not allowed"
+
+msgid "Fetch agents from all active Wazuh connections of the current entity and update the agent list."
+msgstr "Fetch agents from all active Wazuh connections of the current entity and update the agent list."
+
+msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
+msgstr "Link not yet linked agents to computers and network equipments with the same name in the same entity."
+
+msgid "Clear stored password"
+msgstr "Clear stored password"
+
+msgid "Vulnerabilities and alerts"
+msgstr "Vulnerabilities and alerts"

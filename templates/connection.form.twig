@@ -3,6 +3,8 @@
 
 {% block form_fields %}
     {% set rand = random() %}
+    {# Stored secrets are never sent to the browser: password inputs are always rendered empty. #}
+    {% set password_options = item.isNewItem() ? {} : {'placeholder': __('Leave blank to keep the current value', 'wazuh')} %}
 
     {{ fields.textField('name', item.fields['name'], __('Connection Name', 'wazuh'), {
         'rand': rand, 'required': true
@@ -19,10 +21,13 @@
     
     {{ fields.passwordFieldWithToggle2(
         'api_password',
-        item.fields['api_password'],
+        '',
         __('API Password', 'wazuh'),
-        {'rand': rand}|merge(additional_field_options['api_password']|default({}))
+        {'rand': rand}|merge(password_options)|merge(additional_field_options['api_password']|default({}))
     ) }}
+    {% if not item.isNewItem() %}
+        {{ fields.checkboxField('_blank_api_password', 0, __('Clear stored password', 'wazuh'), {'rand': rand}) }}
+    {% endif %}
     
     {{ fields.numberField('sync_interval', item.fields['sync_interval'], __('Synchronization Interval (seconds)', 'wazuh'), {
         'rand': rand
@@ -40,11 +45,31 @@
 
     {{ fields.passwordFieldWithToggle2(
         'indexer_password',
-        item.fields['indexer_password'],
+        '',
         __('Indexer API Password', 'wazuh'),
-        {'rand': rand}|merge(additional_field_options['indexer_password']|default({}))
+        {'rand': rand}|merge(password_options)|merge(additional_field_options['indexer_password']|default({}))
     ) }}
-    
+    {% if not item.isNewItem() %}
+        {{ fields.checkboxField('_blank_indexer_password', 0, __('Clear stored password', 'wazuh'), {'rand': rand}) }}
+    {% endif %}
+
+    {% if not item.isNewItem() and not item.fields['tls_verify']|default(1) %}
+        <div class="alert alert-warning col-12" role="alert">
+            <i class="ti ti-alert-triangle me-1"></i>
+            {{ __('TLS certificate verification is disabled for this connection: credentials sent to Wazuh can be intercepted. Use only for testing; prefer providing the CA certificate instead.', 'wazuh') }}
+        </div>
+    {% endif %}
+
+    {{ fields.checkboxField('tls_verify', item.fields['tls_verify']|default(1), __('Verify TLS certificate', 'wazuh'), {
+        'rand': rand
+    }|merge(additional_field_options['tls_verify']|default({}))) }}
+
+    {{ fields.textareaField('tls_ca_pem', item.fields['tls_ca_pem'], __('CA certificate (PEM)', 'wazuh'), {
+        'rand': rand,
+        'rows': 4,
+        'helper': __('Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store.', 'wazuh')
+    }|merge(additional_field_options['tls_ca_pem']|default({}))) }}
+
     {{ fields.dropdownField('\ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {
         'rand': rand
     }|merge(additional_field_options['itilcategories_id']|default({}))) }}

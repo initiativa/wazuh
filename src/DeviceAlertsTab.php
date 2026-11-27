@@ -44,13 +44,48 @@ if (!defined('GLPI_ROOT')) {
  * @author w-tomasz
  */
 abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable, Ticketable, TreeBrowseInterface {
+
+    /** Vulnerability / alert records use a dedicated plugin right, not core 'dropdown'. */
+    public static $rightname = PluginConfig::FINDING_RIGHTNAME;
+
+    /** A record is visible only to users who may read its linked Computer / NetworkEquipment. */
+    #[\Override]
+    public function canViewItem(): bool {
+        if (!parent::canViewItem()) {
+            return false;
+        }
+        $device_id = (int) ($this->fields[static::getDeviceForeignKeyField()] ?? 0);
+        return $device_id > 0 && static::newDeviceInstance()->can($device_id, READ);
+    }
+
+    // Records are created and updated by the Wazuh fetch (cron / tab display): no interactive create/edit.
+    // Cleaning (trash / purge) is allowed to profiles holding DELETE / PURGE on the finding right.
+    #[\Override]
+    public static function canCreate(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public static function canUpdate(): bool {
+        return false;
+    }
+
+    #[\Override]
+    public function canDeleteItem(): bool {
+        return parent::canDeleteItem() && $this->canViewItem();
+    }
+
+    #[\Override]
+    public function canPurgeItem(): bool {
+        return parent::canPurgeItem() && $this->canViewItem();
+    }
     use IndexerRequestsTrait;
 
     public $dohistory = true;
 
     #[\Override]
     function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
-        if (!$withtemplate && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
+        if (!$withtemplate && static::canView() && ($item instanceof Computer || $item instanceof NetworkEquipment)) {
             global $DB;
             $count = $this->countElements($item->getID());
             return self::createTabEntry(static::getTypeName($count), $count);
@@ -60,6 +95,55 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
 
     abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
+
+    /**
+     * Search parameters of this tab for a device: the defaults, or the submitted state
+     * (trashbin, sort, paging, extra criteria) always restricted to that device.
+     */
+    public static function getDeviceSearchParams(int $device_id, ?array $submitted = null): array {
+        $device_criterion = ['field' => 7, 'searchtype' => 'equals', 'value' => $device_id];
+        if ($submitted === null || isset($submitted['reset'])) {
+            return ['reset' => 'reset', 'sort' => '2', 'order' => 'DESC', 'browse' => 1, 'criteria' => [$device_criterion]];
+        }
+        $other = array_filter((array) ($submitted['criteria'] ?? []), fn($c) => is_array($c) && (string) ($c['field'] ?? '') !== '7');
+        $submitted['criteria'] = array_merge([$device_criterion], array_values($other));
+        $submitted['browse'] = 1;
+        return $submitted;
+    }
+
+    /**
+     * Shows this tab's search for a device. Its form (trashbin toggle, criteria, sort, paging) goes to
+     * front/devicetab.search.php, which stores the state and returns to the device page with this tab open,
+     * so the user stays on the device. The state is kept while the same device is shown.
+     */
+    protected static function showDeviceSearch(CommonGLPI $item): void {
+        global $CFG_GLPI;
+
+        $itemtype = static::class;
+        $device_id = (int) $item->getID();
+        if (($_SESSION['plugin_wazuh_tabsearch'][$itemtype] ?? null) !== $device_id) {
+            Search::manageParams($itemtype, static::getDeviceSearchParams($device_id));
+            $_SESSION['plugin_wazuh_tabsearch'][$itemtype] = $device_id;
+        }
+        // ajax/common.tabs.php puts empty sort/order in $_GET, which would override the stored sorting
+        foreach (['sort', 'order'] as $key) {
+            if (($_GET[$key] ?? null) === '') {
+                unset($_GET[$key]);
+            }
+        }
+        $target = $CFG_GLPI['root_doc'] . '/plugins/wazuh/front/devicetab.search.php?'
+            . http_build_query(['itemtype' => $itemtype, 'device_id' => $device_id]);
+        \Glpi\Search\SearchEngine::show($itemtype, ['target' => $target]);
+    }
+
+    /**
+     * Refreshes the count badge of this tab in the already rendered tab list: the badge is computed
+     * at page load, before this tab content fetched new data from Wazuh.
+     */
+    protected static function displayTabCountUpdate(CommonGLPI $item): void {
+        $count = (new static())->countElements($item->getID());
+        echo Html::scriptBlock(sprintf('wazuhUpdateTabCount(%s, %d);', json_encode(static::class . '$1'), $count));
+    }
 
     public function getForbiddenStandardMassiveAction(): array {
         $forbidden   = parent::getForbiddenStandardMassiveAction();
@@ -147,6 +231,25 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     static function showBrowseView(string $itemtype, array $params, $update = false)
     {
         $item_id = $params['criteria'][0]['value'];
+
+        // Trashbin view: deleted records are usually leaves of the tree (single alerts / vulnerabilities),
+        // which the root-only tree query would never show. List them flat for this device instead.
+        if (!empty($params['is_deleted'])) {
+            $params['criteria'] = [
+                [
+                    'field' => 7,
+                    'searchtype' => 'equals',
+                    'value' => $item_id
+                ],
+            ];
+            $data = Search::getDatas($itemtype, $params);
+            $data['device_id'] = $item_id;
+            $data['parent_map'] = [];
+            $data['has_child_ids'] = [];
+            $data['child_map'] = [];
+            (new TreeSearchOutput())->displayData($data, $params);
+            return;
+        }
         $params['criteria'] = [
             [
                 'field' => 7,

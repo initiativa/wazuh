@@ -63,6 +63,7 @@ function plugin_wazuh_install() {
     \GlpiPlugin\Wazuh\ComputerAlertsTab::install($migration, $version);
     \GlpiPlugin\Wazuh\NetworkEqAlertsTab::install($migration, $version);
 
+    \GlpiPlugin\Wazuh\WazuhProfile::migrateFindingRight();
     \GlpiPlugin\Wazuh\WazuhProfile::initProfile();
 
     $migration->executeMigration();
@@ -99,7 +100,34 @@ function plugin_wazuh_uninstall() {
     \GlpiPlugin\Wazuh\ComputerAlertsTab::uninstall($migration);
     \GlpiPlugin\Wazuh\NetworkEqAlertsTab::uninstall($migration);
 
+    plugin_wazuh_cleanupProfilesAndPreferences($migration);
+
     return true;
+}
+
+/**
+ * Removes the plugin rights from all profiles and the display preferences of plugin itemtypes,
+ * so a later reinstall does not silently inherit old grants.
+ */
+function plugin_wazuh_cleanupProfilesAndPreferences(Migration $migration): void {
+    $migration->displayMessage("Removing plugin rights from profiles.");
+    \ProfileRight::deleteProfileRights([
+        \GlpiPlugin\Wazuh\WazuhAgent::$rightname,
+        \GlpiPlugin\Wazuh\Connection::$rightname,
+        \GlpiPlugin\Wazuh\PluginConfig::FINDING_RIGHTNAME,
+    ]);
+
+    $migration->displayMessage("Cleaning display preferences.");
+    (new \DisplayPreference())->deleteByCriteria([
+        'itemtype' => [
+            \GlpiPlugin\Wazuh\WazuhAgent::class,
+            \GlpiPlugin\Wazuh\Connection::class,
+            \GlpiPlugin\Wazuh\ComputerTab::class,
+            \GlpiPlugin\Wazuh\NetworkEqTab::class,
+            \GlpiPlugin\Wazuh\ComputerAlertsTab::class,
+            \GlpiPlugin\Wazuh\NetworkEqAlertsTab::class,
+        ],
+    ]);
 }
 
 

@@ -8,6 +8,7 @@ use GlpiPlugin\Wazuh\NetworkEqTab;
 use GlpiPlugin\Wazuh\WazuhAgent;
 
 use \Glpi\DBAL\QueryExpression;
+use Glpi\Exception\Http\AccessDeniedHttpException;
 use function Safe\json_encode;
 
 // Check user session and rights
@@ -33,6 +34,12 @@ if (!($itemtype === ComputerAlertsTab::class || $itemtype === ComputerTab::class
     throw new Exception('Illegal Argument Exception. ' . $itemtype . '  ');
 }
 Session::checkRight($itemtype::$rightname, READ);
+
+// the device itself must be readable by the caller (incl. its entity)
+$device = $itemtype::newDeviceInstance();
+if (!$device->can($device_id, READ)) {
+    throw new AccessDeniedHttpException();
+}
 
 $params['criteria'] = [
     [
@@ -64,6 +71,8 @@ $criteria = [
         $itemtype::getDeviceForeignKeyField() => $device_id,
         'is_deleted' => 0,
         $itemtype::getForeignKeyField() => ['<>', 0],
+        // same entity scope as Search::getDatas() above
+        getEntitiesRestrictCriteria($itemtype::getTable(), '', '', true),
     ],
     'GROUPBY' => $itemtype::getForeignKeyField()
 ];

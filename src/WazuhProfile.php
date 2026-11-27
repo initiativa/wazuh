@@ -48,11 +48,92 @@ class WazuhProfile extends \Profile {
       self::addDefaultProfileInfos($_SESSION['glpiactiveprofile']['id'],
                 [
                     WazuhAgent::$rightname => \ALLSTANDARDRIGHT,
-                    Connection::$rightname => \ALLSTANDARDRIGHT
+                    Connection::$rightname => \ALLSTANDARDRIGHT,
+                    PluginConfig::FINDING_RIGHTNAME => \READ | \DELETE | \PURGE,
                 ]
         );
     }
+
+   /**
+    * Vulnerability / alert records were governed by core 'dropdown' before; on upgrade, every profile
+    * that can read Wazuh agents gets READ on them, plus DELETE / PURGE when it holds those on agents
+    * (only if it does not have the right yet, so choices made in the profile tab are kept).
+    */
+   static function migrateFindingRight(): void {
+      global $DB;
+
+      $iterator = $DB->request([
+         'SELECT' => ['profiles_id', 'rights'],
+         'FROM'   => \ProfileRight::getTable(),
+         'WHERE'  => [
+            'name' => WazuhAgent::$rightname,
+            new \Glpi\DBAL\QueryExpression('(' . $DB->quoteName('rights') . ' & ' . (int) \READ . ') > 0'),
+         ],
+      ]);
+      foreach ($iterator as $row) {
+         $rights = \READ | ((int) $row['rights'] & (\DELETE | \PURGE));
+         self::addDefaultProfileInfos($row['profiles_id'], [PluginConfig::FINDING_RIGHTNAME => $rights]);
+      }
+   }
    
+   /**
+    * Plugin rights shown in the "Wazuh" tab of a profile.
+    */
+   public static function getAllRights(): array {
+      return [
+         ['itemtype' => Connection::class, 'label' => Connection::getTypeName(\Session::getPluralNumber()), 'field' => Connection::$rightname],
+         ['itemtype' => WazuhAgent::class, 'label' => WazuhAgent::getTypeName(\Session::getPluralNumber()), 'field' => WazuhAgent::$rightname],
+         // same labels as core rights, limited to what applies to fetched records
+         ['rights' => array_intersect_key((new ComputerTab())->getRights(), [\READ => 1, \DELETE => 1, \PURGE => 1]), 'label' => __('Vulnerabilities and alerts', PluginConfig::APP_CODE), 'field' => PluginConfig::FINDING_RIGHTNAME],
+      ];
+   }
+
+   #[\Override]
+   public function getTabNameForItem(\CommonGLPI $item, $withtemplate = 0) {
+      // helpdesk profiles cannot hold these rights (core keeps only helpdesk rights there)
+      if ($item instanceof \Profile && ($item->fields['interface'] ?? '') === 'central') {
+         return self::createTabEntry(PluginConfig::APP_NAME);
+      }
+      return '';
+   }
+
+   #[\Override]
+   public static function displayTabContentForItem(\CommonGLPI $item, $tabnum = 1, $withtemplate = 0) {
+      if ($item instanceof \Profile) {
+         self::showRightsForm($item->getID());
+      }
+      return true;
+   }
+
+   /**
+    * Rights matrix; saved by the core profile form (front/profile.form.php, "update").
+    */
+   public static function showRightsForm(int $profiles_id): void {
+      $profile = new \Profile();
+      if (!$profile->getFromDB($profiles_id)) {
+         return;
+      }
+      $canedit = \Session::haveRightsOr(\Profile::$rightname, [\CREATE, \UPDATE, \PURGE]) && $profile->canUpdateItem();
+
+      echo "<div class='firstbloc'>";
+      if ($canedit) {
+         echo "<form method='post' action='" . htmlescape(\Profile::getFormURL()) . "'>";
+      }
+      $profile->displayRightsChoiceMatrix(self::getAllRights(), [
+         'canedit'       => $canedit,
+         'default_class' => 'tab_bg_2',
+         'title'         => PluginConfig::APP_NAME,
+      ]);
+      if ($canedit) {
+         echo "<div class='text-center mt-2'>";
+         echo \Html::hidden('id', ['value' => $profiles_id]);
+         echo \Html::submit(_sx('button', 'Save'), ['name' => 'update', 'class' => 'btn btn-primary']);
+         echo "</div>";
+         \Html::closeForm();
+      }
+      echo "</div>";
+   }
+
    /**
     * Adding default rights to profile
     */
@@ -64,6 +145,8 @@ class WazuhProfile extends \Profile {
             $profileRight->add(['profiles_id' => $profiles_id, 'name' => $right, 'rights' => $value]);
          }
       }
+      // GLPI caches the list of known rights; refresh it so the profile matrix sees new plugin rights
+      \ProfileRight::cleanAllPossibleRights();
    }
    
    /**

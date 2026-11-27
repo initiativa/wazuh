@@ -391,11 +391,43 @@ trait FieldValidation {
             return ValidationResult::error(__('URL must not contain user credentials', PluginConfig::APP_CODE));
         }
 
+        // scheme and host only: port is a separate field and the request path is added by the plugin
+        $path = $parsed['path'] ?? '';
+        if (($path !== '' && $path !== '/') || isset($parsed['query']) || isset($parsed['fragment']) || isset($parsed['port'])) {
+            return ValidationResult::error(__('URL must contain only scheme and host, without port, path or query (e.g. https://wazuh.example.com)', PluginConfig::APP_CODE));
+        }
+
+        if (self::isLinkLocalIp(trim($parsed['host'], '[]'))) {
+            return ValidationResult::error(__('Link-local addresses (169.254.0.0/16, fe80::/10) are not allowed', PluginConfig::APP_CODE));
+        }
+
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             return ValidationResult::error(__('URL format is not valid', PluginConfig::APP_CODE));
         }
 
         return ValidationResult::ok($url);
+    }
+
+    /**
+     * True for IPv4 169.254.0.0/16, IPv6 fe80::/10 and IPv4-mapped IPv6 link-local addresses.
+     * Host names are not resolved.
+     */
+    private static function isLinkLocalIp(string $host): bool {
+        $packed = @inet_pton($host);
+        if ($packed === false) {
+            return false;
+        }
+        if (strlen($packed) === 16) {
+            if ((ord($packed[0]) === 0xfe) && ((ord($packed[1]) & 0xc0) === 0x80)) {
+                return true;
+            }
+            if (substr($packed, 0, 12) === str_repeat("\0", 10) . "\xff\xff") {
+                $packed = substr($packed, 12);
+            } else {
+                return false;
+            }
+        }
+        return ord($packed[0]) === 169 && ord($packed[1]) === 254;
     }
 
     private static function defaultLengthError(int $min, int $max): string {

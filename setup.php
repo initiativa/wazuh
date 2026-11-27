@@ -54,10 +54,6 @@ define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "12.0.1");
 function plugin_init_wazuh() {
     global $PLUGIN_HOOKS;
 
-    ini_set('display_errors', 1);
-    ini_set('display_startup_errors', 1);
-    error_reporting(E_ALL);
-
     if (Plugin::isPluginActive(PluginConfig::APP_CODE)) {
 
         if (Session::haveRight('config', UPDATE)) {
@@ -97,6 +93,10 @@ function plugin_wazuh_registerClasses() {
         'addtabon' => ['NetworkEquipment']
     ]);
 
+    Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhProfile::class, [
+        'addtabon' => ['Profile']
+    ]);
+
     Plugin::registerClass(\GlpiPlugin\Wazuh\WazuhAgent::class);
     Plugin::registerClass(\GlpiPlugin\Wazuh\Connection::class);
 }
@@ -110,7 +110,7 @@ function plugin_wazuh_registerClasses() {
 function plugin_version_wazuh() {
     return [
         'name' => PluginConfig::APP_NAME,
-        'version' => PluginConfig::loadVersionNumber(),
+        'version' => PLUGIN_WAZUH_VERSION,
         'author' => '<a href="http://www.initiativa.it">Initiativa</a>',
         'license' => 'GPL v3+',
         'homepage' => 'https://github.com/initiativa/Wazuh',

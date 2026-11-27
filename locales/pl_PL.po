@@ -60,3 +60,62 @@ msgstr "Dodano połączenie servera: %1$s"
 msgid "server_adding_connection_error"
 msgstr "Błąd podczas dodawania servera: %1$s"
 
+msgid "Leave blank to keep the current value"
+msgstr "Pozostaw puste, aby zachować obecną wartość"
+
+msgid "Verify TLS certificate"
+msgstr "Weryfikuj certyfikat TLS"
+
+msgid "CA certificate (PEM)"
+msgstr "Certyfikat CA (PEM)"
+
+msgid "Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store."
+msgstr "Wklej certyfikat CA (np. root-ca.pem), aby zaufać self-signed certyfikatom Wazuha. Pozostaw puste, aby użyć systemowego magazynu CA."
+
+msgid "TLS certificate verification is disabled for this connection: credentials sent to Wazuh can be intercepted. Use only for testing; prefer providing the CA certificate instead."
+msgstr "Weryfikacja certyfikatu TLS jest wyłączona dla tego połączenia: dane logowania wysyłane do Wazuha mogą zostać przechwycone. Używaj tylko do testów; zamiast tego lepiej podaj certyfikat CA."
+
+msgid "Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----)."
+msgstr "Nieprawidłowy certyfikat CA: wklej jeden lub więcej certyfikatów PEM (-----BEGIN CERTIFICATE-----)."
+
+msgid "All agents are already linked"
+msgstr "Wszystkie agenty są już sparowane"
+
+#, php-format
+msgid "Linked agents: %d"
+msgstr "Sparowane agenty: %d"
+
+#, php-format
+msgid "Linked %1$d of %2$d agents, %3$d without matching device"
+msgstr "Sparowano %1$d z %2$d agentów, %3$d bez pasującego urządzenia"
+
+#, php-format
+msgid "Wazuh indexer error (HTTP %1$d): %2$s"
+msgstr "Błąd indexera Wazuh (HTTP %1$d): %2$s"
+
+msgid "Agent can be linked only to a Computer or a Network equipment."
+msgstr "Agenta można powiązać tylko z komputerem lub urządzeniem sieciowym."
+
+msgid "Connection failed"
+msgstr "Połączenie nieudane"
+
+msgid "Authentication failed"
+msgstr "Uwierzytelnianie nieudane"
+
+msgid "URL must contain only scheme and host, without port, path or query (e.g. https://wazuh.example.com)"
+msgstr "URL może zawierać tylko schemat i host, bez portu, ścieżki i parametrów (np. https://wazuh.example.com)"
+
+msgid "Link-local addresses (169.254.0.0/16, fe80::/10) are not allowed"
+msgstr "Adresy link-local (169.254.0.0/16, fe80::/10) są niedozwolone"
+
+msgid "Fetch agents from all active Wazuh connections of the current entity and update the agent list."
+msgstr "Pobierz agentów ze wszystkich aktywnych połączeń Wazuh bieżącej encji i zaktualizuj listę agentów."
+
+msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
+msgstr "Powiąż jeszcze niepowiązane agenty z komputerami i urządzeniami sieciowymi o tej samej nazwie w tej samej encji."
+
+msgid "Clear stored password"
+msgstr "Wyczyść zapisane hasło"
+
+msgid "Vulnerabilities and alerts"
+msgstr "Podatności i alerty"

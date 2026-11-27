@@ -38,6 +38,7 @@ trait IndexerRequestsTrait {
     private static $username;
     private static $password;
     private static $isInitialized = false;
+    private static array $tlsOptions = [];
 
     /**
      * Initializes the Wazuh connection parameters
@@ -45,12 +46,14 @@ trait IndexerRequestsTrait {
      * @param string $indexerUrl Wazuh indexer URL
      * @param string $username Authentication username
      * @param string $password Authentication password
+     * @param array $tlsOptions cURL TLS options, see Connection::getCurlTlsOptions()
      * @return bool Initialization status
      */
-    public static function initWazuhConnection($indexerUrl, $indexer_port, $username, $password) {
+    public static function initWazuhConnection($indexerUrl, $indexer_port, $username, $password, array $tlsOptions) {
         self::$indexerUrl = rtrim($indexerUrl . ':' . $indexer_port, '/');
         self::$username = $username;
         self::$password = (new \GLPIKey)->decrypt($password);
+        self::$tlsOptions = $tlsOptions;
         self::$isInitialized = true;
 
         return true;
@@ -102,8 +105,7 @@ trait IndexerRequestsTrait {
             'Content-Type: application/json',
             'Content-Length: ' . strlen(json_encode($query))
         ]);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt_array($ch, self::$tlsOptions);
         
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
@@ -121,6 +123,22 @@ trait IndexerRequestsTrait {
                 'error' => $error,
                 'http_code' => $httpCode
             ];
+        }
+
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $error_data = json_decode((string) $response, true);
+            $reason = $error_data['error']['reason'] ?? $error_data['error']['type'] ?? null;
+            if ($reason === null && is_string($error_data['error'] ?? null)) {
+                $reason = $error_data['error'];
+            }
+            PluginLogger::error(__FUNCTION__ . " HttpCode: $httpCode. $endpoint. " . ($reason ?? (string) $response));
+            // reason comes from the indexer and session messages are rendered as HTML: escape it
+            Session::addMessageAfterRedirect(
+                htmlescape(sprintf(__('Wazuh indexer error (HTTP %1$d): %2$s', 'wazuh'), $httpCode, $reason ?? '-')),
+                true,
+                ERROR
+            );
+            echo Html::scriptBlock("$(function() { displayAjaxMessageAfterRedirect(); }); ");
         }
 
         return [
