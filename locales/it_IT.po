@@ -109,3 +109,6 @@ msgstr "L'URL deve contenere solo schema e host, senza porta, percorso o paramet
 
 msgid "Link-local addresses (169.254.0.0/16, fe80::/10) are not allowed"
 msgstr "Gli indirizzi link-local (169.254.0.0/16, fe80::/10) non sono consentiti"
+
+msgid "Fetch agents from all active Wazuh connections of the current entity and update the agent list."
+msgstr "Recupera gli agenti da tutte le connessioni Wazuh attive dell'entità corrente e aggiorna l'elenco degli agenti."
