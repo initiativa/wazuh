@@ -228,7 +228,7 @@
             {{ label }}
         </label>
         <div class="col-xxl-7  field-container" style="position: relative;">
-            <input type="password" id="{{ id }}" name="{{ name }}" value="{{ value }}" class="form-control">
+            <input type="password" id="{{ id }}" name="{{ name }}" value="{{ value }}" class="form-control" autocomplete="new-password"{% if options.placeholder is defined %} placeholder="{{ options.placeholder }}"{% endif %}>
             <button type="button" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;" onclick="toggleWazuhPassword('{{ id }}')">
                 <i class="ti ti-eye"></i>
             </button>

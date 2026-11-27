@@ -62,3 +62,5 @@ msgstr "Error adding server: %1$s"
 
 
 
+msgid "Leave blank to keep the current value"
+msgstr "Lasciare vuoto per mantenere il valore attuale"

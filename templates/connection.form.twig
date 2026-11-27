@@ -3,6 +3,8 @@
 
 {% block form_fields %}
     {% set rand = random() %}
+    {# Stored secrets are never sent to the browser: password inputs are always rendered empty. #}
+    {% set password_options = item.isNewItem() ? {} : {'placeholder': __('Leave blank to keep the current value', 'wazuh')} %}
 
     {{ fields.textField('name', item.fields['name'], __('Connection Name', 'wazuh'), {
         'rand': rand, 'required': true
@@ -19,9 +21,9 @@
     
     {{ fields.passwordFieldWithToggle2(
         'api_password',
-        item.fields['api_password'],
+        '',
         __('API Password', 'wazuh'),
-        {'rand': rand}|merge(additional_field_options['api_password']|default({}))
+        {'rand': rand}|merge(password_options)|merge(additional_field_options['api_password']|default({}))
     ) }}
     
     {{ fields.numberField('sync_interval', item.fields['sync_interval'], __('Synchronization Interval (seconds)', 'wazuh'), {
@@ -40,9 +42,9 @@
 
     {{ fields.passwordFieldWithToggle2(
         'indexer_password',
-        item.fields['indexer_password'],
+        '',
         __('Indexer API Password', 'wazuh'),
-        {'rand': rand}|merge(additional_field_options['indexer_password']|default({}))
+        {'rand': rand}|merge(password_options)|merge(additional_field_options['indexer_password']|default({}))
     ) }}
     
     {{ fields.dropdownField('\ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {

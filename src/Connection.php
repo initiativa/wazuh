@@ -37,9 +37,11 @@ class Connection extends CommonDBTM implements Upgradeable {
     use DefaultsTrait;
 
     public static $rightname = 'plugin_wazuh_connection';
-    
+
     public $dohistory = true;
-   
+
+    public static $undisclosedFields = ['api_password', 'indexer_password'];
+
     #[\Override]
     public static function getTypeName($nb = 0): string {
         return _n("Wazuh Config", "Wazuh Config's", $nb, PluginConfig::APP_CODE);
@@ -68,7 +70,11 @@ class Connection extends CommonDBTM implements Upgradeable {
     }
 
     private function prepareInput($input) {
-        foreach (['api_password', 'indexer_password'] as $field_name) {
+        foreach (static::$undisclosedFields as $field_name) {
+            if (!$this->isNewItem() && array_key_exists($field_name, $input) && ($input[$field_name] ?? '') === '') {
+                unset($input[$field_name]);
+                continue;
+            }
             if (array_key_exists($field_name, $input) && !empty($input[$field_name]) && $input[$field_name] !== 'NULL') {
                 $input[$field_name] = (new GLPIKey())->encrypt($input[$field_name]);
             }
@@ -164,30 +170,6 @@ class Connection extends CommonDBTM implements Upgradeable {
         return $tabs;
     }
 
-    private function decryptFields($fields): void
-    {
-        foreach($fields as $field) {
-            $this->fields[$field] = $this->decryptPwd($this->fields[$field]);
-        }
-    }
-    
-    private function decryptPwd($str): string | null {
-        $key = new \GLPIKey();
-        try {
-            $decrypted = @$key->decrypt($str);
-            if (!empty($decrypted)) {
-                $decrypted_password = $decrypted;
-            } else {
-                $decrypted_password = $str;
-            }
-        } catch (Exception $e) {
-            PluginLogger::error(__FUNCTION__ . " " . $e->getMessage());
-            $decrypted_password = $str;
-        }
-        
-        return $decrypted_password;
-    }
-    
    /**
     * @param integer $ID
     * @param array $options
@@ -199,7 +181,6 @@ class Connection extends CommonDBTM implements Upgradeable {
 
         $this->initForm($ID, $options);
 
-        $this->decryptFields(['api_password', 'indexer_password']);
         TemplateRenderer::getInstance()->display("@wazuh/connection.form.twig",
                 [
                     "item" => $this,
@@ -315,5 +296,3 @@ class Connection extends CommonDBTM implements Upgradeable {
     }
 
 }
-
-

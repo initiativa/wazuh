@@ -65,3 +65,5 @@ msgstr ""
 msgid "inactive"
 msgstr ""
 
+msgid "Leave blank to keep the current value"
+msgstr ""

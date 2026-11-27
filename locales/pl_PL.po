@@ -60,3 +60,5 @@ msgstr "Dodano połączenie servera: %1$s"
 msgid "server_adding_connection_error"
 msgstr "Błąd podczas dodawania servera: %1$s"
 
+msgid "Leave blank to keep the current value"
+msgstr "Pozostaw puste, aby zachować obecną wartość"
