@@ -125,6 +125,22 @@ trait IndexerRequestsTrait {
             ];
         }
 
+        if ($httpCode < 200 || $httpCode >= 300) {
+            $error_data = json_decode((string) $response, true);
+            $reason = $error_data['error']['reason'] ?? $error_data['error']['type'] ?? null;
+            if ($reason === null && is_string($error_data['error'] ?? null)) {
+                $reason = $error_data['error'];
+            }
+            PluginLogger::error(__FUNCTION__ . " HttpCode: $httpCode. $endpoint. " . ($reason ?? (string) $response));
+            // reason comes from the indexer and session messages are rendered as HTML: escape it
+            Session::addMessageAfterRedirect(
+                htmlescape(sprintf(__('Wazuh indexer error (HTTP %1$d): %2$s', 'wazuh'), $httpCode, $reason ?? '-')),
+                true,
+                ERROR
+            );
+            echo Html::scriptBlock("$(function() { displayAjaxMessageAfterRedirect(); }); ");
+        }
+
         return [
             'success' => ($httpCode >= 200 && $httpCode < 300),
             'data' => json_decode($response, true),

@@ -533,7 +533,11 @@ class WazuhAgent extends CommonDBTM {
     }
 
 
-    static function linkAgents(): bool {
+    /**
+     * Links not yet linked agents to a Computer or NetworkEquipment with the same name in the same entity.
+     * @return array{to_link: int, linked: int} number of agents that were waiting for a device and how many got linked
+     */
+    static function linkAgents(): array {
        global $DB;
 
        $entities = getSonsOf(Entity::getTable(), $_SESSION['glpiactive_entity']);
@@ -547,37 +551,38 @@ class WazuhAgent extends CommonDBTM {
             ]
         ]);
 
-        if ($iterator) {
-            $agents = iterator_to_array($iterator);
-            foreach ($agents as $agent) {
-                if (isset($agent['name'])) {
-                    $aname = $agent['name'];
-                    $aentity = $agent[Entity::getForeignKeyField()];
-                    $idevices = $DB->request(['FROM' => NetworkEquipment::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => $aentity, 'is_deleted' => false]]);
-                    if ($idevices) {
-                        $devices = iterator_to_array($idevices);
-                        foreach ($devices as $device) { //only last set will be persisted
-                            $agent['itemtype'] = NetworkEquipment::class;
-                            $agent['item_id'] = $device['id'];
-                        }
-                        $DB->update(self::getTable(), $agent, ['id' => $agent['id']]);
-                    }
-
-                    $icomputers = $DB->request(['FROM' => Computer::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => $aentity, 'is_deleted' => false]]);
-                    if ($icomputers) {
-                        $computers = iterator_to_array($icomputers);
-                        foreach ($computers as $computer) { //only last set will be persisted
-                            $agent['itemtype'] = Computer::class;
-                            $agent['item_id'] = $computer['id'];
-                        }
-                        $DB->update(self::getTable(), $agent, ['id' => $agent['id']]);
-                    }
-                }
+        $to_link = 0;
+        $linked_count = 0;
+        foreach ($iterator as $agent) {
+            $to_link++;
+            if (!isset($agent['name'])) {
+                continue;
             }
-            return true;
+            $aname = $agent['name'];
+            $aentity = $agent[Entity::getForeignKeyField()];
+            $linked = false;
+
+            $devices = $DB->request(['FROM' => NetworkEquipment::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => $aentity, 'is_deleted' => false]]);
+            foreach ($devices as $device) { //only last set will be persisted
+                $agent['itemtype'] = NetworkEquipment::class;
+                $agent['item_id'] = $device['id'];
+                $linked = true;
+            }
+
+            $computers = $DB->request(['FROM' => Computer::getTable(), 'WHERE' => ['name' => $aname, Entity::getForeignKeyField() => $aentity, 'is_deleted' => false]]);
+            foreach ($computers as $computer) { //only last set will be persisted
+                $agent['itemtype'] = Computer::class;
+                $agent['item_id'] = $computer['id'];
+                $linked = true;
+            }
+
+            if ($linked) {
+                $DB->update(self::getTable(), $agent, ['id' => $agent['id']]);
+                $linked_count++;
+            }
         }
 
-        return false;
+        return ['to_link' => $to_link, 'linked' => $linked_count];
     }
 
     static function syncAgents(): bool {
@@ -591,7 +596,7 @@ class WazuhAgent extends CommonDBTM {
                 $allOk = false;
             } else {
                 $wazuhConfig->update([
-                    'id' => 1,
+                    'id' => $wazuhConfig->getID(),
                     'last_sync' => date('Y-m-d H:i:s')
                 ]);
             }

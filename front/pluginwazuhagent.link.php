@@ -18,24 +18,40 @@ Session::checkRight("plugin_wazuh_agent", UPDATE);
 $config = new Connection();
 $config->getFromDB(1);
 
-// Synchronize agents
-if (WazuhAgent::linkAgents()) {
+// Link agents to devices
+$result = WazuhAgent::linkAgents();
+$not_linked = $result['to_link'] - $result['linked'];
+
+if ($not_linked === 0) {
     // Update last sync time
     $config->update([
         'id' => 1,
         'last_sync' => date('Y-m-d H:i:s')
     ]);
-    
+}
+
+if ($result['to_link'] === 0) {
     Session::addMessageAfterRedirect(
-        __('Agents linked successfully', 'wazuh'),
+        __('All agents are already linked', 'wazuh'),
+        true,
+        INFO
+    );
+} elseif ($not_linked === 0) {
+    Session::addMessageAfterRedirect(
+        sprintf(__('Linked agents: %d', 'wazuh'), $result['linked']),
         true,
         INFO
     );
 } else {
     Session::addMessageAfterRedirect(
-        __('Not linked all agents', 'wazuh'),
+        sprintf(
+            __('Linked %1$d of %2$d agents, %3$d without matching device', 'wazuh'),
+            $result['linked'],
+            $result['to_link'],
+            $not_linked
+        ),
         true,
-        ERROR
+        WARNING
     );
 }
 
