@@ -48,7 +48,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
     use TicketableTrait;
     use IndexerRequestsTrait;
 
-    public $dohistory = true;
+    public bool $dohistory = true;
     public static $itemtype = 'Computer';
     public static $items_id = 'computers_id';
     
@@ -58,12 +58,12 @@ class ComputerTab extends DeviceTab implements Ticketable {
     }
 
    protected function countElements($computers_id) {
-       $count = countElementsInTableForMyEntities($this->getTable(), [
+       $count = countElementsInTable($this->getTable(), array_merge([
            Computer::getForeignKeyField() => $computers_id,
            Entity::getForeignKeyField() => Session::getActiveEntity(),
            static::getForeignKeyField() => ['<>', 0],
            'is_deleted' => 0
-       ]);
+       ], getEntitiesRestrictCriteria($this->getTable(), '', '', $this->maybeRecursive())));
 
         return $count;
     }

@@ -36,11 +36,11 @@ class Connection extends CommonDBTM implements Upgradeable {
     use FieldValidation;
     use DefaultsTrait;
 
-    public static $rightname = 'plugin_wazuh_connection';
+    public static string $rightname = 'plugin_wazuh_connection';
 
-    public $dohistory = true;
+    public bool $dohistory = true;
 
-    public static $undisclosedFields = ['api_password', 'indexer_password'];
+    public static array $undisclosedFields = ['api_password', 'indexer_password'];
 
     #[\Override]
     public static function getTypeName($nb = 0): string {

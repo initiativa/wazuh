@@ -5,8 +5,6 @@
  * instead of leaving the device for the plugin's own list page.
  */
 
-include('../../../inc/includes.php');
-
 use Glpi\Exception\Http\AccessDeniedHttpException;
 use Glpi\Exception\Http\BadRequestHttpException;
 use GlpiPlugin\Wazuh\ComputerAlertsTab;

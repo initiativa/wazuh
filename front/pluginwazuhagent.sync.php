@@ -3,8 +3,6 @@
  * Agent synchronization for Wazuh plugin
  */
 
-include ('../../../inc/includes.php');
-
 use Glpi\Exception\RedirectException;
 use GlpiPlugin\Wazuh\PluginConfig;
 use GlpiPlugin\Wazuh\WazuhAgent;

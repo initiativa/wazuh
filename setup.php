@@ -41,9 +41,9 @@ use Glpi\Plugin\Hooks;
 define('PLUGIN_WAZUH_VERSION', PluginConfig::loadVersionNumber());
 
 // Minimal GLPI version, inclusive
-define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "11.0.4");
+define("PLUGIN_WAZUH_MIN_GLPI_VERSION", "12.0.0");
 // Maximum GLPI version, exclusive
-define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "12.0.1");
+define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "12.1.0");
 
 /**
  * Init hooks of the plugin.

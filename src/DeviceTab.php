@@ -47,7 +47,7 @@ if (!defined('GLPI_ROOT')) {
 abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, TreeBrowseInterface {
 
     /** Vulnerability / alert records use a dedicated plugin right, not core 'dropdown'. */
-    public static $rightname = PluginConfig::FINDING_RIGHTNAME;
+    public static string $rightname = PluginConfig::FINDING_RIGHTNAME;
 
     /** A record is visible only to users who may read its linked Computer / NetworkEquipment. */
     #[\Override]
@@ -82,7 +82,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
     }
     use IndexerRequestsTrait;
 
-    public $dohistory = true;
+    public bool $dohistory = true;
 
     #[\Override]
     function getTabNameForItem(CommonGLPI $item, $withtemplate = 0): array|string {
@@ -232,7 +232,7 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
         $options['formfooter'] = true;
         $options['formactions'] = [
             Html::submit(__('Save'), ['name' => 'update', 'class' => 'btn btn-primary me-2']),
-            Html::link(__('Back to list'), 'front/vulnerability.php', ['class' => 'btn btn-outline-secondary'])
+            sprintf('<a class="btn btn-outline-secondary" href="%s">%s</a>', htmlescape('front/vulnerability.php'), htmlescape(__('Back to list')))
         ];
 
         TemplateRenderer::getInstance()->display('@wazuh/device_tab.html.twig', [

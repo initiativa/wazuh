@@ -43,8 +43,8 @@ use DBConnection;
 class WazuhAgent extends CommonDBTM {
     use FieldValidation;
 
-   public static $rightname = 'plugin_wazuh_agent';
-   public $dohistory = true;
+   public static string $rightname = 'plugin_wazuh_agent';
+   public bool $dohistory = true;
    
 //    function showItems() {
 //        $relation = new WazuhAgentAssetsRelation();

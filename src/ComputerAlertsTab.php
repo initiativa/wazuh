@@ -52,7 +52,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     use IndexerRequestsTrait;
     use DeviceHelper;
 
-    public $dohistory = true;
+    public bool $dohistory = true;
     public static $itemtype = 'Computer';
     public static $items_id = 'computers_id';
 
@@ -62,12 +62,12 @@ class ComputerAlertsTab extends DeviceAlertsTab {
     }
     
     protected function countElements($device_id): int {
-        $count = countElementsInTableForMyEntities($this->getTable(), [
+        $count = countElementsInTable($this->getTable(), array_merge([
             Computer::getForeignKeyField() => $device_id,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => ['<>', 0],
             'is_deleted' => 0
-        ]);
+        ], getEntitiesRestrictCriteria($this->getTable(), '', '', $this->maybeRecursive())));
 
         return $count;
     }

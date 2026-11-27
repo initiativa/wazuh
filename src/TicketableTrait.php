@@ -96,7 +96,7 @@ trait TicketableTrait {
         $ticket = new Ticket();
         $ticket_input = [
             'name' => $title,
-            'content' => \Toolbox::addslashes_deep($content),
+            'content' => $content,
             'itilcategories_id' => $itil_category_id,
             'status' => Ticket::INCOMING,
             'priority' => 3,

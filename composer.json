@@ -1,6 +1,6 @@
 {
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.3",
       "ext-curl": "*"
     },
     "require-dev": {
@@ -9,7 +9,7 @@
     "config": {
         "optimize-autoloader": true,
         "platform": {
-            "php": "8.2.0"
+            "php": "8.3.0"
         },
         "sort-packages": true
     }

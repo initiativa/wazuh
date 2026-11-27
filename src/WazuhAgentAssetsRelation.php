@@ -32,8 +32,8 @@ use Session;
  */
 class WazuhAgentAssetsRelation extends CommonDBRelation {
 
-    static $itemtype_1 = 'WazuhAgent';
-    static $items_id_1 = 'pluginwazuhagent_id';
+    public static ?string $itemtype_1 = 'WazuhAgent';
+    public static ?string $items_id_1 = 'pluginwazuhagent_id';
     static $table_name = 'glpi_plugin_wazuh_agentassets';
 
     static function getTypeName($nb = 0) {

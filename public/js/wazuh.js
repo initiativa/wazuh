@@ -579,20 +579,19 @@ function initTooltips() {
 /**
  * Test Wazuh API connection
  */
-function wazuhTestApiConnection(testButton, token, connId) {
+function wazuhTestApiConnection(testButton, connId) {
     if (connId < 1) {
         showToast(`Please save connection data first.`, 'warning');
         return;
     }
     let data = {
         connid: connId,
-        _glpi_csrf_token: token,
     };
 
     wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_api_connection.php');
 }
 
-function wazuhTestIndexerConnection(testButton, token, connId) {
+function wazuhTestIndexerConnection(testButton, connId) {
     if (connId < 1) {
         showToast(`Please save connection data first.`, 'warning');
         return;
@@ -600,7 +599,6 @@ function wazuhTestIndexerConnection(testButton, token, connId) {
 
     let data = {
         connid: connId,
-        _glpi_csrf_token: token,
     };
 
     wazuhTestConnection(testButton, data, '/plugins/wazuh/ajax/check_indexer_connection.php');
