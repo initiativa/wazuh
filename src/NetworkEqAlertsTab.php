@@ -144,22 +144,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0): bool {
         PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
         self::getAgentAlerts($item);
-        $item_type = self::class;
-        $params = [
-            'sort' => '2',
-            'order' => 'DESC',
-            'reset' => 'reset',
-            'browse' => 1,
-            'criteria' => [
-                [
-                    'field' => 7,
-                    'searchtype' => 'equals',
-                    'value' => $item->getID()
-                ]
-            ],
-        ];
-        Search::manageParams($item_type, $params);
-        Search::show(NetworkEqAlertsTab::class);
+        static::showDeviceSearch($item);
         static::displayTabCountUpdate($item);
         return true;
     }

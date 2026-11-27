@@ -135,22 +135,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         PluginLogger::debug($item->getType());
         unset($_SESSION['glpisearch'][$item->getType()]);
         self::getAgentAlerts($item);
-        $item_type = self::class;
-        $params = [
-            'sort' => '2',
-            'order' => 'DESC',
-            'reset' => 'reset',
-            'browse' => 1,
-            'criteria' => [
-                [
-                    'field' => 7,
-                    'searchtype' => 'equals',
-                    'value' => $item->getID()
-                ]
-            ],
-        ];
-        Search::manageParams($item_type, $params);
-        Search::show(ComputerAlertsTab::class);
+        static::showDeviceSearch($item);
         static::displayTabCountUpdate($item);
         return true;
     }

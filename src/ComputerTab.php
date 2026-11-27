@@ -181,21 +181,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
     {
         PluginLogger::debug(__FUNCTION__ . " item type: " . $item->getType());
 //        self::getAgentVulnerabilities($item);
-        $item_type = self::class;
-        $params = [
-            'sort' => '2',
-            'order' => 'DESC',
-            'browse' => 1,
-            'criteria' => [
-                [
-                    'field' => 7,
-                    'searchtype' => 'equals',
-                    'value' => $item->getID()
-                ],
-            ],
-        ];
-        Search::manageParams($item_type, $params);
-        Search::show(ComputerTab::class);
+        static::showDeviceSearch($item);
         static::displayTabCountUpdate($item);
         return true;
     }

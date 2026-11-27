@@ -98,6 +98,46 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
     abstract protected function countElements($device_id);
 
     /**
+     * Search parameters of this tab for a device: the defaults, or the submitted state
+     * (trashbin, sort, paging, extra criteria) always restricted to that device.
+     */
+    public static function getDeviceSearchParams(int $device_id, ?array $submitted = null): array {
+        $device_criterion = ['field' => 7, 'searchtype' => 'equals', 'value' => $device_id];
+        if ($submitted === null || isset($submitted['reset'])) {
+            return ['reset' => 'reset', 'sort' => '2', 'order' => 'DESC', 'browse' => 1, 'criteria' => [$device_criterion]];
+        }
+        $other = array_filter((array) ($submitted['criteria'] ?? []), fn($c) => is_array($c) && (string) ($c['field'] ?? '') !== '7');
+        $submitted['criteria'] = array_merge([$device_criterion], array_values($other));
+        $submitted['browse'] = 1;
+        return $submitted;
+    }
+
+    /**
+     * Shows this tab's search for a device. Its form (trashbin toggle, criteria, sort, paging) goes to
+     * front/devicetab.search.php, which stores the state and returns to the device page with this tab open,
+     * so the user stays on the device. The state is kept while the same device is shown.
+     */
+    protected static function showDeviceSearch(CommonGLPI $item): void {
+        global $CFG_GLPI;
+
+        $itemtype = static::class;
+        $device_id = (int) $item->getID();
+        if (($_SESSION['plugin_wazuh_tabsearch'][$itemtype] ?? null) !== $device_id) {
+            Search::manageParams($itemtype, static::getDeviceSearchParams($device_id));
+            $_SESSION['plugin_wazuh_tabsearch'][$itemtype] = $device_id;
+        }
+        // ajax/common.tabs.php puts empty sort/order in $_GET, which would override the stored sorting
+        foreach (['sort', 'order'] as $key) {
+            if (($_GET[$key] ?? null) === '') {
+                unset($_GET[$key]);
+            }
+        }
+        $target = $CFG_GLPI['root_doc'] . '/plugins/wazuh/front/devicetab.search.php?'
+            . http_build_query(['itemtype' => $itemtype, 'device_id' => $device_id]);
+        \Glpi\Search\SearchEngine::show($itemtype, ['target' => $target]);
+    }
+
+    /**
      * Refreshes the count badge of this tab in the already rendered tab list: the badge is computed
      * at page load, before this tab content fetched new data from Wazuh.
      */
