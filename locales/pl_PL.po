@@ -95,3 +95,15 @@ msgstr "Błąd indexera Wazuh (HTTP %1$d): %2$s"
 
 msgid "Agent can be linked only to a Computer or a Network equipment."
 msgstr "Agenta można powiązać tylko z komputerem lub urządzeniem sieciowym."
+
+msgid "Connection failed"
+msgstr "Połączenie nieudane"
+
+msgid "Authentication failed"
+msgstr "Uwierzytelnianie nieudane"
+
+msgid "URL must contain only scheme and host, without port, path or query (e.g. https://wazuh.example.com)"
+msgstr "URL może zawierać tylko schemat i host, bez portu, ścieżki i parametrów (np. https://wazuh.example.com)"
+
+msgid "Link-local addresses (169.254.0.0/16, fe80::/10) are not allowed"
+msgstr "Adresy link-local (169.254.0.0/16, fe80::/10) są niedozwolone"

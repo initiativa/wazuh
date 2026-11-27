@@ -106,6 +106,18 @@ class Connection extends CommonDBTM implements Upgradeable {
         return $options;
     }
 
+    /**
+     * Builds an outbound URL from the parsed components of a stored base URL (scheme and host only),
+     * so a path, query or port stored in the URL can never change the request target.
+     */
+    public static function buildEndpointUrl(?string $base_url, $port, string $path = ''): string {
+        $parts = parse_url((string) $base_url) ?: [];
+        $scheme = strtolower($parts['scheme'] ?? 'https');
+        $host = $parts['host'] ?? '';
+        $port = (int) $port;
+        return $scheme . '://' . $host . ($port > 0 ? ':' . $port : '') . $path;
+    }
+
     private static function isValidPemBundle(string $pem): bool {
         if (!preg_match_all('/-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----/s', $pem, $matches)) {
             return false;

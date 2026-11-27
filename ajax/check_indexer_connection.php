@@ -18,8 +18,10 @@ if ($connection->can((int) ($_POST['connid'] ?? 0), READ)) {
     $api_password = (new GLPIKey())->decrypt($connection->getField('indexer_password'));
     $api_suffix = '/security/user/authenticate';
 
+    $url = Connection::buildEndpointUrl($wazuh_server, $api_port, '/');
+
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "$wazuh_server:$api_port");
+    curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
     curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
     curl_setopt($ch, CURLOPT_USERPWD, "$api_user:$api_password");
@@ -34,19 +36,20 @@ if ($connection->can((int) ($_POST['connid'] ?? 0), READ)) {
 //    curl_close($ch);
 
     PluginLogger::debug(json_encode($_POST));
-    PluginLogger::debug("Authentication attempt to Wazuh INDEXER: $status_code, URL: $wazuh_server:$api_port");
+    PluginLogger::debug("Authentication attempt to Wazuh INDEXER: $status_code, URL: $url");
 
+    // details stay in the log: the browser gets a generic result only (no port/host probing via error text)
     header('Content-Type: application/json');
     if ($curl_error) {
-        PluginLogger::debug("cURL Error: $curl_error");
-        echo json_encode(['success' => false, 'message' => $curl_error]);
+        PluginLogger::error("Wazuh indexer connection test failed, connection #" . $connection->getID() . ", URL: $url, cURL error: $curl_error");
+        echo json_encode(['success' => false, 'message' => __('Connection failed', 'wazuh')]);
         return;
     }
 
     if ($status_code != 200) {
+        PluginLogger::error("Wazuh indexer connection test failed, connection #" . $connection->getID() . ", URL: $url, HTTP $status_code");
         PluginLogger::debug("Auth Response: $response");
-
-        echo json_encode(['success' => false, 'status_code' => $status_code]);
+        echo json_encode(['success' => false, 'message' => __('Authentication failed', 'wazuh')]);
         return;
     }
 
