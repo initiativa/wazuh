@@ -660,6 +660,34 @@ function updateAgentGroups(agentId) {
     // To be expanded based on Wazuh API capabilities
 }
 
+/**
+ * Updates the count badge of a plugin tab in the already rendered GLPI tab list.
+ * @param {string} tabKey - GLPI tab key, e.g. "GlpiPlugin\\Wazuh\\ComputerAlertsTab$1"
+ * @param {number} count
+ */
+function wazuhUpdateTabCount(tabKey, count) {
+    const param = '_glpi_tab=' + encodeURIComponent(tabKey);
+    document.querySelectorAll('a.nav-link[data-glpi-ajax-content]').forEach(function (link) {
+        const url = link.getAttribute('data-glpi-ajax-content') || '';
+        if (!url.split(/[?&]/).includes(param)) {
+            return;
+        }
+        let badge = link.querySelector('.badge.glpi-badge');
+        if (count > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'badge glpi-badge';
+                badge.setAttribute('data-testid', 'tab-count-badge');
+                const container = link.querySelector('span.d-flex') || link;
+                container.append(' ', badge);
+            }
+            badge.textContent = String(count);
+        } else if (badge) {
+            badge.remove();
+        }
+    });
+}
+
 function showToast(message, type = 'info') {
     const classMap = {
         'error': 'bg-danger text-white',

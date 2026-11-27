@@ -61,6 +61,15 @@ abstract class DeviceAlertsTab extends CommonTreeDropdown implements Upgradeable
     abstract public static function getAgentAlerts(CommonGLPI $device): array | false;
     abstract protected function countElements($device_id);
 
+    /**
+     * Refreshes the count badge of this tab in the already rendered tab list: the badge is computed
+     * at page load, before this tab content fetched new data from Wazuh.
+     */
+    protected static function displayTabCountUpdate(CommonGLPI $item): void {
+        $count = (new static())->countElements($item->getID());
+        echo Html::scriptBlock(sprintf('wazuhUpdateTabCount(%s, %d);', json_encode(static::class . '$1'), $count));
+    }
+
     public function getForbiddenStandardMassiveAction(): array {
         $forbidden   = parent::getForbiddenStandardMassiveAction();
         $forbidden[] = 'update';

@@ -212,6 +212,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
         ];
         Search::manageParams($item_type, $params);
         Search::show(NetworkEqTab::class);
+        static::displayTabCountUpdate($item);
         return true;
     }
 

@@ -151,6 +151,7 @@ class ComputerAlertsTab extends DeviceAlertsTab {
         ];
         Search::manageParams($item_type, $params);
         Search::show(ComputerAlertsTab::class);
+        static::displayTabCountUpdate($item);
         return true;
     }
 

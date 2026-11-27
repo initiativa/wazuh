@@ -196,6 +196,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
         ];
         Search::manageParams($item_type, $params);
         Search::show(ComputerTab::class);
+        static::displayTabCountUpdate($item);
         return true;
     }
 

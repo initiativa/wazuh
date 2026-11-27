@@ -160,6 +160,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
         ];
         Search::manageParams($item_type, $params);
         Search::show(NetworkEqAlertsTab::class);
+        static::displayTabCountUpdate($item);
         return true;
     }
 
