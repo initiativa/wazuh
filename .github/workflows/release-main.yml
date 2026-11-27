@@ -3,12 +3,12 @@ name: Auto Release
 on:
   push:
     branches:
-      - main
+      - glpi11
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout kodu
         uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
           VERSION=$(xmllint --xpath "string(/root/versions/version/num)" wazuh.xml)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
-      
+
       - name: prepare tar.gz
         run: |
           PLUGIN_NAME="wazuh"
@@ -44,14 +44,14 @@ jobs:
           cd /tmp
           tar -czvf $PLUGIN_NAME-${{ steps.get-version.outputs.version }}.tar.gz $PLUGIN_NAME
           mv $PLUGIN_NAME-${{ steps.get-version.outputs.version }}.tar.gz $GITHUB_WORKSPACE/
-      
+
       - name: Tag creation
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git tag -a ${{ steps.get-version.outputs.version }} -m "${{ steps.get-version.outputs.version }}"
           git push origin ${{ steps.get-version.outputs.version }}
-      
+
       - name: Release creation
         id: create_release
         uses: softprops/action-gh-release@v1
