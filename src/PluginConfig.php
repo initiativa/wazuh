@@ -33,7 +33,8 @@ class PluginConfig
     public const VQUERY_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_time";
     public const VQUERY_ALERT_TIME_SESSION_KEY = "plugin_wazuh_last_vquery_alert_time";
 
-    public const PLUGIN_ROOT = GLPI_ROOT . "/plugins/" . self::APP_CODE;
+    // resolved from this file, so it works wherever the plugin is installed (plugins/ or marketplace/)
+    public const PLUGIN_ROOT = __DIR__ . '/..';
 
     public static function loadVersionNumber(): string
     {

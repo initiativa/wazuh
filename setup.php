@@ -106,7 +106,7 @@ function plugin_wazuh_registerClasses() {
 function plugin_version_wazuh() {
     return [
         'name' => PluginConfig::APP_NAME,
-        'version' => PluginConfig::loadVersionNumber(),
+        'version' => PLUGIN_WAZUH_VERSION,
         'author' => '<a href="http://www.initiativa.it">Initiativa</a>',
         'license' => 'GPL v3+',
         'homepage' => 'https://github.com/initiativa/Wazuh',
