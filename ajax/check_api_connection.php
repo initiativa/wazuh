@@ -1,11 +1,8 @@
 <?php
-include('../../../inc/includes.php');
-
 use GlpiPlugin\Wazuh\Connection;
 use GlpiPlugin\Wazuh\PluginLogger;
 
 Session::checkLoginUser();
-Session::checkCSRF($_POST, true);
 Session::checkRight(Connection::$rightname, READ);
 
 // per-record check (incl. the connection's entity), not only the global right

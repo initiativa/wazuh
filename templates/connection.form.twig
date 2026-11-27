@@ -70,7 +70,7 @@
         'helper': __('Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store.', 'wazuh')
     }|merge(additional_field_options['tls_ca_pem']|default({}))) }}
 
-    {{ fields.dropdownField('\ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {
+    {{ fields.dropdownField('ITILCategory', 'itilcategories_id', item.fields['itilcategories_id'], __('Category', 'wazuh'), {
         'rand': rand
     }|merge(additional_field_options['itilcategories_id']|default({}))) }}
 
@@ -79,12 +79,12 @@
     }|merge(additional_field_options['is_conn_active']|default({}))) }}
 
     <div class="d-flex flex-row gap-2 justify-content-end">
-        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestApiConnection(this, '{{ csrf_token() }}', '{{ item.fields['id'] }}');">
+        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestApiConnection(this, '{{ item.fields['id'] }}');">
             <i class="fas fa-spinner fa-spin d-none"></i>
             {{ button_text|default('API Test') }}
         </button>
 
-        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestIndexerConnection(this, '{{ csrf_token() }}', '{{ item.fields['id'] }}');">
+        <button type="button" id="action-button" class="btn btn-secondary gap-2" onclick="wazuhTestIndexerConnection(this, '{{ item.fields['id'] }}');">
             <i class="fas fa-spinner fa-spin d-none"></i>
             {{ button_text|default('Indexer Test') }}
         </button>

@@ -51,7 +51,7 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     use IndexerRequestsTrait;
     use DeviceHelper;
 
-    public $dohistory = true;
+    public bool $dohistory = true;
     public static $itemtype = 'NetworkEquipment';
     public static $items_id = 'networkequipments_id';
 
@@ -61,12 +61,12 @@ class NetworkEqAlertsTab extends DeviceAlertsTab {
     }
 
     protected function countElements($device_id) {
-        $count = countElementsInTableForMyEntities($this->getTable(), [
+        $count = countElementsInTable($this->getTable(), array_merge([
             NetworkEquipment::getForeignKeyField() => $device_id,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => ['<>', 0],
             'is_deleted' => 0
-        ]);
+        ], getEntitiesRestrictCriteria($this->getTable(), '', '', $this->maybeRecursive())));
 
 //        global $DB;
 //

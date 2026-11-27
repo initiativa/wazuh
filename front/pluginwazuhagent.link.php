@@ -3,8 +3,6 @@
  * Agent synchronization for Wazuh plugin
  */
 
-include ('../../../inc/includes.php');
-
 use GlpiPlugin\Wazuh\Connection;
 use GlpiPlugin\Wazuh\WazuhAgent;
 

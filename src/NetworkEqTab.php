@@ -47,7 +47,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
     use TicketableTrait;
     use IndexerRequestsTrait;
 
-    public $dohistory = true;
+    public bool $dohistory = true;
     public static $itemtype = 'NetworkEquipment';
     public static $items_id = 'networkequipments_id';
 
@@ -57,12 +57,12 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
     }
 
     protected function countElements($device_id) {
-        $count = countElementsInTableForMyEntities($this->getTable(), [
+        $count = countElementsInTable($this->getTable(), array_merge([
             NetworkEquipment::getForeignKeyField() => $device_id,
             Entity::getForeignKeyField() => Session::getActiveEntity(),
             static::getForeignKeyField() => ['<>', 0],
             'is_deleted' => 0
-        ]);
+        ], getEntitiesRestrictCriteria($this->getTable(), '', '', $this->maybeRecursive())));
 
 //        global $DB;
 //
@@ -396,7 +396,7 @@ class NetworkEqTab extends DeviceTab implements Ticketable {
         $ticket = new Ticket();
         $ticket_input = [
             'name' => $title,
-            'content' => \Toolbox::addslashes_deep($content),
+            'content' => $content,
             'itilcategories_id' => $itil_category_id,
             'status' => Ticket::INCOMING,
             'priority' => 3,
