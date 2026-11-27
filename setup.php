@@ -54,10 +54,6 @@ define("PLUGIN_WAZUH_MAX_GLPI_VERSION", "12.0.1");
 function plugin_init_wazuh() {
     global $PLUGIN_HOOKS;
 
-    ini_set('display_errors', 1);
-    ini_set('display_startup_errors', 1);
-    error_reporting(E_ALL);
-
     if (Plugin::isPluginActive(PluginConfig::APP_CODE)) {
 
         if (Session::haveRight('config', UPDATE)) {
