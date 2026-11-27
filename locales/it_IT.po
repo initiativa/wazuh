@@ -112,3 +112,6 @@ msgstr "Gli indirizzi link-local (169.254.0.0/16, fe80::/10) non sono consentiti
 
 msgid "Fetch agents from all active Wazuh connections of the current entity and update the agent list."
 msgstr "Recupera gli agenti da tutte le connessioni Wazuh attive dell'entità corrente e aggiorna l'elenco degli agenti."
+
+msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
+msgstr "Collega gli agenti non ancora collegati a computer e dispositivi di rete con lo stesso nome nella stessa entità."
