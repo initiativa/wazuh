@@ -9,9 +9,9 @@ Session::checkLoginUser();
 Session::checkCSRF($_POST, true);
 Session::checkRight(Connection::$rightname, READ);
 
-$connection = Connection::getById($_POST['connid']);
-
-if ($connection) {
+// per-record check (incl. the connection's entity), not only the global right
+$connection = new Connection();
+if ($connection->can((int) ($_POST['connid'] ?? 0), READ)) {
     $wazuh_server = $connection->getField('indexer_url');
     $api_port = $connection->getField('indexer_port');
     $api_user = $connection->getField('indexer_user');
