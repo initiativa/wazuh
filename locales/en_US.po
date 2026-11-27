@@ -92,3 +92,6 @@ msgstr "Linked %1$d of %2$d agents, %3$d without matching device"
 #, php-format
 msgid "Wazuh indexer error (HTTP %1$d): %2$s"
 msgstr "Wazuh indexer error (HTTP %1$d): %2$s"
+
+msgid "Agent can be linked only to a Computer or a Network equipment."
+msgstr "Agent can be linked only to a Computer or a Network equipment."

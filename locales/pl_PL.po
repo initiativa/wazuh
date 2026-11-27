@@ -92,3 +92,6 @@ msgstr "Sparowano %1$d z %2$d agentów, %3$d bez pasującego urządzenia"
 #, php-format
 msgid "Wazuh indexer error (HTTP %1$d): %2$s"
 msgstr "Błąd indexera Wazuh (HTTP %1$d): %2$s"
+
+msgid "Agent can be linked only to a Computer or a Network equipment."
+msgstr "Agenta można powiązać tylko z komputerem lub urządzeniem sieciowym."

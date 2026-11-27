@@ -97,3 +97,6 @@ msgstr ""
 #, php-format
 msgid "Wazuh indexer error (HTTP %1$d): %2$s"
 msgstr ""
+
+msgid "Agent can be linked only to a Computer or a Network equipment."
+msgstr ""

@@ -389,7 +389,8 @@ class WazuhAgent extends CommonDBTM {
 
             if (class_exists($itemtype) && in_array($itemtype, ['Computer', 'NetworkEquipment'])) {
                 $item = new $itemtype();
-                if ($item->getFromDB($item_id)) {
+                // show the linked device only to users allowed to see it (incl. its entity)
+                if ($item->can($item_id, READ)) {
                     return $item->getLink();
                 }
             }
@@ -405,11 +406,60 @@ class WazuhAgent extends CommonDBTM {
 //    }
 
     
+    /** Device types an agent can be linked to. */
+    private const LINKABLE_ITEMTYPES = ['Computer', 'NetworkEquipment'];
+
+    /** True only while syncAgent() writes agents fetched from the Wazuh API (not settable from a request). */
+    private static bool $syncing = false;
+
     public function prepareInputForAdd($input) {
-        return $input;
+        return $this->prepareUserInput($input);
     }
 
     public function prepareInputForUpdate($input) {
+        return $this->prepareUserInput($input);
+    }
+
+    /**
+     * Server-side checks for agent writes coming from users (form, massive actions).
+     * Entity and connection are owned by the sync; a device link must target an allowed,
+     * existing asset the current user can read.
+     */
+    private function prepareUserInput(array $input): array|false {
+        if (self::$syncing) {
+            return $input;
+        }
+
+        unset($input[Entity::getForeignKeyField()], $input[Connection::getForeignKeyField()]);
+
+        if (!array_key_exists('itemtype', $input) && !array_key_exists('item_id', $input)) {
+            return $input;
+        }
+
+        $itemtype = (string) ($input['itemtype'] ?? $this->fields['itemtype'] ?? '');
+        $item_id = (int) ($input['item_id'] ?? $this->fields['item_id'] ?? 0);
+
+        if ($item_id === 0) {
+            // unlinking is allowed
+            $input['item_id'] = 0;
+            return $input;
+        }
+
+        if (!in_array($itemtype, self::LINKABLE_ITEMTYPES, true)) {
+            PluginLogger::warning(__FUNCTION__ . " rejected itemtype '$itemtype' for agent " . ($this->fields['id'] ?? 'new'));
+            Session::addMessageAfterRedirect(__('Agent can be linked only to a Computer or a Network equipment.', PluginConfig::APP_CODE), true, ERROR);
+            return false;
+        }
+
+        $asset = new $itemtype();
+        if (!$asset->can($item_id, READ)) {
+            PluginLogger::warning(__FUNCTION__ . " rejected $itemtype $item_id for agent " . ($this->fields['id'] ?? 'new') . ": not readable");
+            Session::addMessageAfterRedirect(__("You don't have permission to perform this action."), true, ERROR);
+            return false;
+        }
+
+        $input['itemtype'] = $itemtype;
+        $input['item_id'] = $item_id;
         return $input;
     }
 
@@ -678,31 +728,35 @@ class WazuhAgent extends CommonDBTM {
             ])->current();
 
             $agent_obj = new self();
+            self::$syncing = true;
+            try {
+                if ($existing_agent) {
+                    $agent_data['id'] = $existing_agent['id'];
 
-            if ($existing_agent) {
-                $agent_data['id'] = $existing_agent['id'];
+                    PluginLogger::debug("Updating agent ID: " . $existing_agent['id'] . " with data: " . json_encode($agent_data));
 
-                PluginLogger::debug("Updating agent ID: " . $existing_agent['id'] . " with data: " . json_encode($agent_data));
-
-                if ($agent_obj->update($agent_data)) {
-                    $success_count++;
+                    if ($agent_obj->update($agent_data)) {
+                        $success_count++;
+                    } else {
+                        PluginLogger::error("Failed to update agent ID: " . $existing_agent['id']);
+                        $failure_count++;
+                    }
                 } else {
-                    PluginLogger::error("Failed to update agent ID: " . $existing_agent['id']);
-                    $failure_count++;
-                }
-            } else {
-                $agent_data['date_creation'] = $currentDate;
+                    $agent_data['date_creation'] = $currentDate;
 
-                PluginLogger::debug("Adding new agent with data: " . json_encode($agent_data));
+                    PluginLogger::debug("Adding new agent with data: " . json_encode($agent_data));
 
-                $new_id = $agent_obj->add($agent_data);
-                if ($new_id) {
-                    $success_count++;
-                    PluginLogger::debug("Successfully added agent with new ID: " . $new_id);
-                } else {
-                    PluginLogger::error("Failed to add new agent: " . $agent['name']);
-                    $failure_count++;
+                    $new_id = $agent_obj->add($agent_data);
+                    if ($new_id) {
+                        $success_count++;
+                        PluginLogger::debug("Successfully added agent with new ID: " . $new_id);
+                    } else {
+                        PluginLogger::error("Failed to add new agent: " . $agent['name']);
+                        $failure_count++;
+                    }
                 }
+            } finally {
+                self::$syncing = false;
             }
         }
 
