@@ -118,3 +118,6 @@ msgstr ""
 
 msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
 msgstr ""
+
+msgid "Clear stored password"
+msgstr ""

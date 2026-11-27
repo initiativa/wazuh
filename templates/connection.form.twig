@@ -25,6 +25,9 @@
         __('API Password', 'wazuh'),
         {'rand': rand}|merge(password_options)|merge(additional_field_options['api_password']|default({}))
     ) }}
+    {% if not item.isNewItem() %}
+        {{ fields.checkboxField('_blank_api_password', 0, __('Clear stored password', 'wazuh'), {'rand': rand}) }}
+    {% endif %}
     
     {{ fields.numberField('sync_interval', item.fields['sync_interval'], __('Synchronization Interval (seconds)', 'wazuh'), {
         'rand': rand
@@ -46,6 +49,9 @@
         __('Indexer API Password', 'wazuh'),
         {'rand': rand}|merge(password_options)|merge(additional_field_options['indexer_password']|default({}))
     ) }}
+    {% if not item.isNewItem() %}
+        {{ fields.checkboxField('_blank_indexer_password', 0, __('Clear stored password', 'wazuh'), {'rand': rand}) }}
+    {% endif %}
 
     {% if not item.isNewItem() and not item.fields['tls_verify']|default(1) %}
         <div class="alert alert-warning col-12" role="alert">

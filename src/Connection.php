@@ -71,6 +71,11 @@ class Connection extends CommonDBTM implements Upgradeable {
 
     private function prepareInput($input) {
         foreach (static::$undisclosedFields as $field_name) {
+            // explicit "clear stored password" checkbox (like core's _blank_passwd)
+            if (!$this->isNewItem() && !empty($input['_blank_' . $field_name])) {
+                $input[$field_name] = '';
+                continue;
+            }
             if (!$this->isNewItem() && array_key_exists($field_name, $input) && ($input[$field_name] ?? '') === '') {
                 unset($input[$field_name]);
                 continue;

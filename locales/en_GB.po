@@ -114,3 +114,6 @@ msgstr "Fetch agents from all active Wazuh connections of the current entity and
 
 msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
 msgstr "Link not yet linked agents to computers and network equipments with the same name in the same entity."
+
+msgid "Clear stored password"
+msgstr "Clear stored password"

@@ -113,3 +113,6 @@ msgstr "Pobierz agentów ze wszystkich aktywnych połączeń Wazuh bieżącej en
 
 msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
 msgstr "Powiąż jeszcze niepowiązane agenty z komputerami i urządzeniami sieciowymi o tej samej nazwie w tej samej encji."
+
+msgid "Clear stored password"
+msgstr "Wyczyść zapisane hasło"

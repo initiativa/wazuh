@@ -115,3 +115,6 @@ msgstr "Recupera gli agenti da tutte le connessioni Wazuh attive dell'entità co
 
 msgid "Link not yet linked agents to computers and network equipments with the same name in the same entity."
 msgstr "Collega gli agenti non ancora collegati a computer e dispositivi di rete con lo stesso nome nella stessa entità."
+
+msgid "Clear stored password"
+msgstr "Cancella la password salvata"
