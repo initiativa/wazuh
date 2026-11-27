@@ -281,9 +281,9 @@ class ComputerTab extends DeviceTab implements Ticketable {
                     Session::addMessageAfterRedirect($message, true, INFO);
                     Html::back();
                 }
-            default:
-                parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
+                return;
         }
+        parent::processMassiveActionsForOneItemtype($ma, $item, $ids);
     }
 
     #[\Override]
