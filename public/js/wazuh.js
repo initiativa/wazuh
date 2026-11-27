@@ -627,16 +627,19 @@ function wazuhTestConnection(testButton, data, url) {
             if (response.success === false) {
                 $(testButton).removeClass(['btn-secondary', 'btn-success']);
                 $(testButton).addClass('btn-danger');
-                showToast(`Connection to ${data.url}:${data.port} failed. ${response.error}`, 'error');
+                let reason = response.message
+                    || (response.status_code ? `HTTP ${response.status_code}` : 'unknown error');
+                // reason may contain text from the remote certificate: never inject it as HTML
+                showToast(`Connection failed: ${$('<div>').text(reason).html()}`, 'error');
             } else {
                 $(testButton).removeClass(['btn-secondary', 'btn-danger']);
                 $(testButton).addClass('btn-success');
-                showToast(`Authentication to ${data.url}:${data.port} succeed.`);
+                showToast($('<div>').text(response.message || 'Connection completed').html());
             }
         },
         error: function(xhr) {
             console.error('Error:', xhr);
-            showToast(`Connection to ${data.url}:${data.port} failed. ${xhr.statusText}`, 'error');
+            showToast(`Connection test failed: ${xhr.status} ${xhr.statusText}`, 'error');
             $(testButton).removeClass(['btn-secondary', 'btn-success']);
             $(testButton).addClass('btn-danger');
         },

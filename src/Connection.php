@@ -82,6 +82,42 @@ class Connection extends CommonDBTM implements Upgradeable {
         return $input;
     }
 
+    /**
+     * cURL TLS options for every outbound call to this Wazuh connection.
+     * Certificate and host name verification are on unless the connection explicitly disables it;
+     * an optional PEM CA bundle allows self-signed Wazuh certificates without disabling verification.
+     */
+    public function getCurlTlsOptions(): array {
+        if (!(bool) ($this->fields['tls_verify'] ?? true)) {
+            return [
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0,
+            ];
+        }
+
+        $options = [
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ];
+        $ca_pem = trim((string) ($this->fields['tls_ca_pem'] ?? ''));
+        if ($ca_pem !== '') {
+            $options[CURLOPT_CAINFO_BLOB] = $ca_pem;
+        }
+        return $options;
+    }
+
+    private static function isValidPemBundle(string $pem): bool {
+        if (!preg_match_all('/-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----/s', $pem, $matches)) {
+            return false;
+        }
+        foreach ($matches[0] as $certificate) {
+            if (@openssl_x509_read($certificate) === false) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static function getHistoryChangeWhenUpdateField($field) {
        return true;
     }
@@ -248,6 +284,9 @@ class Connection extends CommonDBTM implements Upgradeable {
             $migration->addKey($table, 'is_conn_active', 'is_conn_active');
         }
 
+        $migration->addField($table, 'tls_verify', "tinyint(1) NOT NULL DEFAULT '1'");
+        $migration->addField($table, 'tls_ca_pem', 'text');
+
         $migration->migrationOneTable($table);
         self::defaultsConfigData($table);
 
@@ -291,6 +330,10 @@ class Connection extends CommonDBTM implements Upgradeable {
         self::validateTextLength($input, $validation_errors, 'indexer_password', 0);
         self::validateDropdown($input, $validation_errors, 'itilcategories_id', ItilCategory::getTable(), self::ENTITY_CRITERIA());
         self::validateYesNo($input, $validation_errors, 'is_conn_active');
+        self::validateYesNo($input, $validation_errors, 'tls_verify');
+        if (trim((string) ($input['tls_ca_pem'] ?? '')) !== '' && !self::isValidPemBundle($input['tls_ca_pem'])) {
+            $validation_errors['tls_ca_pem'] = __('Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----).', 'wazuh');
+        }
 
         return self::setAdditionalFieldOptions($validation_errors);
     }

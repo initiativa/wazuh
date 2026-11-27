@@ -38,6 +38,7 @@ trait IndexerRequestsTrait {
     private static $username;
     private static $password;
     private static $isInitialized = false;
+    private static array $tlsOptions = [];
 
     /**
      * Initializes the Wazuh connection parameters
@@ -45,12 +46,14 @@ trait IndexerRequestsTrait {
      * @param string $indexerUrl Wazuh indexer URL
      * @param string $username Authentication username
      * @param string $password Authentication password
+     * @param array $tlsOptions cURL TLS options, see Connection::getCurlTlsOptions()
      * @return bool Initialization status
      */
-    public static function initWazuhConnection($indexerUrl, $indexer_port, $username, $password) {
+    public static function initWazuhConnection($indexerUrl, $indexer_port, $username, $password, array $tlsOptions) {
         self::$indexerUrl = rtrim($indexerUrl . ':' . $indexer_port, '/');
         self::$username = $username;
         self::$password = (new \GLPIKey)->decrypt($password);
+        self::$tlsOptions = $tlsOptions;
         self::$isInitialized = true;
 
         return true;
@@ -102,8 +105,7 @@ trait IndexerRequestsTrait {
             'Content-Type: application/json',
             'Content-Length: ' . strlen(json_encode($query))
         ]);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt_array($ch, self::$tlsOptions);
         
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);

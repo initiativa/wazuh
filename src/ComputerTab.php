@@ -205,7 +205,7 @@ class ComputerTab extends DeviceTab implements Ticketable {
             if ($agent) {
                 $connection = Connection::getById($agent->fields[Connection::getForeignKeyField()]);
                 if ($connection) {
-                    static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password']);
+                    static::initWazuhConnection($connection->fields['indexer_url'], $connection->fields['indexer_port'], $connection->fields['indexer_user'], $connection->fields['indexer_password'], $connection->getCurlTlsOptions());
                     $agentId = $agent->fields['agent_id'];
                     return static::queryVulnerabilitiesByAgentIds([$agentId], $device);
                 }

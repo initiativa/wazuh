@@ -67,3 +67,18 @@ msgstr ""
 
 msgid "Leave blank to keep the current value"
 msgstr ""
+
+msgid "Verify TLS certificate"
+msgstr ""
+
+msgid "CA certificate (PEM)"
+msgstr ""
+
+msgid "Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store."
+msgstr ""
+
+msgid "TLS certificate verification is disabled for this connection: credentials sent to Wazuh can be intercepted. Use only for testing; prefer providing the CA certificate instead."
+msgstr ""
+
+msgid "Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----)."
+msgstr ""

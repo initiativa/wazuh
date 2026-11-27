@@ -64,3 +64,18 @@ msgstr "Error adding server: %1$s"
 
 msgid "Leave blank to keep the current value"
 msgstr "Lasciare vuoto per mantenere il valore attuale"
+
+msgid "Verify TLS certificate"
+msgstr "Verifica certificato TLS"
+
+msgid "CA certificate (PEM)"
+msgstr "Certificato CA (PEM)"
+
+msgid "Paste the CA certificate (e.g. root-ca.pem) to trust self-signed Wazuh certificates. Leave empty to use the system CA store."
+msgstr "Incolla il certificato CA (es. root-ca.pem) per considerare attendibili i certificati autofirmati di Wazuh. Lasciare vuoto per usare l'archivio CA di sistema."
+
+msgid "TLS certificate verification is disabled for this connection: credentials sent to Wazuh can be intercepted. Use only for testing; prefer providing the CA certificate instead."
+msgstr "La verifica del certificato TLS è disattivata per questa connessione: le credenziali inviate a Wazuh possono essere intercettate. Usare solo per test; è preferibile fornire il certificato CA."
+
+msgid "Invalid CA certificate: paste one or more PEM certificates (-----BEGIN CERTIFICATE-----)."
+msgstr "Certificato CA non valido: incollare uno o più certificati PEM (-----BEGIN CERTIFICATE-----)."

@@ -442,14 +442,13 @@ class WazuhAgent extends CommonDBTM {
            CURLOPT_URL => "$wazuh_server:$api_port/security/user/authenticate",
            CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
            CURLOPT_USERPWD => "$api_user:$api_password",
-           CURLOPT_SSL_VERIFYPEER => false,
-           CURLOPT_SSL_VERIFYHOST => false,
            CURLOPT_RETURNTRANSFER => true,
            CURLOPT_POST => true,
            CURLOPT_CONNECTTIMEOUT => 10,
            CURLOPT_TIMEOUT => 10,
            CURLOPT_POSTFIELDS => "{}"
        ]);
+       curl_setopt_array($ch, $config->getCurlTlsOptions());
 
         $response = curl_exec($ch);
         $curl_error = curl_error($ch);
@@ -498,8 +497,7 @@ class WazuhAgent extends CommonDBTM {
             'Content-Type: application/json',
             "Authorization: Bearer $token"
         ));
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt_array($ch, $config->getCurlTlsOptions());
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
         $response = curl_exec($ch);
