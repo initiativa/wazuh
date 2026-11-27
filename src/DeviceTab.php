@@ -204,6 +204,25 @@ abstract class DeviceTab extends CommonTreeDropdown implements Upgradeable, Tree
 
     static function showBrowseView(string $itemtype, array $params, $update = false): void {
         $item_id = $params['criteria'][0]['value'];
+
+        // Trashbin view: deleted records are usually leaves of the tree (single alerts / vulnerabilities),
+        // which the root-only tree query would never show. List them flat for this device instead.
+        if (!empty($params['is_deleted'])) {
+            $params['criteria'] = [
+                [
+                    'field' => 7,
+                    'searchtype' => 'equals',
+                    'value' => $item_id
+                ],
+            ];
+            $data = Search::getDatas($itemtype, $params);
+            $data['device_id'] = $item_id;
+            $data['parent_map'] = [];
+            $data['has_child_ids'] = [];
+            $data['child_map'] = [];
+            (new TreeSearchOutput())->displayData($data, $params);
+            return;
+        }
         $params['criteria'][] = [
             'field' => 20,
             'searchtype' => 'equals',
